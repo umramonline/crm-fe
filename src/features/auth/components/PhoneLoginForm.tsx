@@ -4,17 +4,20 @@ import type { FormEvent } from 'react';
 import { authTexts } from '@/features/auth/constants/authTexts';
 
 type PhoneLoginFormProps = {
-  onSubmit: (phone: string) => { ok: true } | { ok: false; messageKey: 'phoneInvalidMessage' };
+  isSubmitting: boolean;
+  onSubmit: (phone: string) => Promise<
+    { ok: true } | { ok: false; messageKey: 'phoneInvalidMessage' | 'otpRequestFailedMessage' }
+  >;
 };
 
-export function PhoneLoginForm({ onSubmit }: PhoneLoginFormProps) {
+export function PhoneLoginForm({ isSubmitting, onSubmit }: PhoneLoginFormProps) {
   const [phone, setPhone] = useState('');
   const [errorMessage, setErrorMessage] = useState('');
 
-  function handleSubmit(event: FormEvent<HTMLFormElement>): void {
+  async function handleSubmit(event: FormEvent<HTMLFormElement>): Promise<void> {
     event.preventDefault();
 
-    const result = onSubmit(phone);
+    const result = await onSubmit(phone);
 
     if (!result.ok) {
       setErrorMessage(authTexts[result.messageKey]);
@@ -42,6 +45,7 @@ export function PhoneLoginForm({ onSubmit }: PhoneLoginFormProps) {
           placeholder={authTexts.phonePlaceholder}
           type="tel"
           value={phone}
+          disabled={isSubmitting}
           onChange={(event) => setPhone(event.target.value)}
         />
         <span className="auth-input-icon" aria-hidden="true">
@@ -51,8 +55,8 @@ export function PhoneLoginForm({ onSubmit }: PhoneLoginFormProps) {
 
       {errorMessage ? <p className="auth-error">{errorMessage}</p> : null}
 
-      <button className="auth-primary-button" type="submit">
-        {authTexts.phoneSubmitLabel}
+      <button className="auth-primary-button" type="submit" disabled={isSubmitting}>
+        {isSubmitting ? authTexts.phoneSubmittingLabel : authTexts.phoneSubmitLabel}
       </button>
 
       <button className="auth-link-button" type="button">

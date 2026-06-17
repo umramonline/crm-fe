@@ -6,12 +6,12 @@ import { useLoginFlow } from '@/features/auth/hooks/useLoginFlow';
 const initialRemainingTime = '04:55';
 
 export function LoginPage() {
-  const { currentStep, goBackToPhone, submitOtp, submitPhone } = useLoginFlow();
+  const { currentStep, goBackToPhone, isPhoneSubmitting, submitOtp, submitPhone } = useLoginFlow();
 
   return (
     <AuthShell>
       {currentStep === 'phone' ? (
-        <PhoneLoginForm onSubmit={submitPhone} />
+        <PhoneLoginForm isSubmitting={isPhoneSubmitting} onSubmit={submitPhone} />
       ) : (
         <OtpVerificationForm
           remainingTime={initialRemainingTime}

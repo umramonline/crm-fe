@@ -1,12 +1,13 @@
 import { useState } from 'react';
 
 import { otpSchema, phoneSchema } from '@/features/auth/schemas/authSchemas';
+import { requestOtp } from '@/features/auth/services/authApi';
 
 type LoginStep = 'phone' | 'otp';
 
 type PhoneSubmitResult =
   | { ok: true }
-  | { ok: false; messageKey: 'phoneInvalidMessage' };
+  | { ok: false; messageKey: 'phoneInvalidMessage' | 'otpRequestFailedMessage' };
 
 type OtpSubmitResult =
   | { ok: true }
@@ -14,17 +15,19 @@ type OtpSubmitResult =
 
 type UseLoginFlowReturn = {
   currentStep: LoginStep;
+  isPhoneSubmitting: boolean;
   phone: string;
-  submitPhone: (nextPhone: string) => PhoneSubmitResult;
+  submitPhone: (nextPhone: string) => Promise<PhoneSubmitResult>;
   submitOtp: (otpCode: string) => OtpSubmitResult;
   goBackToPhone: () => void;
 };
 
 export function useLoginFlow(): UseLoginFlowReturn {
   const [currentStep, setCurrentStep] = useState<LoginStep>('phone');
+  const [isPhoneSubmitting, setIsPhoneSubmitting] = useState(false);
   const [phone, setPhone] = useState('');
 
-  function submitPhone(nextPhone: string): PhoneSubmitResult {
+  async function submitPhone(nextPhone: string): Promise<PhoneSubmitResult> {
     const normalizedPhone = nextPhone.trim();
     const result = phoneSchema.safeParse(normalizedPhone);
 
@@ -32,8 +35,17 @@ export function useLoginFlow(): UseLoginFlowReturn {
       return { ok: false, messageKey: 'phoneInvalidMessage' };
     }
 
-    setPhone(normalizedPhone);
-    setCurrentStep('otp');
+    setIsPhoneSubmitting(true);
+
+    try {
+      await requestOtp({ phone: normalizedPhone });
+      setPhone(normalizedPhone);
+      setCurrentStep('otp');
+    } catch {
+      return { ok: false, messageKey: 'otpRequestFailedMessage' };
+    } finally {
+      setIsPhoneSubmitting(false);
+    }
 
     return { ok: true };
   }
@@ -54,6 +66,7 @@ export function useLoginFlow(): UseLoginFlowReturn {
 
   return {
     currentStep,
+    isPhoneSubmitting,
     phone,
     submitPhone,
     submitOtp,
