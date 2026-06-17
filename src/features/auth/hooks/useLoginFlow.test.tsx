@@ -2,17 +2,20 @@ import { act, renderHook } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { useLoginFlow } from '@/features/auth/hooks/useLoginFlow';
-import { requestOtp } from '@/features/auth/services/authApi';
+import { requestOtp, verifyOtp } from '@/features/auth/services/authApi';
 
 vi.mock('@/features/auth/services/authApi', () => ({
   requestOtp: vi.fn(),
+  verifyOtp: vi.fn(),
 }));
 
 const requestOtpMock = vi.mocked(requestOtp);
+const verifyOtpMock = vi.mocked(verifyOtp);
 
 describe('useLoginFlow', () => {
   beforeEach(() => {
     requestOtpMock.mockReset();
+    verifyOtpMock.mockReset();
   });
 
   it('keeps the phone step when the phone format is invalid', async () => {
@@ -66,5 +69,63 @@ describe('useLoginFlow', () => {
     });
 
     expect(result.current.currentStep).toBe('phone');
+  });
+
+  it('keeps the otp step when the otp format is invalid', async () => {
+    requestOtpMock.mockResolvedValue();
+    const { result } = renderHook(() => useLoginFlow());
+
+    await act(async () => {
+      await result.current.submitPhone('05551234567');
+    });
+
+    await act(async () => {
+      const submitResult = await result.current.submitOtp('12345');
+
+      expect(submitResult.ok).toBe(false);
+    });
+
+    expect(result.current.currentStep).toBe('otp');
+    expect(verifyOtpMock).not.toHaveBeenCalled();
+  });
+
+  it('moves to the password step when otp verification succeeds', async () => {
+    requestOtpMock.mockResolvedValue();
+    verifyOtpMock.mockResolvedValue();
+    const { result } = renderHook(() => useLoginFlow());
+
+    await act(async () => {
+      await result.current.submitPhone('05551234567');
+    });
+
+    await act(async () => {
+      const submitResult = await result.current.submitOtp('123456');
+
+      expect(submitResult.ok).toBe(true);
+    });
+
+    expect(verifyOtpMock).toHaveBeenCalledWith({
+      phone: '05551234567',
+      otp_code: '123456',
+    });
+    expect(result.current.currentStep).toBe('password');
+  });
+
+  it('keeps the otp step when otp verification fails', async () => {
+    requestOtpMock.mockResolvedValue();
+    verifyOtpMock.mockRejectedValue(new Error('verify failed'));
+    const { result } = renderHook(() => useLoginFlow());
+
+    await act(async () => {
+      await result.current.submitPhone('05551234567');
+    });
+
+    await act(async () => {
+      const submitResult = await result.current.submitOtp('123456');
+
+      expect(submitResult.ok).toBe(false);
+    });
+
+    expect(result.current.currentStep).toBe('otp');
   });
 });

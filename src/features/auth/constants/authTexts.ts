@@ -11,6 +11,11 @@ export const authTexts = {
   remainingTimeLabel: 'Kalan süre',
   backLabel: 'Geri',
   verifyLabel: 'Doğrula',
+  otpVerifyingLabel: 'Doğrulanıyor...',
   otpInvalidMessage: 'OTP kodu 6 haneli olmalıdır.',
+  otpVerifyFailedMessage: 'Güvenlik kodu hatalı.',
+  passwordPlaceholder: 'Şifre',
+  rememberMeLabel: 'Beni Hatırla',
+  passwordSubmitLabel: 'Giriş Yap',
   logoAlt: 'CRM',
 } as const;

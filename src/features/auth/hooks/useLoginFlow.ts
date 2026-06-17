@@ -1,9 +1,9 @@
 import { useState } from 'react';
 
 import { otpSchema, phoneSchema } from '@/features/auth/schemas/authSchemas';
-import { requestOtp } from '@/features/auth/services/authApi';
+import { requestOtp, verifyOtp } from '@/features/auth/services/authApi';
 
-type LoginStep = 'phone' | 'otp';
+type LoginStep = 'phone' | 'otp' | 'password';
 
 type PhoneSubmitResult =
   | { ok: true }
@@ -11,20 +11,22 @@ type PhoneSubmitResult =
 
 type OtpSubmitResult =
   | { ok: true }
-  | { ok: false; messageKey: 'otpInvalidMessage' };
+  | { ok: false; messageKey: 'otpInvalidMessage' | 'otpVerifyFailedMessage' };
 
 type UseLoginFlowReturn = {
   currentStep: LoginStep;
   isPhoneSubmitting: boolean;
+  isOtpSubmitting: boolean;
   phone: string;
   submitPhone: (nextPhone: string) => Promise<PhoneSubmitResult>;
-  submitOtp: (otpCode: string) => OtpSubmitResult;
+  submitOtp: (otpCode: string) => Promise<OtpSubmitResult>;
   goBackToPhone: () => void;
 };
 
 export function useLoginFlow(): UseLoginFlowReturn {
   const [currentStep, setCurrentStep] = useState<LoginStep>('phone');
   const [isPhoneSubmitting, setIsPhoneSubmitting] = useState(false);
+  const [isOtpSubmitting, setIsOtpSubmitting] = useState(false);
   const [phone, setPhone] = useState('');
 
   async function submitPhone(nextPhone: string): Promise<PhoneSubmitResult> {
@@ -50,11 +52,23 @@ export function useLoginFlow(): UseLoginFlowReturn {
     return { ok: true };
   }
 
-  function submitOtp(otpCode: string): OtpSubmitResult {
-    const result = otpSchema.safeParse(otpCode.trim());
+  async function submitOtp(otpCode: string): Promise<OtpSubmitResult> {
+    const normalizedOtpCode = otpCode.trim();
+    const result = otpSchema.safeParse(normalizedOtpCode);
 
     if (!result.success) {
       return { ok: false, messageKey: 'otpInvalidMessage' };
+    }
+
+    setIsOtpSubmitting(true);
+
+    try {
+      await verifyOtp({ phone, otp_code: normalizedOtpCode });
+      setCurrentStep('password');
+    } catch {
+      return { ok: false, messageKey: 'otpVerifyFailedMessage' };
+    } finally {
+      setIsOtpSubmitting(false);
     }
 
     return { ok: true };
@@ -67,6 +81,7 @@ export function useLoginFlow(): UseLoginFlowReturn {
   return {
     currentStep,
     isPhoneSubmitting,
+    isOtpSubmitting,
     phone,
     submitPhone,
     submitOtp,

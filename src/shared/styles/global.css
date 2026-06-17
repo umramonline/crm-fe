@@ -71,6 +71,10 @@ button {
   padding-inline: 22px;
 }
 
+.auth-password-form {
+  gap: 12px;
+}
+
 .auth-title {
   margin: 0 0 10px;
   color: #111827;
@@ -179,6 +183,32 @@ button {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 14px;
+}
+
+.auth-password-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 118px;
+  gap: 12px;
+  align-items: center;
+}
+
+.auth-checkbox-label {
+  display: inline-flex;
+  gap: 6px;
+  align-items: center;
+  color: #111827;
+  font-size: 12px;
+}
+
+.auth-checkbox {
+  width: 13px;
+  height: 13px;
+  margin: 0;
+  accent-color: #0d8bff;
+}
+
+.auth-password-submit {
+  height: 38px;
 }
 
 .auth-meta {
