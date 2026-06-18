@@ -269,6 +269,12 @@ button {
   font-size: 14px;
 }
 
+.hello-logout-button {
+  min-width: 118px;
+  margin-top: 20px;
+  padding-inline: 18px;
+}
+
 .visually-hidden {
   position: absolute;
   width: 1px;

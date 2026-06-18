@@ -27,3 +27,15 @@ export async function loginWithPassword(
 ): Promise<void> {
   await apiClient.post("/api/v1/auth/password/login", payload);
 }
+
+export async function refreshSession(): Promise<void> {
+  await apiClient.post("/api/v1/auth/refresh");
+}
+
+export async function logout(): Promise<void> {
+  await apiClient.post("/api/v1/auth/logout");
+}
+
+export async function getSession(): Promise<void> {
+  await apiClient.get("/api/v1/auth/session");
+}
