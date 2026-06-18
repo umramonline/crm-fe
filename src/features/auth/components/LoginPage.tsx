@@ -1,22 +1,37 @@
-import { AuthShell } from '@/features/auth/components/AuthShell';
-import { OtpVerificationForm } from '@/features/auth/components/OtpVerificationForm';
-import { PasswordLoginForm } from '@/features/auth/components/PasswordLoginForm';
-import { PhoneLoginForm } from '@/features/auth/components/PhoneLoginForm';
-import { useLoginFlow } from '@/features/auth/hooks/useLoginFlow';
+import { AuthShell } from "@/features/auth/components/AuthShell";
+import { OtpVerificationForm } from "@/features/auth/components/OtpVerificationForm";
+import { PasswordLoginForm } from "@/features/auth/components/PasswordLoginForm";
+import { PhoneLoginForm } from "@/features/auth/components/PhoneLoginForm";
+import { useLoginFlow } from "@/features/auth/hooks/useLoginFlow";
 
-const initialRemainingTime = '04:55';
+const initialRemainingTime = "04:55";
 
-export function LoginPage() {
-  const { currentStep, goBackToPhone, isOtpSubmitting, isPhoneSubmitting, submitOtp, submitPhone } =
-    useLoginFlow();
+type LoginPageProps = {
+  onAuthenticated?: () => void;
+};
+
+export function LoginPage({ onAuthenticated }: LoginPageProps) {
+  const {
+    currentStep,
+    goBackToPhone,
+    isOtpSubmitting,
+    isPasswordSubmitting,
+    isPhoneSubmitting,
+    submitOtp,
+    submitPassword,
+    submitPhone,
+  } = useLoginFlow({ onAuthenticated });
 
   return (
     <AuthShell>
-      {currentStep === 'phone' ? (
-        <PhoneLoginForm isSubmitting={isPhoneSubmitting} onSubmit={submitPhone} />
+      {currentStep === "phone" ? (
+        <PhoneLoginForm
+          isSubmitting={isPhoneSubmitting}
+          onSubmit={submitPhone}
+        />
       ) : null}
 
-      {currentStep === 'otp' ? (
+      {currentStep === "otp" ? (
         <OtpVerificationForm
           isSubmitting={isOtpSubmitting}
           remainingTime={initialRemainingTime}
@@ -25,7 +40,12 @@ export function LoginPage() {
         />
       ) : null}
 
-      {currentStep === 'password' ? <PasswordLoginForm /> : null}
+      {currentStep === "password" ? (
+        <PasswordLoginForm
+          isSubmitting={isPasswordSubmitting}
+          onSubmit={submitPassword}
+        />
+      ) : null}
     </AuthShell>
   );
 }
