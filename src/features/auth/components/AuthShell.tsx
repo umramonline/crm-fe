@@ -10,7 +10,7 @@ export function AuthShell({ children }: AuthShellProps) {
   return (
     <main className="auth-page">
       <section className="auth-content" aria-label={authTexts.loginTitle}>
-        <img className="auth-logo" src="/logo.webp" alt={authTexts.logoAlt} />
+        <img className="auth-logo" src="/logo.png" alt={authTexts.logoAlt} />
         <div className="auth-card">{children}</div>
       </section>
     </main>

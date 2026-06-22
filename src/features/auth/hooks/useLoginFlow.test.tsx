@@ -17,6 +17,17 @@ vi.mock("@/features/auth/services/authApi", () => ({
 const loginWithPasswordMock = vi.mocked(loginWithPassword);
 const requestOtpMock = vi.mocked(requestOtp);
 const verifyOtpMock = vi.mocked(verifyOtp);
+const sessionFixture = {
+  userId: "1",
+  user: {
+    id: 1,
+    name: "Kemal Karaduman",
+    phone: "05551234567",
+    roleId: 30,
+    roleName: "ADMIN",
+  },
+  permissions: [],
+};
 
 describe("useLoginFlow", () => {
   beforeEach(() => {
@@ -160,7 +171,7 @@ describe("useLoginFlow", () => {
     const onAuthenticated = vi.fn();
     requestOtpMock.mockResolvedValue();
     verifyOtpMock.mockResolvedValue();
-    loginWithPasswordMock.mockResolvedValue();
+    loginWithPasswordMock.mockResolvedValue(sessionFixture);
     const { result } = renderHook(() => useLoginFlow({ onAuthenticated }));
 
     await act(async () => {

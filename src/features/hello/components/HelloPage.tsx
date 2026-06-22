@@ -1,21 +1,30 @@
+import type { SessionData } from "@/features/auth/services/authApi";
+
 type HelloPageProps = {
-  onLogout: () => void;
+  session: SessionData;
 };
 
-export function HelloPage({ onLogout }: HelloPageProps) {
+export function HelloPage({ session }: HelloPageProps) {
   return (
-    <main className="hello-page">
-      <section className="hello-card">
-        <h1>Merhaba</h1>
-        <p>Geçici giriş sonrası ekranı.</p>
-        <button
-          className="auth-primary-button hello-logout-button"
-          type="button"
-          onClick={onLogout}
-        >
-          Çıkış Yap
-        </button>
-      </section>
-    </main>
+    <section className="home-panel">
+      <div className="content-card welcome-card">
+        <span>CRM</span>
+        <h1>Hoş geldiniz</h1>
+        <p>
+          Ümran CRM panelinde size tanımlı yetkilerle işlemlerinizi
+          gerçekleştirebilirsiniz.
+        </p>
+      </div>
+
+      <div className="content-card small-stat">
+        <span>Rol</span>
+        <strong>{session.user.roleName || "-"}</strong>
+      </div>
+
+      <div className="content-card small-stat">
+        <span>Yetki</span>
+        <strong>{session.permissions.length}</strong>
+      </div>
+    </section>
   );
 }

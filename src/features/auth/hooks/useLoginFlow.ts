@@ -8,6 +8,7 @@ import {
 import {
   loginWithPassword,
   requestOtp,
+  type SessionData,
   verifyOtp,
 } from "@/features/auth/services/authApi";
 
@@ -32,7 +33,7 @@ type PasswordSubmitResult =
     };
 
 type UseLoginFlowOptions = {
-  onAuthenticated?: () => void;
+  onAuthenticated?: (session: SessionData) => void;
 };
 
 type UseLoginFlowReturn = {
@@ -117,8 +118,8 @@ export function useLoginFlow(
     setIsPasswordSubmitting(true);
 
     try {
-      await loginWithPassword({ phone, password: result.data });
-      options.onAuthenticated?.();
+      const session = await loginWithPassword({ phone, password: result.data });
+      options.onAuthenticated?.(session);
     } catch {
       return { ok: false, messageKey: "passwordLoginFailedMessage" };
     } finally {
