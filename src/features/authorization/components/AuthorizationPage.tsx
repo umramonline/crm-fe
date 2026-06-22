@@ -400,13 +400,13 @@ export function AuthorizationPage({ permissions }: AuthorizationPageProps) {
                 <tbody>
                   {filteredMethods.map((method) => (
                     <tr key={method.id}>
-                      <td>
+                      <td data-label="İzin">
                         <strong>{method.name}</strong>
                         <span>{method.description}</span>
                       </td>
-                      <td>{method.method || "UI"}</td>
-                      <td>{method.path || "-"}</td>
-                      <td>
+                      <td data-label="Method">{method.method || "UI"}</td>
+                      <td data-label="Path">{method.path || "-"}</td>
+                      <td data-label="Aktif">
                         <input
                           type="checkbox"
                           disabled={!canUpdateRolePermissions}

@@ -727,6 +727,28 @@ select {
   }
 }
 
+@media (max-width: 760px) {
+  .permission-table-panel {
+    min-width: 0;
+    overflow: scroll;
+  }
+
+  .permission-table-scroll {
+    overflow: visible;
+  }
+
+  .permission-table {
+    min-width: 0;
+    border-collapse: separate;
+    border-spacing: 0 10px;
+  }
+
+  /* .permission-table thead {
+    display: none;
+  } */
+
+}
+
 @media (max-width: 640px) {
   .panel-content {
     padding: 12px;
