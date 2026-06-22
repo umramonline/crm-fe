@@ -18,6 +18,7 @@ import {
   type Role,
   type RolePermission,
 } from "@/features/authorization/services/authorizationApi";
+import type { Permission } from "@/features/auth/services/authApi";
 
 const httpMethods: HttpMethod[] = [
   "GET",
@@ -57,7 +58,11 @@ const emptyMethodForm: MethodForm = {
   path: "",
 };
 
-export function AuthorizationPage() {
+type AuthorizationPageProps = {
+  permissions: Permission[];
+};
+
+export function AuthorizationPage({ permissions }: AuthorizationPageProps) {
   const [roles, setRoles] = useState<Role[]>([]);
   const [modules, setModules] = useState<Module[]>([]);
   const [methods, setMethods] = useState<ModuleMethod[]>([]);
@@ -69,6 +74,29 @@ export function AuthorizationPage() {
   const [methodForm, setMethodForm] = useState<MethodForm>(emptyMethodForm);
   const [isLoading, setIsLoading] = useState(true);
   const [message, setMessage] = useState("");
+  const permissionNames = useMemo(
+    () => new Set(permissions.map((permission) => permission.name)),
+    [permissions],
+  );
+  const canViewModulesForm = permissionNames.has("modules.form");
+  const canViewMethodsForm = permissionNames.has("module_methods.form");
+  const canViewRolePermissionsForm = permissionNames.has("role_permissions.form");
+  const canListRoles = permissionNames.has("roles.list");
+  const canListModules = permissionNames.has("modules.list");
+  const canCreateModules = permissionNames.has("modules.create");
+  const canUpdateModules = permissionNames.has("modules.update");
+  const canDeleteModules = permissionNames.has("modules.delete");
+  const canListMethods = permissionNames.has("module_methods.list");
+  const canCreateMethods = permissionNames.has("module_methods.create");
+  const canUpdateMethods = permissionNames.has("module_methods.update");
+  const canDeleteMethods = permissionNames.has("module_methods.delete");
+  const canListRolePermissions = permissionNames.has("role_permissions.list");
+  const canUpdateRolePermissions = permissionNames.has("role_permissions.update");
+  const shouldLoadRoles = canViewRolePermissionsForm && canListRoles;
+  const shouldLoadModules =
+    canListModules && (canViewModulesForm || canViewMethodsForm);
+  const shouldLoadMethods =
+    canListMethods && (canViewMethodsForm || canViewRolePermissionsForm);
 
   const filteredMethods = useMemo(() => {
     if (selectedModuleId === 0) {
@@ -87,9 +115,9 @@ export function AuthorizationPage() {
 
       try {
         const [nextRoles, nextModules, nextMethods] = await Promise.all([
-          listRoles(),
-          listModules(),
-          listModuleMethods(),
+          shouldLoadRoles ? listRoles() : Promise.resolve([]),
+          shouldLoadModules ? listModules() : Promise.resolve([]),
+          shouldLoadMethods ? listModuleMethods() : Promise.resolve([]),
         ]);
 
         if (!isActive) {
@@ -121,13 +149,17 @@ export function AuthorizationPage() {
     return () => {
       isActive = false;
     };
-  }, []);
+  }, [shouldLoadMethods, shouldLoadModules, shouldLoadRoles]);
 
   useEffect(() => {
     let isActive = true;
 
     async function loadPermissions(): Promise<void> {
-      if (selectedRoleId === 0) {
+      if (
+        selectedRoleId === 0 ||
+        !canViewRolePermissionsForm ||
+        !canListRolePermissions
+      ) {
         setRolePermissions([]);
         setCheckedIds(new Set());
         return;
@@ -155,12 +187,12 @@ export function AuthorizationPage() {
     return () => {
       isActive = false;
     };
-  }, [selectedRoleId]);
+  }, [canListRolePermissions, canViewRolePermissionsForm, selectedRoleId]);
 
   async function reloadCatalog(nextModuleId = selectedModuleId): Promise<void> {
     const [nextModules, nextMethods] = await Promise.all([
-      listModules(),
-      listModuleMethods(),
+      shouldLoadModules ? listModules() : Promise.resolve([]),
+      shouldLoadMethods ? listModuleMethods() : Promise.resolve([]),
     ]);
 
     setModules(nextModules);
@@ -183,6 +215,11 @@ export function AuthorizationPage() {
       return;
     }
 
+    if ((moduleForm.id && !canUpdateModules) || (!moduleForm.id && !canCreateModules)) {
+      setMessage("Modül kaydetme yetkiniz bulunmuyor.");
+      return;
+    }
+
     try {
       const module = moduleForm.id
         ? await updateModule(moduleForm.id, name)
@@ -196,6 +233,11 @@ export function AuthorizationPage() {
   }
 
   async function handleModuleDelete(id: number): Promise<void> {
+    if (!canDeleteModules) {
+      setMessage("Modül silme yetkiniz bulunmuyor.");
+      return;
+    }
+
     if (!window.confirm("Modül silinsin mi?")) {
       return;
     }
@@ -213,6 +255,11 @@ export function AuthorizationPage() {
     event.preventDefault();
     if (methodForm.moduleId === 0 || methodForm.name.trim() === "") {
       setMessage("Method için modül ve isim zorunludur.");
+      return;
+    }
+
+    if ((methodForm.id && !canUpdateMethods) || (!methodForm.id && !canCreateMethods)) {
+      setMessage("Method kaydetme yetkiniz bulunmuyor.");
       return;
     }
 
@@ -237,6 +284,11 @@ export function AuthorizationPage() {
   }
 
   async function handleMethodDelete(id: number): Promise<void> {
+    if (!canDeleteMethods) {
+      setMessage("Method silme yetkiniz bulunmuyor.");
+      return;
+    }
+
     if (!window.confirm("Method silinsin mi?")) {
       return;
     }
@@ -264,6 +316,11 @@ export function AuthorizationPage() {
   }
 
   async function savePermissions(): Promise<void> {
+    if (!canUpdateRolePermissions) {
+      setMessage("Rol izinlerini güncelleme yetkiniz bulunmuyor.");
+      return;
+    }
+
     if (selectedRoleId === 0) {
       setMessage("Rol seçiniz.");
       return;
@@ -290,33 +347,47 @@ export function AuthorizationPage() {
 
       {isLoading ? (
         <div className="panel-card">Yükleniyor...</div>
+      ) : !canViewModulesForm &&
+        !canViewMethodsForm &&
+        !canViewRolePermissionsForm ? (
+        <div className="panel-card">Bu sayfada görüntüleyebileceğiniz form yok.</div>
       ) : (
         <div className="permission-layout">
+          {canViewRolePermissionsForm ? (
           <section className="panel-card permission-table-panel">
             <div className="panel-card-title">
               <h2>Rol İzinleri</h2>
+              {canUpdateRolePermissions ? (
               <button className="blue-button" type="button" onClick={() => void savePermissions()}>
                 Kaydet
               </button>
+              ) : null}
             </div>
 
-            <label className="panel-label" htmlFor="role-select">
-              Rol
-            </label>
-            <select
-              id="role-select"
-              className="panel-input"
-              value={selectedRoleId}
-              onChange={(event) => setSelectedRoleId(Number(event.target.value))}
-            >
-              {roles.map((role) => (
-                <option key={role.id} value={role.id}>
-                  {role.name}
-                </option>
-              ))}
-            </select>
+            {canListRoles ? (
+              <>
+                <label className="panel-label" htmlFor="role-select">
+                  Rol
+                </label>
+                <select
+                  id="role-select"
+                  className="panel-input"
+                  value={selectedRoleId}
+                  onChange={(event) => setSelectedRoleId(Number(event.target.value))}
+                >
+                  {roles.map((role) => (
+                    <option key={role.id} value={role.id}>
+                      {role.name}
+                    </option>
+                  ))}
+                </select>
+              </>
+            ) : (
+              <p className="muted-text">Rol listesini görme yetkiniz yok.</p>
+            )}
 
-            <div className="permission-table-scroll">
+            {canListMethods && canListRolePermissions ? (
+              <div className="permission-table-scroll">
               <table className="permission-table">
                 <thead>
                   <tr>
@@ -338,6 +409,7 @@ export function AuthorizationPage() {
                       <td>
                         <input
                           type="checkbox"
+                          disabled={!canUpdateRolePermissions}
                           checked={checkedIds.has(method.id)}
                           onChange={() => togglePermission(method.id)}
                         />
@@ -347,17 +419,26 @@ export function AuthorizationPage() {
                 </tbody>
               </table>
             </div>
+            ) : (
+              <p className="muted-text">
+                Rol izinleri tablosunu görüntülemek için gerekli listeleme
+                yetkileri bulunmuyor.
+              </p>
+            )}
 
             <small className="muted-text">
               Seçili role ait kayıtlı izin: {rolePermissions.length}
             </small>
           </section>
+          ) : null}
 
+          {canViewModulesForm ? (
           <section className="panel-card">
             <div className="panel-card-title">
               <h2>Modüller</h2>
             </div>
 
+            {canCreateModules || canUpdateModules ? (
             <form className="panel-form" onSubmit={(event) => void handleModuleSubmit(event)}>
               <label className="panel-label" htmlFor="module-name">
                 Modül Adı
@@ -385,7 +466,9 @@ export function AuthorizationPage() {
                 ) : null}
               </div>
             </form>
+            ) : null}
 
+            {canListModules ? (
             <div className="compact-list">
               {modules.map((module) => (
                 <div
@@ -409,26 +492,36 @@ export function AuthorizationPage() {
                     {module.name}
                   </button>
                   <span>
+                    {canUpdateModules ? (
                     <button
                       type="button"
                       onClick={() => setModuleForm({ id: module.id, name: module.name })}
                     >
                       Düzenle
                     </button>
+                    ) : null}
+                    {canDeleteModules ? (
                     <button type="button" onClick={() => void handleModuleDelete(module.id)}>
                       Sil
                     </button>
+                    ) : null}
                   </span>
                 </div>
               ))}
             </div>
+            ) : (
+              <p className="muted-text">Modül listesini görme yetkiniz yok.</p>
+            )}
           </section>
+          ) : null}
 
+          {canViewMethodsForm ? (
           <section className="panel-card method-panel">
             <div className="panel-card-title">
               <h2>Methodlar</h2>
             </div>
 
+            {canCreateMethods || canUpdateMethods ? (
             <form className="panel-form" onSubmit={(event) => void handleMethodSubmit(event)}>
               <label className="panel-label" htmlFor="method-module">
                 Modül
@@ -535,7 +628,9 @@ export function AuthorizationPage() {
                 ) : null}
               </div>
             </form>
+            ) : null}
 
+            {canListMethods ? (
             <div className="method-list">
               {filteredMethods.map((method) => (
                 <div className="method-item" key={method.id}>
@@ -547,6 +642,7 @@ export function AuthorizationPage() {
                     </small>
                   </div>
                   <span>
+                    {canUpdateMethods ? (
                     <button
                       type="button"
                       onClick={() =>
@@ -562,14 +658,21 @@ export function AuthorizationPage() {
                     >
                       Düzenle
                     </button>
+                    ) : null}
+                    {canDeleteMethods ? (
                     <button type="button" onClick={() => void handleMethodDelete(method.id)}>
                       Sil
                     </button>
+                    ) : null}
                   </span>
                 </div>
               ))}
             </div>
+            ) : (
+              <p className="muted-text">Method listesini görme yetkiniz yok.</p>
+            )}
           </section>
+          ) : null}
         </div>
       )}
     </section>

@@ -114,7 +114,7 @@ export function App() {
         onNavigate={(page) => navigateTo(pathFromPage(page))}
       >
         {activePage === "permissions" ? (
-          <AuthorizationPage />
+          <AuthorizationPage permissions={session.permissions} />
         ) : (
           <HelloPage session={session} />
         )}
