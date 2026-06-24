@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 
 import { AuthorizationPage } from "@/features/authorization/components/AuthorizationPage";
 import { LoginPage } from "@/features/auth/components/LoginPage";
@@ -13,7 +13,7 @@ import { AppLayout, type AppPage } from "@/shared/components/AppLayout";
 
 export function App() {
   const [path, setPath] = useState(() => window.location.pathname);
-  const [isCheckingSession, setIsCheckingSession] = useState(false);
+  const [isCheckingSession, setIsCheckingSession] = useState(true);
   const [session, setSession] = useState<SessionData | null>(null);
 
   useEffect(() => {
@@ -26,11 +26,12 @@ export function App() {
     return () => window.removeEventListener("popstate", handlePopState);
   }, []);
 
-  useEffect(() => {
-    if (path === "/") {
-      return;
-    }
+  const navigateTo = useCallback((nextPath: string): void => {
+    window.history.pushState(null, "", nextPath);
+    setPath(nextPath);
+  }, []);
 
+  useEffect(() => {
     let isActive = true;
 
     async function ensureSession(): Promise<void> {
@@ -40,16 +41,25 @@ export function App() {
         const nextSession = await getSession();
         if (isActive) {
           setSession(nextSession);
+          if (path === "/") {
+            navigateTo("/home");
+          }
         }
       } catch {
         try {
           const refreshedSession = await refreshSession();
           if (isActive) {
             setSession(refreshedSession);
+            if (path === "/") {
+              navigateTo("/home");
+            }
           }
         } catch {
           if (isActive) {
-            navigateTo("/");
+            setSession(null);
+            if (path !== "/") {
+              navigateTo("/");
+            }
           }
         }
       } finally {
@@ -64,7 +74,7 @@ export function App() {
     return () => {
       isActive = false;
     };
-  }, [path]);
+  }, [navigateTo, path]);
 
   function handleAuthenticated(nextSession: SessionData): void {
     setSession(nextSession);
@@ -80,22 +90,17 @@ export function App() {
     }
   }
 
-  function navigateTo(nextPath: string): void {
-    window.history.pushState(null, "", nextPath);
-    setPath(nextPath);
+  if (isCheckingSession) {
+    return (
+      <main className="hello-page">
+        <section className="hello-card">
+          <p>Oturum kontrol ediliyor...</p>
+        </section>
+      </main>
+    );
   }
 
   if (path !== "/") {
-    if (isCheckingSession) {
-      return (
-        <main className="hello-page">
-          <section className="hello-card">
-            <p>Oturum kontrol ediliyor...</p>
-          </section>
-        </main>
-      );
-    }
-
     if (!session) {
       return null;
     }
