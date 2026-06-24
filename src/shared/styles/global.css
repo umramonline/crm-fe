@@ -678,6 +678,47 @@ select {
   font-size: 11px;
 }
 
+.customer-table {
+  min-width: 1280px;
+}
+
+.customer-filter-row th {
+  background: #ffffff;
+}
+
+.customer-filter-form {
+  margin-bottom: 12px;
+}
+
+.customer-filter-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+}
+
+.customer-filter-actions .muted-text {
+  margin-left: auto;
+}
+
+.customer-pagination {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  justify-content: flex-end;
+  margin-top: 12px;
+}
+
+.table-sort-button {
+  border: 0;
+  padding: 0;
+  color: inherit;
+  font: inherit;
+  font-weight: 700;
+  background: transparent;
+  cursor: pointer;
+}
+
 .method-item > div {
   display: flex;
   min-width: 0;

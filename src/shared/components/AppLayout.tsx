@@ -3,10 +3,11 @@ import { useEffect, useState } from "react";
 
 import type { SessionData } from "@/features/auth/services/authApi";
 
-export type AppPage = "home" | "permissions";
+export type AppPage = "home" | "customers" | "permissions";
 
 type AppLayoutProps = {
   activePage: AppPage;
+  canViewCustomers: boolean;
   canViewPermissions: boolean;
   children: ReactNode;
   session: SessionData;
@@ -16,6 +17,7 @@ type AppLayoutProps = {
 
 export function AppLayout({
   activePage,
+  canViewCustomers,
   canViewPermissions,
   children,
   onLogout,
@@ -59,6 +61,21 @@ export function AppLayout({
             <span aria-hidden="true">◉</span>
             Anasayfa
           </button>
+
+          {canViewCustomers ? (
+            <button
+              className={
+                activePage === "customers"
+                  ? "panel-menu-item active"
+                  : "panel-menu-item"
+              }
+              type="button"
+              onClick={() => handleNavigate("customers")}
+            >
+              <span aria-hidden="true">👥</span>
+              Müşteriler
+            </button>
+          ) : null}
 
           {canViewPermissions ? (
             <button

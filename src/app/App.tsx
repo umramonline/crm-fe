@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 
 import { AuthorizationPage } from "@/features/authorization/components/AuthorizationPage";
 import { LoginPage } from "@/features/auth/components/LoginPage";
+import { CustomersPage } from "@/features/customers/components/CustomersPage";
 import {
   getSession,
   logout,
@@ -105,20 +106,26 @@ export function App() {
       return null;
     }
 
+    const canViewCustomers = session.permissions.some(
+      (permission) => permission.name === "customers.menu",
+    );
     const canViewPermissions = session.permissions.some(
       (permission) => permission.name === "authorization.menu",
     );
-    const activePage = pageFromPath(path, canViewPermissions);
+    const activePage = pageFromPath(path, canViewCustomers, canViewPermissions);
 
     return (
       <AppLayout
         activePage={activePage}
+        canViewCustomers={canViewCustomers}
         canViewPermissions={canViewPermissions}
         session={session}
         onLogout={() => void handleLogout()}
         onNavigate={(page) => navigateTo(pathFromPage(page))}
       >
-        {activePage === "permissions" ? (
+        {activePage === "customers" ? (
+          <CustomersPage permissions={session.permissions} />
+        ) : activePage === "permissions" ? (
           <AuthorizationPage permissions={session.permissions} />
         ) : (
           <HelloPage session={session} />
@@ -130,7 +137,15 @@ export function App() {
   return <LoginPage onAuthenticated={handleAuthenticated} />;
 }
 
-function pageFromPath(path: string, canViewPermissions: boolean): AppPage {
+function pageFromPath(
+  path: string,
+  canViewCustomers: boolean,
+  canViewPermissions: boolean,
+): AppPage {
+  if (path === "/customers" && canViewCustomers) {
+    return "customers";
+  }
+
   if (path === "/permissions" && canViewPermissions) {
     return "permissions";
   }
@@ -139,5 +154,9 @@ function pageFromPath(path: string, canViewPermissions: boolean): AppPage {
 }
 
 function pathFromPage(page: AppPage): string {
+  if (page === "customers") {
+    return "/customers";
+  }
+
   return page === "permissions" ? "/permissions" : "/home";
 }
