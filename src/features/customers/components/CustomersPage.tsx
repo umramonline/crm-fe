@@ -17,7 +17,7 @@ const situationOptions = [
 
 const sourceOptions = ["PlusCard", "Manuel"] as const;
 
-const typeOptions = ["Kurumsal", "Bireysel", "-"] as const;
+const typeOptions = ["Kurumsal", "Bireysel"] as const;
 
 type CustomerFilters = {
   situation: string;
