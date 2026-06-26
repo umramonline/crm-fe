@@ -398,7 +398,7 @@ export function AuthorizationPage({ permissions }: AuthorizationPageProps) {
                   </tr>
                 </thead>
                 <tbody>
-                  {filteredMethods.map((method) => (
+                  {methods.map((method) => (
                     <tr key={method.id}>
                       <td data-label="İzin">
                         <strong>{method.name}</strong>
