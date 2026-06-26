@@ -7,6 +7,7 @@ export type Customer = {
   ad: string;
   soyad: string;
   branchName: string;
+  zoneName: string;
   plusCardNo: string;
   credit: number;
   source: string;
@@ -39,6 +40,7 @@ export type CustomerListQuery = {
   ad?: string;
   soyad?: string;
   branchName?: string;
+  zoneName?: string;
   plusCardNo?: string;
   source?: string;
   city?: string;
@@ -70,6 +72,7 @@ export async function listCustomers(
       ad: query.ad || undefined,
       soyad: query.soyad || undefined,
       branch_name: query.branchName || undefined,
+      zone_name: query.zoneName || undefined,
       plus_card_no: query.plusCardNo || undefined,
       source: query.source || undefined,
       city: query.city || undefined,
@@ -110,6 +113,7 @@ function toCustomer(record: RawRecord): Customer {
     ad: stringValue(record.ad),
     soyad: stringValue(record.soyad),
     branchName: stringValue(record.branch_name),
+    zoneName: stringValue(record.zone_name),
     plusCardNo: stringValue(record.plus_card_no),
     credit: numberValue(record.credit),
     source: stringValue(record.source),

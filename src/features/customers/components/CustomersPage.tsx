@@ -26,6 +26,7 @@ type CustomerFilters = {
   ad: string;
   soyad: string;
   branchName: string;
+  zoneName: string;
   plusCardNo: string;
   source: string;
   city: string;
@@ -41,6 +42,7 @@ const emptyFilters: CustomerFilters = {
   ad: "",
   soyad: "",
   branchName: "",
+  zoneName: "",
   plusCardNo: "",
   source: "",
   city: "",
@@ -92,6 +94,7 @@ export function CustomersPage({ permissions }: CustomersPageProps) {
           ad: appliedFilters.ad,
           soyad: appliedFilters.soyad,
           branchName: appliedFilters.branchName,
+          zoneName: appliedFilters.zoneName,
           plusCardNo: appliedFilters.plusCardNo,
           source: appliedFilters.source,
           city: appliedFilters.city,
@@ -198,6 +201,7 @@ export function CustomersPage({ permissions }: CustomersPageProps) {
               <th>Yetkili İsmi</th>
               <th>Yetkili Soyismi</th>
               <th>Bayi</th>
+              <th>Bölge</th>
               <th>Plus Card No</th>
               <th>
                 <button
@@ -307,6 +311,18 @@ export function CustomersPage({ permissions }: CustomersPageProps) {
               <th>
                 <input
                   className="panel-input"
+                  value={draftFilters.zoneName}
+                  onChange={(event) =>
+                    setDraftFilters((current) => ({
+                      ...current,
+                      zoneName: event.target.value,
+                    }))
+                  }
+                />
+              </th>
+              <th>
+                <input
+                  className="panel-input"
                   value={draftFilters.plusCardNo}
                   onChange={(event) =>
                     setDraftFilters((current) => ({
@@ -408,6 +424,7 @@ export function CustomersPage({ permissions }: CustomersPageProps) {
                 <td>{customer.ad || "-"}</td>
                 <td>{customer.soyad || "-"}</td>
                 <td>{customer.branchName || "-"}</td>
+                <td>{customer.zoneName || "-"}</td>
                 <td>{customer.plusCardNo || "-"}</td>
                 <td>{formatCredit(customer.credit)}</td>
                 <td>{customer.source || "-"}</td>
