@@ -2,8 +2,10 @@ import { FormEvent, useEffect, useMemo, useState } from "react";
 
 import {
   listCustomers,
+  listZones,
   type Customer,
   type CustomerListQuery,
+  type Zone,
 } from "@/features/customers/services/customerApi";
 import type { Permission } from "@/features/auth/services/authApi";
 
@@ -26,7 +28,7 @@ type CustomerFilters = {
   ad: string;
   soyad: string;
   branchName: string;
-  zoneName: string;
+  zoneId: string;
   plusCardNo: string;
   source: string;
   city: string;
@@ -42,7 +44,7 @@ const emptyFilters: CustomerFilters = {
   ad: "",
   soyad: "",
   branchName: "",
-  zoneName: "",
+  zoneId: "",
   plusCardNo: "",
   source: "",
   city: "",
@@ -61,7 +63,9 @@ export function CustomersPage({ permissions }: CustomersPageProps) {
     [permissions],
   );
   const canListCustomers = permissionNames.has("customers.list");
+  const canListZones = permissionNames.has("customers.zones.list");
 
+  const [zones, setZones] = useState<Zone[]>([]);
   const [draftFilters, setDraftFilters] = useState<CustomerFilters>(emptyFilters);
   const [appliedFilters, setAppliedFilters] = useState<CustomerFilters>(emptyFilters);
   const [items, setItems] = useState<Customer[]>([]);
@@ -72,6 +76,33 @@ export function CustomersPage({ permissions }: CustomersPageProps) {
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc");
   const [isLoading, setIsLoading] = useState(false);
   const [message, setMessage] = useState("");
+
+  useEffect(() => {
+    if (!canListZones) {
+      return;
+    }
+
+    let isActive = true;
+
+    async function loadZones(): Promise<void> {
+      try {
+        const nextZones = await listZones();
+        if (isActive) {
+          setZones(nextZones);
+        }
+      } catch {
+        if (isActive) {
+          setMessage("Bölge listesi getirilemedi.");
+        }
+      }
+    }
+
+    void loadZones();
+
+    return () => {
+      isActive = false;
+    };
+  }, [canListZones]);
 
   useEffect(() => {
     if (!canListCustomers) {
@@ -94,7 +125,7 @@ export function CustomersPage({ permissions }: CustomersPageProps) {
           ad: appliedFilters.ad,
           soyad: appliedFilters.soyad,
           branchName: appliedFilters.branchName,
-          zoneName: appliedFilters.zoneName,
+          zoneId: appliedFilters.zoneId ? Number(appliedFilters.zoneId) : undefined,
           plusCardNo: appliedFilters.plusCardNo,
           source: appliedFilters.source,
           city: appliedFilters.city,
@@ -309,16 +340,24 @@ export function CustomersPage({ permissions }: CustomersPageProps) {
                 />
               </th>
               <th>
-                <input
+                <select
                   className="panel-input"
-                  value={draftFilters.zoneName}
+                  value={draftFilters.zoneId}
                   onChange={(event) =>
                     setDraftFilters((current) => ({
                       ...current,
-                      zoneName: event.target.value,
+                      zoneId: event.target.value,
                     }))
                   }
-                />
+                  disabled={!canListZones}
+                >
+                  <option value="">Tümü</option>
+                  {zones.map((zone) => (
+                    <option key={zone.id} value={zone.id}>
+                      {zone.name}
+                    </option>
+                  ))}
+                </select>
               </th>
               <th>
                 <input
@@ -412,7 +451,7 @@ export function CustomersPage({ permissions }: CustomersPageProps) {
           <tbody>
             {items.length === 0 && !isLoading ? (
               <tr>
-                <td colSpan={13}>Kayıt bulunamadı.</td>
+                <td colSpan={14}>Kayıt bulunamadı.</td>
               </tr>
             ) : null}
 

@@ -40,7 +40,7 @@ export type CustomerListQuery = {
   ad?: string;
   soyad?: string;
   branchName?: string;
-  zoneName?: string;
+  zoneId?: number;
   plusCardNo?: string;
   source?: string;
   city?: string;
@@ -59,6 +59,21 @@ type ApiEnvelope<T> = {
 
 type RawRecord = Record<string, unknown>;
 
+export type Zone = {
+  id: number;
+  name: string;
+};
+
+export async function listZones(): Promise<Zone[]> {
+  const response = await apiClient.get<ApiEnvelope<RawRecord>>("/api/v1/zones");
+  const items = (response.data.data?.items as RawRecord[] | undefined) ?? [];
+
+  return items.map((item) => ({
+    id: numberValue(item.id),
+    name: stringValue(item.name),
+  }));
+}
+
 export async function listCustomers(
   query: CustomerListQuery = {},
 ): Promise<CustomerListResult> {
@@ -72,7 +87,7 @@ export async function listCustomers(
       ad: query.ad || undefined,
       soyad: query.soyad || undefined,
       branch_name: query.branchName || undefined,
-      zone_name: query.zoneName || undefined,
+      zone_id: query.zoneId || undefined,
       plus_card_no: query.plusCardNo || undefined,
       source: query.source || undefined,
       city: query.city || undefined,
