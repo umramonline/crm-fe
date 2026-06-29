@@ -45,6 +45,8 @@ export type CustomerSearchResult = {
 
 export type CustomerValidationErrors = Record<string, string>;
 
+export type CustomerDataSource = "umramonline" | "backend";
+
 export type CreateCustomerPayload = {
   type: "bireysel" | "kurumsal";
   ad: string;
@@ -103,6 +105,7 @@ export type CustomerListResult = {
 export type CustomerListQuery = {
   page?: number;
   perPage?: number;
+  dataSource?: CustomerDataSource;
   situation?: string;
   unvan?: string;
   cep?: string;
@@ -231,8 +234,13 @@ export async function createCustomer(payload: CreateCustomerPayload): Promise<Cu
   }
 }
 
-export async function getCustomer(id: number): Promise<CustomerDetail> {
-  const response = await apiClient.get<ApiEnvelope<RawRecord>>(`/api/v1/customers/${id}`);
+export async function getCustomer(
+  id: number,
+  dataSource: CustomerDataSource = "umramonline",
+): Promise<CustomerDetail> {
+  const response = await apiClient.get<ApiEnvelope<RawRecord>>(
+    `${customerListPath(dataSource)}/${id}`,
+  );
 
   return toCustomerDetail(response.data.data ?? {});
 }
@@ -240,7 +248,7 @@ export async function getCustomer(id: number): Promise<CustomerDetail> {
 export async function listCustomers(
   query: CustomerListQuery = {},
 ): Promise<CustomerListResult> {
-  const response = await apiClient.get<ApiEnvelope<RawRecord>>("/api/v1/customers", {
+  const response = await apiClient.get<ApiEnvelope<RawRecord>>(customerListPath(query.dataSource), {
     params: {
       page: query.page,
       per_page: query.perPage,
@@ -263,6 +271,10 @@ export async function listCustomers(
   });
 
   return normalizeCustomerListResult(response.data.data ?? {});
+}
+
+function customerListPath(dataSource: CustomerDataSource = "umramonline"): string {
+  return dataSource === "backend" ? "/api/v1/customers/backend" : "/api/v1/customers/umramonline";
 }
 
 function toCustomerDetail(record: RawRecord): CustomerDetail {

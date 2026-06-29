@@ -13,6 +13,7 @@ import {
   type City,
   CustomerValidationError,
   type Customer,
+  type CustomerDataSource,
   type CustomerDetail,
   type CustomerListQuery,
   type CustomerValidationErrors,
@@ -49,6 +50,7 @@ const entryText = {
   createFailed: "Müşteri kaydı oluşturulamadı.",
   detailFailed: "Müşteri detayı getirilemedi.",
   detailTitle: "Müşteri Detayı",
+  dataSourceLabel: "Müşteri kaynağı",
 } as const;
 
 const turkeyMobilePhoneRegex = /^05[0-9]{9}$/;
@@ -124,15 +126,25 @@ export function CustomersPage({ permissions }: CustomersPageProps) {
     [permissions],
   );
   const canListCustomers = permissionNames.has("customers.list");
+  const canListUmramonlineCustomers =
+    canListCustomers || permissionNames.has("customers.list.umramonline");
+  const canListBackendCustomers =
+    canListCustomers || permissionNames.has("customers.list.backend");
   const canListZones = permissionNames.has("customers.zones.list");
   const canSearchCustomers = permissionNames.has("customers.search");
   const canViewCustomerDetail = permissionNames.has("customers.detail");
+  const canViewUmramonlineCustomerDetail =
+    canViewCustomerDetail || permissionNames.has("customers.detail.umramonline");
+  const canViewBackendCustomerDetail =
+    canViewCustomerDetail || permissionNames.has("customers.detail.backend");
   const canCreateCustomers = permissionNames.has("customers.create");
   const canListCities = permissionNames.has("customers.cities.list");
   const canListTowns = permissionNames.has("customers.towns.list");
   const canListBranches = permissionNames.has("customers.branches.list");
 
   const [zones, setZones] = useState<Zone[]>([]);
+  const [customerDataSource, setCustomerDataSource] =
+    useState<CustomerDataSource>("umramonline");
   const [cities, setCities] = useState<City[]>([]);
   const [towns, setTowns] = useState<Town[]>([]);
   const [branches, setBranches] = useState<Branch[]>([]);
@@ -159,6 +171,27 @@ export function CustomersPage({ permissions }: CustomersPageProps) {
   const [isCreatingCustomer, setIsCreatingCustomer] = useState(false);
   const [createErrors, setCreateErrors] = useState<CustomerValidationErrors>({});
   const [selectedCustomerDetail, setSelectedCustomerDetail] = useState<CustomerDetail | null>(null);
+  const isBackendDataSource = customerDataSource === "backend";
+  const canListSelectedSource = isBackendDataSource
+    ? canListBackendCustomers
+    : canListUmramonlineCustomers;
+  const canViewSelectedSourceDetail = isBackendDataSource
+    ? canViewBackendCustomerDetail
+    : canViewUmramonlineCustomerDetail;
+
+  useEffect(() => {
+    if (customerDataSource === "umramonline" && !canListUmramonlineCustomers && canListBackendCustomers) {
+      setCustomerDataSource("backend");
+    }
+
+    if (customerDataSource === "backend" && !canListBackendCustomers && canListUmramonlineCustomers) {
+      setCustomerDataSource("umramonline");
+    }
+  }, [
+    canListBackendCustomers,
+    canListUmramonlineCustomers,
+    customerDataSource,
+  ]);
 
   useEffect(() => {
     if (!canListZones) {
@@ -256,7 +289,7 @@ export function CustomersPage({ permissions }: CustomersPageProps) {
   }, [canListTowns, isCreateModalOpen, newCustomerForm.ilKodu]);
 
   useEffect(() => {
-    if (!canListCustomers) {
+    if (!canListSelectedSource) {
       return;
     }
 
@@ -270,20 +303,24 @@ export function CustomersPage({ permissions }: CustomersPageProps) {
         const result = await listCustomers({
           page: currentPage,
           perPage: 10,
-          situation: appliedFilters.situation,
+          dataSource: customerDataSource,
+          situation: isBackendDataSource ? "" : appliedFilters.situation,
           unvan: appliedFilters.unvan,
           cep: appliedFilters.cep,
           ad: appliedFilters.ad,
           soyad: appliedFilters.soyad,
           branchName: appliedFilters.branchName,
-          zoneId: appliedFilters.zoneId ? Number(appliedFilters.zoneId) : undefined,
-          plusCardNo: appliedFilters.plusCardNo,
-          source: appliedFilters.source,
+          zoneId:
+            !isBackendDataSource && appliedFilters.zoneId
+              ? Number(appliedFilters.zoneId)
+              : undefined,
+          plusCardNo: isBackendDataSource ? "" : appliedFilters.plusCardNo,
+          source: isBackendDataSource ? "" : appliedFilters.source,
           city: appliedFilters.city,
           town: appliedFilters.town,
           createdAt: appliedFilters.createdAt,
           type: appliedFilters.type,
-          sortBy,
+          sortBy: sortBy === "created_at" ? sortBy : isBackendDataSource ? "" : sortBy,
           sortOrder,
         });
 
@@ -312,7 +349,15 @@ export function CustomersPage({ permissions }: CustomersPageProps) {
     return () => {
       isActive = false;
     };
-  }, [appliedFilters, canListCustomers, currentPage, sortBy, sortOrder]);
+  }, [
+    appliedFilters,
+    canListSelectedSource,
+    currentPage,
+    customerDataSource,
+    isBackendDataSource,
+    sortBy,
+    sortOrder,
+  ]);
 
   function handleFilterSubmit(event: FormEvent<HTMLFormElement>): void {
     event.preventDefault();
@@ -328,6 +373,16 @@ export function CustomersPage({ permissions }: CustomersPageProps) {
     setSortOrder("desc");
   }
 
+  function handleCustomerDataSourceChange(nextDataSource: CustomerDataSource): void {
+    setCustomerDataSource(nextDataSource);
+    setDraftFilters(emptyFilters);
+    setAppliedFilters(emptyFilters);
+    setCurrentPage(1);
+    setSortBy("");
+    setSortOrder("desc");
+    setSelectedCustomerDetail(null);
+  }
+
   async function handleOpenCustomerDetail(customerId: number): Promise<void> {
     if (!customerId) {
       setMessage(entryText.detailFailed);
@@ -337,7 +392,7 @@ export function CustomersPage({ permissions }: CustomersPageProps) {
     setMessage("");
 
     try {
-      const customer = await getCustomer(customerId);
+      const customer = await getCustomer(customerId, customerDataSource);
       setSelectedCustomerDetail(customer);
     } catch {
       setMessage(entryText.detailFailed);
@@ -472,6 +527,10 @@ export function CustomersPage({ permissions }: CustomersPageProps) {
   }
 
   function handleSort(column: "credit" | "created_at"): void {
+    if (isBackendDataSource && column !== "created_at") {
+      return;
+    }
+
     if (sortBy === column) {
       setSortOrder((current) => (current === "asc" ? "desc" : "asc"));
       return;
@@ -482,7 +541,7 @@ export function CustomersPage({ permissions }: CustomersPageProps) {
     setCurrentPage(1);
   }
 
-  if (!canListCustomers) {
+  if (!canListUmramonlineCustomers && !canListBackendCustomers) {
     return (
       <section className="panel-card">
         <div className="page-title">
@@ -799,6 +858,23 @@ export function CustomersPage({ permissions }: CustomersPageProps) {
 
       <form className="customer-filter-form" onSubmit={handleFilterSubmit}>
         <div className="customer-filter-actions">
+          <label className="customer-source-select-label">
+            {entryText.dataSourceLabel}
+            <select
+              className="panel-input"
+              value={customerDataSource}
+              onChange={(event) =>
+                handleCustomerDataSourceChange(event.target.value as CustomerDataSource)
+              }
+            >
+              <option value="umramonline" disabled={!canListUmramonlineCustomers}>
+                Umramonline
+              </option>
+              <option value="backend" disabled={!canListBackendCustomers}>
+                Backend
+              </option>
+            </select>
+          </label>
           <button
             className="blue-button"
             type="button"
@@ -830,18 +906,20 @@ export function CustomersPage({ permissions }: CustomersPageProps) {
               <th>Yetkili İsmi</th>
               <th>Yetkili Soyismi</th>
               <th>Bayi</th>
-              <th>Bölge</th>
-              <th>Plus Card No</th>
-              <th>
-                <button
-                  className="table-sort-button"
-                  type="button"
-                  onClick={() => handleSort("credit")}
-                >
-                  Plus Card Bakiyesi
-                  {sortBy === "credit" ? (sortOrder === "asc" ? " ↑" : " ↓") : ""}
-                </button>
-              </th>
+              {!isBackendDataSource ? <th>Bölge</th> : null}
+              {!isBackendDataSource ? <th>Plus Card No</th> : null}
+              {!isBackendDataSource ? (
+                <th>
+                  <button
+                    className="table-sort-button"
+                    type="button"
+                    onClick={() => handleSort("credit")}
+                  >
+                    Plus Card Bakiyesi
+                    {sortBy === "credit" ? (sortOrder === "asc" ? " ↑" : " ↓") : ""}
+                  </button>
+                </th>
+              ) : null}
               <th>Müşteri Kaynağı</th>
               <th>İl</th>
               <th>İlçe</th>
@@ -860,23 +938,25 @@ export function CustomersPage({ permissions }: CustomersPageProps) {
             <tr className="customer-filter-row">
               <th />
               <th>
-                <select
-                  className="panel-input"
-                  value={draftFilters.situation}
-                  onChange={(event) =>
-                    setDraftFilters((current) => ({
-                      ...current,
-                      situation: event.target.value,
-                    }))
-                  }
-                >
-                  <option value="">Tümü</option>
-                  {situationOptions.map((option) => (
-                    <option key={option} value={option}>
-                      {option}
-                    </option>
-                  ))}
-                </select>
+                {!isBackendDataSource ? (
+                  <select
+                    className="panel-input"
+                    value={draftFilters.situation}
+                    onChange={(event) =>
+                      setDraftFilters((current) => ({
+                        ...current,
+                        situation: event.target.value,
+                      }))
+                    }
+                  >
+                    <option value="">Tümü</option>
+                    {situationOptions.map((option) => (
+                      <option key={option} value={option}>
+                        {option}
+                      </option>
+                    ))}
+                  </select>
+                ) : null}
               </th>
               <th>
                 <input
@@ -938,57 +1018,63 @@ export function CustomersPage({ permissions }: CustomersPageProps) {
                   }
                 />
               </th>
+              {!isBackendDataSource ? (
+                <th>
+                  <select
+                    className="panel-input"
+                    value={draftFilters.zoneId}
+                    onChange={(event) =>
+                      setDraftFilters((current) => ({
+                        ...current,
+                        zoneId: event.target.value,
+                      }))
+                    }
+                    disabled={!canListZones}
+                  >
+                    <option value="">Tümü</option>
+                    {zones.map((zone) => (
+                      <option key={zone.id} value={zone.id}>
+                        {zone.name}
+                      </option>
+                    ))}
+                  </select>
+                </th>
+              ) : null}
+              {!isBackendDataSource ? (
+                <th>
+                  <input
+                    className="panel-input"
+                    value={draftFilters.plusCardNo}
+                    onChange={(event) =>
+                      setDraftFilters((current) => ({
+                        ...current,
+                        plusCardNo: event.target.value,
+                      }))
+                    }
+                  />
+                </th>
+              ) : null}
+              {!isBackendDataSource ? <th /> : null}
               <th>
-                <select
-                  className="panel-input"
-                  value={draftFilters.zoneId}
-                  onChange={(event) =>
-                    setDraftFilters((current) => ({
-                      ...current,
-                      zoneId: event.target.value,
-                    }))
-                  }
-                  disabled={!canListZones}
-                >
-                  <option value="">Tümü</option>
-                  {zones.map((zone) => (
-                    <option key={zone.id} value={zone.id}>
-                      {zone.name}
-                    </option>
-                  ))}
-                </select>
-              </th>
-              <th>
-                <input
-                  className="panel-input"
-                  value={draftFilters.plusCardNo}
-                  onChange={(event) =>
-                    setDraftFilters((current) => ({
-                      ...current,
-                      plusCardNo: event.target.value,
-                    }))
-                  }
-                />
-              </th>
-              <th />
-              <th>
-                <select
-                  className="panel-input"
-                  value={draftFilters.source}
-                  onChange={(event) =>
-                    setDraftFilters((current) => ({
-                      ...current,
-                      source: event.target.value,
-                    }))
-                  }
-                >
-                  <option value="">Tümü</option>
-                  {sourceOptions.map((option) => (
-                    <option key={option} value={option}>
-                      {option}
-                    </option>
-                  ))}
-                </select>
+                {!isBackendDataSource ? (
+                  <select
+                    className="panel-input"
+                    value={draftFilters.source}
+                    onChange={(event) =>
+                      setDraftFilters((current) => ({
+                        ...current,
+                        source: event.target.value,
+                      }))
+                    }
+                  >
+                    <option value="">Tümü</option>
+                    {sourceOptions.map((option) => (
+                      <option key={option} value={option}>
+                        {option}
+                      </option>
+                    ))}
+                  </select>
+                ) : null}
               </th>
               <th>
                 <input
@@ -1050,7 +1136,7 @@ export function CustomersPage({ permissions }: CustomersPageProps) {
           <tbody>
             {items.length === 0 && !isLoading ? (
               <tr>
-                <td colSpan={15}>Kayıt bulunamadı.</td>
+                <td colSpan={isBackendDataSource ? 12 : 15}>Kayıt bulunamadı.</td>
               </tr>
             ) : null}
 
@@ -1061,7 +1147,7 @@ export function CustomersPage({ permissions }: CustomersPageProps) {
                     className="customer-action-button"
                     type="button"
                     aria-label="Müşteri detayını görüntüle"
-                    disabled={!canViewCustomerDetail}
+                    disabled={!canViewSelectedSourceDetail}
                     onClick={() => void handleOpenCustomerDetail(customer.id)}
                   >
                     ⓘ
@@ -1073,9 +1159,9 @@ export function CustomersPage({ permissions }: CustomersPageProps) {
                 <td>{customer.ad || "-"}</td>
                 <td>{customer.soyad || "-"}</td>
                 <td>{customer.branchName || "-"}</td>
-                <td>{customer.zoneName || "-"}</td>
-                <td>{customer.plusCardNo || "-"}</td>
-                <td>{formatCredit(customer.credit)}</td>
+                {!isBackendDataSource ? <td>{customer.zoneName || "-"}</td> : null}
+                {!isBackendDataSource ? <td>{customer.plusCardNo || "-"}</td> : null}
+                {!isBackendDataSource ? <td>{formatCredit(customer.credit)}</td> : null}
                 <td>{customer.source || "-"}</td>
                 <td>{customer.city || "-"}</td>
                 <td>{customer.town || "-"}</td>
