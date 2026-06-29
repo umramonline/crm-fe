@@ -620,6 +620,7 @@ export function CustomersPage({ permissions }: CustomersPageProps) {
                         className="panel-input"
                         inputMode="numeric"
                         pattern="05[0-9]{9}"
+                        maxLength={11}
                         placeholder="05XXXXXXXXX"
                         value={newCustomerForm.telefon}
                         onChange={(event) => updateNewCustomerField("telefon", event.target.value)}
