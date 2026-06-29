@@ -15,6 +15,7 @@ export type Customer = {
   city: string;
   town: string;
   createdAt: string;
+  vehicleStockCount: number | null;
   type: string;
 };
 
@@ -159,7 +160,7 @@ export type CustomerListQuery = {
   town?: string;
   createdAt?: string;
   type?: string;
-  sortBy?: "credit" | "created_at" | "";
+  sortBy?: "credit" | "created_at" | "vehicle_stock_count" | "";
   sortOrder?: "asc" | "desc";
 };
 
@@ -468,6 +469,7 @@ function toCustomer(record: RawRecord): Customer {
     city: stringValue(record.city),
     town: stringValue(record.town),
     createdAt: stringValue(record.created_at),
+    vehicleStockCount: nullableNumberValue(record.vehicle_stock_count),
     type: stringValue(record.type),
   };
 }

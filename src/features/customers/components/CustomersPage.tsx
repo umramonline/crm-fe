@@ -320,7 +320,12 @@ export function CustomersPage({ permissions }: CustomersPageProps) {
           town: appliedFilters.town,
           createdAt: appliedFilters.createdAt,
           type: appliedFilters.type,
-          sortBy: sortBy === "created_at" ? sortBy : isBackendDataSource ? "" : sortBy,
+          sortBy:
+            sortBy === "created_at" || sortBy === "vehicle_stock_count"
+              ? sortBy
+              : isBackendDataSource
+                ? ""
+                : sortBy,
           sortOrder,
         });
 
@@ -531,8 +536,8 @@ export function CustomersPage({ permissions }: CustomersPageProps) {
     }
   }
 
-  function handleSort(column: "credit" | "created_at"): void {
-    if (isBackendDataSource && column !== "created_at") {
+  function handleSort(column: "credit" | "created_at" | "vehicle_stock_count"): void {
+    if (isBackendDataSource && column !== "created_at" && column !== "vehicle_stock_count") {
       return;
     }
 
@@ -913,6 +918,18 @@ export function CustomersPage({ permissions }: CustomersPageProps) {
               <th>Yetkili Telefonu</th>
               <th>Yetkili İsmi</th>
               <th>Yetkili Soyismi</th>
+              {isBackendDataSource ? (
+                <th>
+                  <button
+                    className="table-sort-button"
+                    type="button"
+                    onClick={() => handleSort("vehicle_stock_count")}
+                  >
+                    Araç Stok Adedi
+                    {sortBy === "vehicle_stock_count" ? (sortOrder === "asc" ? " ↑" : " ↓") : ""}
+                  </button>
+                </th>
+              ) : null}
               <th>Bayi</th>
               {!isBackendDataSource ? <th>Bölge</th> : null}
               {!isBackendDataSource ? <th>Plus Card No</th> : null}
@@ -978,6 +995,7 @@ export function CustomersPage({ permissions }: CustomersPageProps) {
                   }
                 />
               </th>
+              {isBackendDataSource ? <th /> : null}
               <th>
                 <input
                   className="panel-input"
@@ -1144,7 +1162,7 @@ export function CustomersPage({ permissions }: CustomersPageProps) {
           <tbody>
             {items.length === 0 && !isLoading ? (
               <tr>
-                <td colSpan={isBackendDataSource ? 12 : 15}>Kayıt bulunamadı.</td>
+                <td colSpan={isBackendDataSource ? 13 : 15}>Kayıt bulunamadı.</td>
               </tr>
             ) : null}
 
@@ -1166,6 +1184,7 @@ export function CustomersPage({ permissions }: CustomersPageProps) {
                 <td>{customer.cep || "-"}</td>
                 <td>{customer.ad || "-"}</td>
                 <td>{customer.soyad || "-"}</td>
+                {isBackendDataSource ? <td>{formatVehicleStockCount(customer.vehicleStockCount)}</td> : null}
                 <td>{customer.branchName || "-"}</td>
                 {!isBackendDataSource ? <td>{customer.zoneName || "-"}</td> : null}
                 {!isBackendDataSource ? <td>{customer.plusCardNo || "-"}</td> : null}
@@ -1212,6 +1231,16 @@ function navigateToFullRegistration(customerId: number): void {
 }
 
 function formatCredit(value: number): string {
+  return new Intl.NumberFormat("tr-TR", {
+    maximumFractionDigits: 0,
+  }).format(value);
+}
+
+function formatVehicleStockCount(value: number | null): string {
+  if (value === null) {
+    return "-";
+  }
+
   return new Intl.NumberFormat("tr-TR", {
     maximumFractionDigits: 0,
   }).format(value);
