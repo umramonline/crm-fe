@@ -27,6 +27,8 @@ type FullRegistrationForm = {
   cep: string;
   ad: string;
   soyad: string;
+  unvan: string;
+  corporateSector: string;
   tcNo: string;
   dogumTarihi: string;
   eposta: string;
@@ -35,6 +37,8 @@ type FullRegistrationForm = {
   classifiedsWebsiteLink: string;
   vehicleStockCount: string;
   branchId: string;
+  vergiNo: string;
+  vergiDairesi: string;
   telephones: CustomerTelephone[];
   ilKodu: string;
   ilceKodu: string;
@@ -47,6 +51,8 @@ const emptyFullRegistrationForm: FullRegistrationForm = {
   cep: "",
   ad: "",
   soyad: "",
+  unvan: "",
+  corporateSector: "",
   tcNo: "",
   dogumTarihi: "",
   eposta: "",
@@ -55,6 +61,8 @@ const emptyFullRegistrationForm: FullRegistrationForm = {
   classifiedsWebsiteLink: "",
   vehicleStockCount: "",
   branchId: "",
+  vergiNo: "",
+  vergiDairesi: "",
   telephones: [],
   ilKodu: "",
   ilceKodu: "",
@@ -65,6 +73,18 @@ const emptyFullRegistrationForm: FullRegistrationForm = {
 const customerTextMaxLength = 255;
 const telephoneTitleMaxLength = 255;
 const turkeyMobilePhoneRegex = /^05[0-9]{9}$/;
+const corporateSectorOptions = [
+  "Teknoloji",
+  "İnşaat",
+  "Otomotiv",
+  "Gıda",
+  "Tekstil",
+  "Sağlık",
+  "Eğitim",
+  "Finans",
+  "Turizm",
+  "Diğer",
+];
 
 export function CustomerFullRegistrationPage({
   customerId,
@@ -100,6 +120,8 @@ export function CustomerFullRegistrationPage({
           cep: customer.cep,
           ad: customer.ad,
           soyad: customer.soyad,
+          unvan: customer.unvan,
+          corporateSector: customer.corporateSector,
           tcNo: customer.tcNo,
           dogumTarihi: customer.dogumTarihi,
           eposta: customer.eposta,
@@ -109,6 +131,8 @@ export function CustomerFullRegistrationPage({
           vehicleStockCount:
             customer.vehicleStockCount === null ? "" : String(customer.vehicleStockCount),
           branchId: customer.branchId === null ? "" : String(customer.branchId),
+          vergiNo: customer.vergiNo,
+          vergiDairesi: customer.vergiDairesi,
           telephones: customer.telephones,
           ilKodu: customer.ilKodu,
           ilceKodu: customer.ilceKodu,
@@ -232,6 +256,8 @@ export function CustomerFullRegistrationPage({
         cep: form.cep.trim(),
         ad: form.ad.trim(),
         soyad: form.soyad.trim(),
+        unvan: form.type === "kurumsal" ? form.unvan.trim() : "",
+        corporateSector: form.type === "kurumsal" ? form.corporateSector : "",
         tcNo: form.tcNo.trim(),
         dogumTarihi: form.dogumTarihi,
         eposta: form.eposta.trim(),
@@ -240,6 +266,8 @@ export function CustomerFullRegistrationPage({
         classifiedsWebsiteLink: form.classifiedsWebsiteLink.trim(),
         vehicleStockCount: Number(form.vehicleStockCount),
         branchId: Number(form.branchId),
+        vergiNo: form.type === "kurumsal" ? form.vergiNo.trim() : "",
+        vergiDairesi: form.type === "kurumsal" ? form.vergiDairesi.trim() : "",
         telephones: form.telephones,
         ilKodu: form.ilKodu,
         ilceKodu: form.ilceKodu,
@@ -287,21 +315,38 @@ export function CustomerFullRegistrationPage({
               ]}
               error={errors.type}
             />
-            <FormInput label="Cep *" value={form.cep} onChange={(value) => updateField("cep", value)} error={errors.cep} maxLength={11} />
+            <FormInput
+              label="Cep *"
+              value={form.cep}
+              onChange={(value) => updateField("cep", value)}
+              error={errors.cep}
+              isPhone
+              maxLength={11}
+            />
             <FormInput label="Ad *" value={form.ad} onChange={(value) => updateField("ad", value)} error={errors.ad} />
             <FormInput label="Soyad *" value={form.soyad} onChange={(value) => updateField("soyad", value)} error={errors.soyad} />
-            <FormInput label="T.C. No" value={form.tcNo} onChange={(value) => updateField("tcNo", value)} error={errors.tc_no} />
-            <FormInput label="Doğum Tarihi" type="date" value={form.dogumTarihi} onChange={(value) => updateField("dogumTarihi", value)} error={errors.dogum_tarihi} />
+            {form.type === "bireysel" ? (
+              <>
+                <FormInput label="T.C. No" value={form.tcNo} onChange={(value) => updateField("tcNo", value)} error={errors.tc_no} />
+                <FormInput label="Doğum Tarihi" type="date" value={form.dogumTarihi} onChange={(value) => updateField("dogumTarihi", value)} error={errors.dogum_tarihi} />
+              </>
+            ) : (
+              <>
+                <FormInput label="Ünvan *" value={form.unvan} onChange={(value) => updateField("unvan", value)} error={errors.unvan} />
+                <FormSelect
+                  label="Sektör *"
+                  value={form.corporateSector}
+                  onChange={(value) => updateField("corporateSector", value)}
+                  options={corporateSectorOptions.map((sector) => ({ value: sector, label: sector }))}
+                  error={errors.corporate_sector}
+                />
+              </>
+            )}
           </div>
         ) : null}
 
         {step === 2 ? (
           <div className="customer-entry-form">
-            <FormInput label="E-posta" value={form.eposta} onChange={(value) => updateField("eposta", value)} error={errors.eposta} />
-            <FormInput label="Website" value={form.website} onChange={(value) => updateField("website", value)} error={errors.website} />
-            <FormInput label="Google Map Link" value={form.googleMapLink} onChange={(value) => updateField("googleMapLink", value)} error={errors.google_map_link} />
-            <FormInput label="İlan Sitesi Linki" value={form.classifiedsWebsiteLink} onChange={(value) => updateField("classifiedsWebsiteLink", value)} error={errors.classifieds_website_link} />
-            <FormInput label="Araç Stok Adedi *" type="number" value={form.vehicleStockCount} onChange={(value) => updateField("vehicleStockCount", value)} error={errors.vehicle_stock_count} />
             <FormSelect
               label="Bayi *"
               value={form.branchId}
@@ -309,6 +354,17 @@ export function CustomerFullRegistrationPage({
               options={branches.map((branch) => ({ value: String(branch.id), label: branch.name }))}
               error={errors.branch_id}
             />
+            <FormInput label="E-posta" value={form.eposta} onChange={(value) => updateField("eposta", value)} error={errors.eposta} />
+            <FormInput label="Website" value={form.website} onChange={(value) => updateField("website", value)} error={errors.website} />
+            <FormInput label="Google Map Link" value={form.googleMapLink} onChange={(value) => updateField("googleMapLink", value)} error={errors.google_map_link} />
+            <FormInput label="İlan Sitesi Linki" value={form.classifiedsWebsiteLink} onChange={(value) => updateField("classifiedsWebsiteLink", value)} error={errors.classifieds_website_link} />
+            <FormInput label="Araç Stok Adedi *" type="number" value={form.vehicleStockCount} onChange={(value) => updateField("vehicleStockCount", value)} error={errors.vehicle_stock_count} />
+            {form.type === "kurumsal" ? (
+              <>
+                <FormInput label="Vergi No *" value={form.vergiNo} onChange={(value) => updateField("vergiNo", value)} error={errors.vergi_no} />
+                <FormInput label="Vergi Dairesi *" value={form.vergiDairesi} onChange={(value) => updateField("vergiDairesi", value)} error={errors.vergi_dairesi} />
+              </>
+            ) : null}
           </div>
         ) : null}
 
@@ -321,7 +377,7 @@ export function CustomerFullRegistrationPage({
             {form.telephones.map((telephone, index) => (
               <div className="full-registration-phone-row" key={`${index}-${telephone.id ?? 0}`}>
                 <FormInput label="Cep telefonu başlığı" value={telephone.title} onChange={(value) => updateTelephone(index, "title", value)} />
-                <FormInput label="Cep telefonu" value={telephone.phoneNumber} onChange={(value) => updateTelephone(index, "phoneNumber", value)} />
+                <FormInput label="Cep telefonu" value={telephone.phoneNumber} onChange={(value) => updateTelephone(index, "phoneNumber", value)} isPhone />
                 <button className="gray-button" type="button" onClick={() => removeTelephone(index)}>
                   Sil
                 </button>
@@ -378,6 +434,7 @@ type FormInputProps = {
   error?: string;
   type?: string;
   maxLength?: number;
+  isPhone?: boolean;
 };
 
 function FormInput({
@@ -387,6 +444,7 @@ function FormInput({
   error,
   type = "text",
   maxLength = customerTextMaxLength,
+  isPhone = false,
 }: FormInputProps) {
   return (
     <label className="field-label">
@@ -394,7 +452,10 @@ function FormInput({
       <input
         className="panel-input"
         type={type}
-        maxLength={type === "number" ? undefined : maxLength}
+        inputMode={isPhone ? "numeric" : undefined}
+        pattern={isPhone ? "05[0-9]{9}" : undefined}
+        maxLength={type === "number" ? undefined : isPhone ? 11 : maxLength}
+        placeholder={isPhone ? "05XXXXXXXXX" : undefined}
         value={value}
         onChange={(event) => onChange(event.target.value)}
       />
@@ -438,7 +499,15 @@ function validateStep(step: 1 | 2 | 3 | 4, form: FullRegistrationForm): Customer
     validateMaxLength(errors, "ad", form.ad, "Ad");
     requireField(errors, "soyad", form.soyad, "Soyad zorunludur.");
     validateMaxLength(errors, "soyad", form.soyad, "Soyad");
-    validateMaxLength(errors, "tc_no", form.tcNo, "T.C. no");
+    if (form.type === "bireysel") {
+      validateMaxLength(errors, "tc_no", form.tcNo, "T.C. no");
+    }
+    if (form.type === "kurumsal") {
+      requireField(errors, "unvan", form.unvan, "Ünvan zorunludur.");
+      validateMaxLength(errors, "unvan", form.unvan, "Ünvan");
+      requireField(errors, "corporate_sector", form.corporateSector, "Sektör zorunludur.");
+      validateMaxLength(errors, "corporate_sector", form.corporateSector, "Sektör");
+    }
   }
 
   if (step === 2) {
@@ -451,12 +520,18 @@ function validateStep(step: 1 | 2 | 3 | 4, form: FullRegistrationForm): Customer
       errors.vehicle_stock_count = "Araç stok adedi 0 veya daha büyük olmalıdır.";
     }
     requireField(errors, "branch_id", form.branchId, "Bayi zorunludur.");
+    if (form.type === "kurumsal") {
+      requireField(errors, "vergi_no", form.vergiNo, "Vergi no zorunludur.");
+      validateMaxLength(errors, "vergi_no", form.vergiNo, "Vergi no");
+      requireField(errors, "vergi_dairesi", form.vergiDairesi, "Vergi dairesi zorunludur.");
+      validateMaxLength(errors, "vergi_dairesi", form.vergiDairesi, "Vergi dairesi");
+    }
   }
 
   if (step === 3) {
     form.telephones.forEach((telephone) => {
       if (telephone.phoneNumber.trim() || telephone.title.trim()) {
-        validateMaxLength(errors, "telephones", telephone.phoneNumber, "Telefon");
+        validateOptionalPhone(errors, "telephones", telephone.phoneNumber);
         validateMaxLength(errors, "telephones", telephone.title, "Telefon başlığı", telephoneTitleMaxLength);
       }
     });
@@ -482,7 +557,16 @@ function validateAll(form: FullRegistrationForm): CustomerValidationErrors {
 }
 
 function firstInvalidStep(errors: CustomerValidationErrors): 1 | 2 | 3 | 4 {
-  if (errors.type || errors.cep || errors.ad || errors.soyad || errors.tc_no || errors.dogum_tarihi) {
+  if (
+    errors.type ||
+    errors.cep ||
+    errors.ad ||
+    errors.soyad ||
+    errors.tc_no ||
+    errors.dogum_tarihi ||
+    errors.unvan ||
+    errors.corporate_sector
+  ) {
     return 1;
   }
   if (
@@ -491,7 +575,9 @@ function firstInvalidStep(errors: CustomerValidationErrors): 1 | 2 | 3 | 4 {
     errors.google_map_link ||
     errors.classifieds_website_link ||
     errors.vehicle_stock_count ||
-    errors.branch_id
+    errors.branch_id ||
+    errors.vergi_no ||
+    errors.vergi_dairesi
   ) {
     return 2;
   }
@@ -514,6 +600,12 @@ function requireField(
 
 function validatePhone(errors: CustomerValidationErrors, field: string, value: string): void {
   if (!turkeyMobilePhoneRegex.test(value.trim())) {
+    errors[field] = "Telefon 05XXXXXXXXX formatında, toplam 11 hane olmalıdır.";
+  }
+}
+
+function validateOptionalPhone(errors: CustomerValidationErrors, field: string, value: string): void {
+  if (value.trim() && !turkeyMobilePhoneRegex.test(value.trim())) {
     errors[field] = "Telefon 05XXXXXXXXX formatında, toplam 11 hane olmalıdır.";
   }
 }
@@ -546,6 +638,8 @@ function fieldToApiField(field: keyof FullRegistrationForm): string {
     cep: "cep",
     ad: "ad",
     soyad: "soyad",
+    unvan: "unvan",
+    corporateSector: "corporate_sector",
     tcNo: "tc_no",
     dogumTarihi: "dogum_tarihi",
     eposta: "eposta",
@@ -554,6 +648,8 @@ function fieldToApiField(field: keyof FullRegistrationForm): string {
     classifiedsWebsiteLink: "classifieds_website_link",
     vehicleStockCount: "vehicle_stock_count",
     branchId: "branch_id",
+    vergiNo: "vergi_no",
+    vergiDairesi: "vergi_dairesi",
     telephones: "telephones",
     ilKodu: "il_kodu",
     ilceKodu: "ilce_kodu",

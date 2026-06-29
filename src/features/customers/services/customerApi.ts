@@ -37,9 +37,11 @@ export type CustomerDetail = {
   ilKodu: string;
   ilceKodu: string;
   vergiNo: string;
+  vergiDairesi: string;
   tcNo: string;
   dogumTarihi: string;
   vehicleStockCount: number | null;
+  corporateSector: string;
   type: string;
   createdAt: string;
   telephones: CustomerTelephone[];
@@ -80,6 +82,8 @@ export type FullRegistrationPayload = {
   cep: string;
   ad: string;
   soyad: string;
+  unvan: string;
+  corporateSector: string;
   tcNo: string;
   dogumTarihi: string;
   eposta: string;
@@ -88,6 +92,8 @@ export type FullRegistrationPayload = {
   classifiedsWebsiteLink: string;
   vehicleStockCount: number;
   branchId: number;
+  vergiNo: string;
+  vergiDairesi: string;
   telephones: CustomerTelephone[];
   ilKodu: string;
   ilceKodu: string;
@@ -299,6 +305,8 @@ export async function completeFullRegistration(
         cep: payload.cep,
         ad: payload.ad,
         soyad: payload.soyad,
+        unvan: payload.unvan,
+        corporate_sector: payload.corporateSector,
         tc_no: payload.tcNo,
         dogum_tarihi: payload.dogumTarihi,
         eposta: payload.eposta,
@@ -307,6 +315,8 @@ export async function completeFullRegistration(
         classifieds_website_link: payload.classifiedsWebsiteLink,
         vehicle_stock_count: payload.vehicleStockCount,
         branch_id: payload.branchId,
+        vergi_no: payload.vergiNo,
+        vergi_dairesi: payload.vergiDairesi,
         telephones: payload.telephones.map((telephone) => ({
           phone_number: telephone.phoneNumber,
           title: telephone.title,
@@ -403,9 +413,11 @@ function toCustomerDetail(record: RawRecord): CustomerDetail {
     ilKodu: stringValue(record.il_kodu),
     ilceKodu: stringValue(record.ilce_kodu),
     vergiNo: stringValue(record.vergi_no),
+    vergiDairesi: stringValue(record.vergi_dairesi),
     tcNo: stringValue(record.tc_no),
     dogumTarihi: stringValue(record.dogum_tarihi),
     vehicleStockCount: nullableNumberValue(record.vehicle_stock_count),
+    corporateSector: stringValue(record.corporate_sector),
     type: stringValue(record.type),
     createdAt: stringValue(record.created_at),
     telephones: Array.isArray(record.telephones)
