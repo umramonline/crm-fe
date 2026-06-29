@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 
 import { AuthorizationPage } from "@/features/authorization/components/AuthorizationPage";
 import { LoginPage } from "@/features/auth/components/LoginPage";
+import { CustomerFullRegistrationPage } from "@/features/customers/components/CustomerFullRegistrationPage";
 import { CustomersPage } from "@/features/customers/components/CustomersPage";
 import {
   getSession,
@@ -117,6 +118,7 @@ export function App() {
       (permission) => permission.name === "authorization.menu",
     );
     const activePage = pageFromPath(path, canViewCustomers, canViewPermissions);
+    const fullRegistrationCustomerId = customerFullRegistrationId(path);
 
     return (
       <>
@@ -129,7 +131,12 @@ export function App() {
           onLogout={() => void handleLogout()}
           onNavigate={(page) => navigateTo(pathFromPage(page))}
         >
-          {activePage === "customers" ? (
+          {fullRegistrationCustomerId && canViewCustomers ? (
+            <CustomerFullRegistrationPage
+              customerId={fullRegistrationCustomerId}
+              onBack={() => navigateTo("/customers")}
+            />
+          ) : activePage === "customers" ? (
             <CustomersPage permissions={session.permissions} />
           ) : activePage === "permissions" ? (
             <AuthorizationPage permissions={session.permissions} />
@@ -154,6 +161,10 @@ function pageFromPath(
   canViewCustomers: boolean,
   canViewPermissions: boolean,
 ): AppPage {
+  if (path.startsWith("/customers/full-registration/") && canViewCustomers) {
+    return "customers";
+  }
+
   if (path === "/customers" && canViewCustomers) {
     return "customers";
   }
@@ -163,6 +174,16 @@ function pageFromPath(
   }
 
   return "home";
+}
+
+function customerFullRegistrationId(path: string): number | null {
+  const prefix = "/customers/full-registration/";
+  if (!path.startsWith(prefix)) {
+    return null;
+  }
+
+  const id = Number(path.slice(prefix.length));
+  return Number.isFinite(id) && id > 0 ? id : null;
 }
 
 function pathFromPage(page: AppPage): string {

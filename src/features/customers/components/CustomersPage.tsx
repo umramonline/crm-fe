@@ -419,6 +419,11 @@ export function CustomersPage({ permissions }: CustomersPageProps) {
     try {
       const result = await searchCustomer(normalizedQuery);
       if (result.found && result.customer) {
+        if (result.source === "backend") {
+          navigateToFullRegistration(result.customer.id);
+          return;
+        }
+
         setFoundCustomer(result.customer);
         setMessage(`${entryText.customerFound} Kaynak: ${formatCustomerSource(result.source)}.`);
         return;
@@ -1199,6 +1204,11 @@ export function CustomersPage({ permissions }: CustomersPageProps) {
       </div>
     </section>
   );
+}
+
+function navigateToFullRegistration(customerId: number): void {
+  window.history.pushState(null, "", `/customers/full-registration/${customerId}`);
+  window.dispatchEvent(new PopStateEvent("popstate"));
 }
 
 function formatCredit(value: number): string {

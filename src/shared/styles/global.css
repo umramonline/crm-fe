@@ -909,6 +909,47 @@ select {
   font-weight: 700;
 }
 
+.full-registration-form {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.full-registration-steps {
+  display: flex;
+  gap: 8px;
+}
+
+.full-registration-steps span {
+  display: grid;
+  width: 30px;
+  height: 30px;
+  place-items: center;
+  border-radius: 999px;
+  color: #475569;
+  font-size: 12px;
+  font-weight: 800;
+  background: #e2e8f0;
+}
+
+.full-registration-steps span.active {
+  color: #ffffff;
+  background: #0d8bff;
+}
+
+.full-registration-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.full-registration-phone-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr auto;
+  gap: 10px;
+  align-items: end;
+}
+
 .table-sort-button {
   border: 0;
   padding: 0;

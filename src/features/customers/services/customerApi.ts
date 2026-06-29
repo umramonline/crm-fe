@@ -28,13 +28,27 @@ export type CustomerDetail = {
   yetkiliAdi: string;
   cep: string;
   telefon: string;
+  eposta: string;
+  website: string;
+  googleMapLink: string;
+  classifiedsWebsiteLink: string;
   mahalle: string;
+  addressDetail: string;
   ilKodu: string;
   ilceKodu: string;
   vergiNo: string;
   tcNo: string;
+  dogumTarihi: string;
+  vehicleStockCount: number | null;
   type: string;
   createdAt: string;
+  telephones: CustomerTelephone[];
+};
+
+export type CustomerTelephone = {
+  id?: number;
+  phoneNumber: string;
+  title: string;
 };
 
 export type CustomerSearchResult = {
@@ -59,6 +73,26 @@ export type CreateCustomerPayload = {
   ilceKodu: string;
   mahalle: string;
   branchId: number;
+};
+
+export type FullRegistrationPayload = {
+  type: "bireysel" | "kurumsal";
+  cep: string;
+  ad: string;
+  soyad: string;
+  tcNo: string;
+  dogumTarihi: string;
+  eposta: string;
+  website: string;
+  googleMapLink: string;
+  classifiedsWebsiteLink: string;
+  vehicleStockCount: number;
+  branchId: number;
+  telephones: CustomerTelephone[];
+  ilKodu: string;
+  ilceKodu: string;
+  mahalle: string;
+  addressDetail: string;
 };
 
 export class CustomerValidationError extends Error {
@@ -245,6 +279,78 @@ export async function getCustomer(
   return toCustomerDetail(response.data.data ?? {});
 }
 
+export async function getFullRegistrationCustomer(id: number): Promise<CustomerDetail> {
+  const response = await apiClient.get<ApiEnvelope<RawRecord>>(
+    `/api/v1/customers/full-registration/${id}`,
+  );
+
+  return toCustomerDetail(response.data.data ?? {});
+}
+
+export async function completeFullRegistration(
+  id: number,
+  payload: FullRegistrationPayload,
+): Promise<CustomerDetail> {
+  try {
+    const response = await apiClient.put<ApiEnvelope<RawRecord>>(
+      `/api/v1/customers/full-registration/${id}`,
+      {
+        type: payload.type,
+        cep: payload.cep,
+        ad: payload.ad,
+        soyad: payload.soyad,
+        tc_no: payload.tcNo,
+        dogum_tarihi: payload.dogumTarihi,
+        eposta: payload.eposta,
+        website: payload.website,
+        google_map_link: payload.googleMapLink,
+        classifieds_website_link: payload.classifiedsWebsiteLink,
+        vehicle_stock_count: payload.vehicleStockCount,
+        branch_id: payload.branchId,
+        telephones: payload.telephones.map((telephone) => ({
+          phone_number: telephone.phoneNumber,
+          title: telephone.title,
+        })),
+        il_kodu: payload.ilKodu,
+        ilce_kodu: payload.ilceKodu,
+        mahalle: payload.mahalle,
+        address_detail: payload.addressDetail,
+      },
+    );
+
+    return toCustomerDetail(response.data.data ?? {});
+  } catch (error: unknown) {
+    const apiError = error as {
+      response?: {
+        status?: number;
+        data?: ApiEnvelope<RawRecord>;
+      };
+    };
+
+    if (apiError.response?.status === 422) {
+      throw new CustomerValidationError(apiError.response.data?.errors ?? {});
+    }
+
+    throw error;
+  }
+}
+
+export async function fullRegistrationPhoneExists(
+  id: number,
+  cep: string,
+): Promise<boolean> {
+  const response = await apiClient.get<ApiEnvelope<RawRecord>>(
+    `/api/v1/customers/full-registration/${id}/phone-exists`,
+    {
+      params: {
+        cep,
+      },
+    },
+  );
+
+  return Boolean(response.data.data?.exists);
+}
+
 export async function listCustomers(
   query: CustomerListQuery = {},
 ): Promise<CustomerListResult> {
@@ -288,13 +394,31 @@ function toCustomerDetail(record: RawRecord): CustomerDetail {
     yetkiliAdi: stringValue(record.yetkili_adi),
     cep: stringValue(record.cep),
     telefon: stringValue(record.telefon),
+    eposta: stringValue(record.eposta),
+    website: stringValue(record.website),
+    googleMapLink: stringValue(record.google_map_link),
+    classifiedsWebsiteLink: stringValue(record.classifieds_website_link),
     mahalle: stringValue(record.mahalle),
+    addressDetail: stringValue(record.address_detail),
     ilKodu: stringValue(record.il_kodu),
     ilceKodu: stringValue(record.ilce_kodu),
     vergiNo: stringValue(record.vergi_no),
     tcNo: stringValue(record.tc_no),
+    dogumTarihi: stringValue(record.dogum_tarihi),
+    vehicleStockCount: nullableNumberValue(record.vehicle_stock_count),
     type: stringValue(record.type),
     createdAt: stringValue(record.created_at),
+    telephones: Array.isArray(record.telephones)
+      ? record.telephones.map((telephone) => toCustomerTelephone(telephone as RawRecord))
+      : [],
+  };
+}
+
+function toCustomerTelephone(record: RawRecord): CustomerTelephone {
+  return {
+    id: numberValue(record.id),
+    phoneNumber: stringValue(record.phone_number),
+    title: stringValue(record.title),
   };
 }
 
