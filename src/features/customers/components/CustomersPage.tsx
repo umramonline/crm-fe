@@ -1,6 +1,7 @@
 import { FormEvent, useEffect, useMemo, useState } from "react";
 
 import {
+  createCustomer,
   listBranches,
   listCities,
   listCustomers,
@@ -9,9 +10,11 @@ import {
   searchCustomer,
   type Branch,
   type City,
+  CustomerValidationError,
   type Customer,
   type CustomerDetail,
   type CustomerListQuery,
+  type CustomerValidationErrors,
   type Town,
   type Zone,
 } from "@/features/customers/services/customerApi";
@@ -41,7 +44,11 @@ const entryText = {
   citiesLoading: "Seçenekler yükleniyor...",
   typeStepTitle: "Müşteri türü seçin",
   formStepTitle: "Yeni müşteri bilgileri",
+  createSuccess: "Müşteri kaydedildi.",
+  createFailed: "Müşteri kaydı oluşturulamadı.",
 } as const;
+
+const turkeyMobilePhoneRegex = /^05[0-9]{9}$/;
 
 type CustomerFilters = {
   situation: string;
@@ -115,6 +122,7 @@ export function CustomersPage({ permissions }: CustomersPageProps) {
   const canListCustomers = permissionNames.has("customers.list");
   const canListZones = permissionNames.has("customers.zones.list");
   const canSearchCustomers = permissionNames.has("customers.search");
+  const canCreateCustomers = permissionNames.has("customers.create");
   const canListCities = permissionNames.has("customers.cities.list");
   const canListTowns = permissionNames.has("customers.towns.list");
   const canListBranches = permissionNames.has("customers.branches.list");
@@ -143,6 +151,8 @@ export function CustomersPage({ permissions }: CustomersPageProps) {
   const [newCustomerForm, setNewCustomerForm] =
     useState<NewCustomerForm>(emptyNewCustomerForm);
   const [isReferenceLoading, setIsReferenceLoading] = useState(false);
+  const [isCreatingCustomer, setIsCreatingCustomer] = useState(false);
+  const [createErrors, setCreateErrors] = useState<CustomerValidationErrors>({});
 
   useEffect(() => {
     if (!canListZones) {
@@ -361,6 +371,7 @@ export function CustomersPage({ permissions }: CustomersPageProps) {
   function handleSelectCustomerEntryType(type: CustomerEntryType): void {
     setCustomerEntryType(type);
     setNewCustomerForm(emptyNewCustomerForm);
+    setCreateErrors({});
     setCreateStep(2);
   }
 
@@ -369,6 +380,7 @@ export function CustomersPage({ permissions }: CustomersPageProps) {
     setCreateStep(1);
     setCustomerEntryType("");
     setNewCustomerForm(emptyNewCustomerForm);
+    setCreateErrors({});
     setTowns([]);
   }
 
@@ -378,6 +390,59 @@ export function CustomersPage({ permissions }: CustomersPageProps) {
       [field]: value,
       ...(field === "ilKodu" ? { ilceKodu: "" } : {}),
     }));
+    setCreateErrors((current) => ({
+      ...current,
+      [formFieldToApiField(field)]: "",
+      ...(field === "ilKodu" ? { ilce_kodu: "" } : {}),
+    }));
+  }
+
+  async function handleCreateCustomerSubmit(event: FormEvent<HTMLFormElement>): Promise<void> {
+    event.preventDefault();
+
+    if (customerEntryType !== "bireysel" && customerEntryType !== "kurumsal") {
+      setCreateErrors({ type: "Müşteri türü seçiniz." });
+      return;
+    }
+
+    const validationErrors = validateNewCustomerForm(customerEntryType, newCustomerForm);
+    if (Object.keys(validationErrors).length > 0) {
+      setCreateErrors(validationErrors);
+      return;
+    }
+
+    setIsCreatingCustomer(true);
+    setCreateErrors({});
+    setMessage("");
+
+    try {
+      await createCustomer({
+        type: customerEntryType,
+        ad: newCustomerForm.ad.trim(),
+        soyad: newCustomerForm.soyad.trim(),
+        cep: newCustomerForm.cep.trim(),
+        unvan: newCustomerForm.unvan.trim(),
+        yetkiliAdi: newCustomerForm.yetkiliAdi.trim(),
+        telefon: newCustomerForm.telefon.trim(),
+        ilKodu: newCustomerForm.ilKodu,
+        ilceKodu: newCustomerForm.ilceKodu,
+        mahalle: newCustomerForm.mahalle.trim(),
+        branchId: Number(newCustomerForm.branchId),
+      });
+
+      handleCloseCreateModal();
+      setMessage(entryText.createSuccess);
+      setCurrentPage(1);
+      setAppliedFilters((current) => ({ ...current }));
+    } catch (error: unknown) {
+      if (error instanceof CustomerValidationError) {
+        setCreateErrors(error.errors);
+      } else {
+        setMessage(entryText.createFailed);
+      }
+    } finally {
+      setIsCreatingCustomer(false);
+    }
   }
 
   function handleSort(column: "credit" | "created_at"): void {
@@ -481,7 +546,10 @@ export function CustomersPage({ permissions }: CustomersPageProps) {
                 </button>
               </div>
             ) : (
-              <form className="customer-entry-form">
+              <form
+                className="customer-entry-form"
+                onSubmit={(event) => void handleCreateCustomerSubmit(event)}
+              >
                 {customerEntryType === "bireysel" ? (
                   <>
                     <label className="field-label">
@@ -491,6 +559,9 @@ export function CustomersPage({ permissions }: CustomersPageProps) {
                         value={newCustomerForm.ad}
                         onChange={(event) => updateNewCustomerField("ad", event.target.value)}
                       />
+                      {createErrors.ad ? (
+                        <span className="customer-field-error">{createErrors.ad}</span>
+                      ) : null}
                     </label>
                     <label className="field-label">
                       Soyad
@@ -499,14 +570,24 @@ export function CustomersPage({ permissions }: CustomersPageProps) {
                         value={newCustomerForm.soyad}
                         onChange={(event) => updateNewCustomerField("soyad", event.target.value)}
                       />
+                      {createErrors.soyad ? (
+                        <span className="customer-field-error">{createErrors.soyad}</span>
+                      ) : null}
                     </label>
                     <label className="field-label">
                       Cep
                       <input
                         className="panel-input"
+                        inputMode="numeric"
+                        pattern="05[0-9]{9}"
+                        maxLength={11}
+                        placeholder="05XXXXXXXXX"
                         value={newCustomerForm.cep}
                         onChange={(event) => updateNewCustomerField("cep", event.target.value)}
                       />
+                      {createErrors.cep ? (
+                        <span className="customer-field-error">{createErrors.cep}</span>
+                      ) : null}
                     </label>
                   </>
                 ) : (
@@ -518,6 +599,9 @@ export function CustomersPage({ permissions }: CustomersPageProps) {
                         value={newCustomerForm.unvan}
                         onChange={(event) => updateNewCustomerField("unvan", event.target.value)}
                       />
+                      {createErrors.unvan ? (
+                        <span className="customer-field-error">{createErrors.unvan}</span>
+                      ) : null}
                     </label>
                     <label className="field-label">
                       Yetkili Adı
@@ -526,14 +610,23 @@ export function CustomersPage({ permissions }: CustomersPageProps) {
                         value={newCustomerForm.yetkiliAdi}
                         onChange={(event) => updateNewCustomerField("yetkiliAdi", event.target.value)}
                       />
+                      {createErrors.yetkili_adi ? (
+                        <span className="customer-field-error">{createErrors.yetkili_adi}</span>
+                      ) : null}
                     </label>
                     <label className="field-label">
                       Telefon
                       <input
                         className="panel-input"
+                        inputMode="numeric"
+                        pattern="05[0-9]{9}"
+                        placeholder="05XXXXXXXXX"
                         value={newCustomerForm.telefon}
                         onChange={(event) => updateNewCustomerField("telefon", event.target.value)}
                       />
+                      {createErrors.telefon ? (
+                        <span className="customer-field-error">{createErrors.telefon}</span>
+                      ) : null}
                     </label>
                   </>
                 )}
@@ -553,6 +646,9 @@ export function CustomersPage({ permissions }: CustomersPageProps) {
                       </option>
                     ))}
                   </select>
+                  {createErrors.il_kodu ? (
+                    <span className="customer-field-error">{createErrors.il_kodu}</span>
+                  ) : null}
                 </label>
 
                 <label className="field-label">
@@ -570,6 +666,9 @@ export function CustomersPage({ permissions }: CustomersPageProps) {
                       </option>
                     ))}
                   </select>
+                  {createErrors.ilce_kodu ? (
+                    <span className="customer-field-error">{createErrors.ilce_kodu}</span>
+                  ) : null}
                 </label>
 
                 <label className="field-label">
@@ -579,6 +678,9 @@ export function CustomersPage({ permissions }: CustomersPageProps) {
                     value={newCustomerForm.mahalle}
                     onChange={(event) => updateNewCustomerField("mahalle", event.target.value)}
                   />
+                  {createErrors.mahalle ? (
+                    <span className="customer-field-error">{createErrors.mahalle}</span>
+                  ) : null}
                 </label>
 
                 <label className="field-label">
@@ -596,14 +698,21 @@ export function CustomersPage({ permissions }: CustomersPageProps) {
                       </option>
                     ))}
                   </select>
+                  {createErrors.branch_id ? (
+                    <span className="customer-field-error">{createErrors.branch_id}</span>
+                  ) : null}
                 </label>
 
                 <div className="customer-modal-actions">
                   <button className="gray-button" type="button" onClick={() => setCreateStep(1)}>
                     Geri
                   </button>
-                  <button className="blue-button" type="button" disabled>
-                    Kaydet sonraki aşamada eklenecek
+                  <button
+                    className="blue-button"
+                    type="submit"
+                    disabled={!canCreateCustomers || isCreatingCustomer}
+                  >
+                    {isCreatingCustomer ? "Kaydediliyor..." : "Kaydet"}
                   </button>
                 </div>
               </form>
@@ -974,4 +1083,66 @@ function customerDisplayName(customer: CustomerDetail): string {
 
   const individualName = `${customer.ad} ${customer.soyad}`.trim();
   return individualName || "-";
+}
+
+function validateNewCustomerForm(
+  customerType: Exclude<CustomerEntryType, "">,
+  form: NewCustomerForm,
+): CustomerValidationErrors {
+  const errors: CustomerValidationErrors = {};
+
+  if (customerType === "bireysel") {
+    requireField(errors, "ad", form.ad, "Ad zorunludur.");
+    requireField(errors, "soyad", form.soyad, "Soyad zorunludur.");
+    validateMobilePhone(errors, "cep", form.cep);
+  } else {
+    requireField(errors, "unvan", form.unvan, "Ünvan zorunludur.");
+    requireField(errors, "yetkili_adi", form.yetkiliAdi, "Yetkili adı zorunludur.");
+    validateMobilePhone(errors, "telefon", form.telefon);
+  }
+
+  requireField(errors, "il_kodu", form.ilKodu, "İl zorunludur.");
+  requireField(errors, "ilce_kodu", form.ilceKodu, "İlçe zorunludur.");
+  requireField(errors, "mahalle", form.mahalle, "Mahalle zorunludur.");
+  requireField(errors, "branch_id", form.branchId, "Bayi zorunludur.");
+
+  return errors;
+}
+
+function requireField(
+  errors: CustomerValidationErrors,
+  field: string,
+  value: string,
+  message: string,
+): void {
+  if (!value.trim()) {
+    errors[field] = message;
+  }
+}
+
+function validateMobilePhone(
+  errors: CustomerValidationErrors,
+  field: string,
+  value: string,
+): void {
+  if (!turkeyMobilePhoneRegex.test(value.trim())) {
+    errors[field] = "Telefon 05XXXXXXXXX formatında, toplam 11 hane olmalıdır.";
+  }
+}
+
+function formFieldToApiField(field: keyof NewCustomerForm): string {
+  const fieldMap: Record<keyof NewCustomerForm, string> = {
+    ad: "ad",
+    soyad: "soyad",
+    cep: "cep",
+    unvan: "unvan",
+    yetkiliAdi: "yetkili_adi",
+    telefon: "telefon",
+    ilKodu: "il_kodu",
+    ilceKodu: "ilce_kodu",
+    mahalle: "mahalle",
+    branchId: "branch_id",
+  };
+
+  return fieldMap[field];
 }

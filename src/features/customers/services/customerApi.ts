@@ -42,6 +42,31 @@ export type CustomerSearchResult = {
   customer: CustomerDetail | null;
 };
 
+export type CustomerValidationErrors = Record<string, string>;
+
+export type CreateCustomerPayload = {
+  type: "bireysel" | "kurumsal";
+  ad: string;
+  soyad: string;
+  cep: string;
+  unvan: string;
+  yetkiliAdi: string;
+  telefon: string;
+  ilKodu: string;
+  ilceKodu: string;
+  mahalle: string;
+  branchId: number;
+};
+
+export class CustomerValidationError extends Error {
+  errors: CustomerValidationErrors;
+
+  constructor(errors: CustomerValidationErrors) {
+    super("Müşteri bilgileri geçersiz.");
+    this.errors = errors;
+  }
+}
+
 export type City = {
   id: number;
   title: string;
@@ -98,6 +123,7 @@ type ApiEnvelope<T> = {
   success: boolean;
   message: string;
   data?: T;
+  errors?: CustomerValidationErrors;
 };
 
 type RawRecord = Record<string, unknown>;
@@ -169,6 +195,39 @@ export async function listBranches(): Promise<Branch[]> {
     name: stringValue(item.name),
     title: stringValue(item.title),
   }));
+}
+
+export async function createCustomer(payload: CreateCustomerPayload): Promise<CustomerDetail> {
+  try {
+    const response = await apiClient.post<ApiEnvelope<RawRecord>>("/api/v1/customers", {
+      type: payload.type,
+      ad: payload.ad,
+      soyad: payload.soyad,
+      cep: payload.cep,
+      unvan: payload.unvan,
+      yetkili_adi: payload.yetkiliAdi,
+      telefon: payload.telefon,
+      il_kodu: payload.ilKodu,
+      ilce_kodu: payload.ilceKodu,
+      mahalle: payload.mahalle,
+      branch_id: payload.branchId,
+    });
+
+    return toCustomerDetail(response.data.data ?? {});
+  } catch (error: unknown) {
+    const apiError = error as {
+      response?: {
+        status?: number;
+        data?: ApiEnvelope<RawRecord>;
+      };
+    };
+
+    if (apiError.response?.status === 422) {
+      throw new CustomerValidationError(apiError.response.data?.errors ?? {});
+    }
+
+    throw error;
+  }
 }
 
 export async function listCustomers(

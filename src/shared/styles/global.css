@@ -815,6 +815,12 @@ select {
   font-weight: 700;
 }
 
+.customer-field-error {
+  color: #dc2626;
+  font-size: 11px;
+  font-weight: 700;
+}
+
 .table-sort-button {
   border: 0;
   padding: 0;
