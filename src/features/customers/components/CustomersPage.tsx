@@ -857,24 +857,27 @@ export function CustomersPage({ permissions }: CustomersPageProps) {
       ) : null}
 
       <form className="customer-filter-form" onSubmit={handleFilterSubmit}>
-        <div className="customer-filter-actions">
-          <label className="customer-source-select-label">
+      
+      <div className="customer-filter-actions">
+        <label className="customer-source-select-label" style={{ marginBottom: "12px" }}>
             {entryText.dataSourceLabel}
-            <select
-              className="panel-input"
-              value={customerDataSource}
-              onChange={(event) =>
-                handleCustomerDataSourceChange(event.target.value as CustomerDataSource)
-              }
-            >
-              <option value="umramonline" disabled={!canListUmramonlineCustomers}>
-                Umramonline
-              </option>
-              <option value="backend" disabled={!canListBackendCustomers}>
-                Backend
-              </option>
-            </select>
-          </label>
+          <select
+            className="panel-input"
+            value={customerDataSource}
+            onChange={(event) =>
+              handleCustomerDataSourceChange(event.target.value as CustomerDataSource)
+            }
+          >
+            <option value="umramonline" disabled={!canListUmramonlineCustomers}>
+              Umramonline
+            </option>
+            <option value="backend" disabled={!canListBackendCustomers}>
+              Backend
+            </option>
+          </select>
+        </label>
+      </div>
+      <div className="customer-filter-actions">
           <button
             className="blue-button"
             type="button"
