@@ -1,5 +1,7 @@
 import axios, { type AxiosError, type InternalAxiosRequestConfig } from "axios";
 
+import { startApiLoading, stopApiLoading } from "@/services/apiLoading";
+
 const defaultApiBaseUrl = "http://localhost:8321";
 
 export const apiClient = axios.create({
@@ -22,6 +24,7 @@ const refreshClient = axios.create({
 
 type RetriableRequestConfig = InternalAxiosRequestConfig & {
   _retry?: boolean;
+  _globalLoadingTracked?: boolean;
 };
 
 let refreshRequest: Promise<void> | null = null;
@@ -30,11 +33,33 @@ function isAuthEndpoint(url?: string): boolean {
   return Boolean(url?.includes("/api/v1/auth/"));
 }
 
+function stopTrackedApiLoading(config?: InternalAxiosRequestConfig): void {
+  const trackedConfig = config as RetriableRequestConfig | undefined;
+  if (!trackedConfig?._globalLoadingTracked) {
+    return;
+  }
+
+  trackedConfig._globalLoadingTracked = false;
+  stopApiLoading();
+}
+
+apiClient.interceptors.request.use((config) => {
+  const trackedConfig = config as RetriableRequestConfig;
+  trackedConfig._globalLoadingTracked = true;
+  startApiLoading();
+
+  return trackedConfig;
+});
+
 apiClient.interceptors.response.use(
-  (response) => response,
+  (response) => {
+    stopTrackedApiLoading(response.config);
+    return response;
+  },
   async (error: AxiosError) => {
     const response = error.response;
     const originalRequest = error.config as RetriableRequestConfig | undefined;
+    stopTrackedApiLoading(originalRequest);
 
     if (
       response?.status !== 401 ||

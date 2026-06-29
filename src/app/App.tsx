@@ -11,6 +11,7 @@ import {
 } from "@/features/auth/services/authApi";
 import { HelloPage } from "@/features/hello/components/HelloPage";
 import { AppLayout, type AppPage } from "@/shared/components/AppLayout";
+import { GlobalLoadingOverlay } from "@/shared/components/GlobalLoadingOverlay";
 
 export function App() {
   const [path, setPath] = useState(() => window.location.pathname);
@@ -93,17 +94,20 @@ export function App() {
 
   if (isCheckingSession) {
     return (
-      <main className="hello-page">
-        <section className="hello-card">
-          <p>Oturum kontrol ediliyor...</p>
-        </section>
-      </main>
+      <>
+        <GlobalLoadingOverlay />
+        <main className="hello-page">
+          <section className="hello-card">
+            <p>Oturum kontrol ediliyor...</p>
+          </section>
+        </main>
+      </>
     );
   }
 
   if (path !== "/") {
     if (!session) {
-      return null;
+      return <GlobalLoadingOverlay />;
     }
 
     const canViewCustomers = session.permissions.some(
@@ -115,26 +119,34 @@ export function App() {
     const activePage = pageFromPath(path, canViewCustomers, canViewPermissions);
 
     return (
-      <AppLayout
-        activePage={activePage}
-        canViewCustomers={canViewCustomers}
-        canViewPermissions={canViewPermissions}
-        session={session}
-        onLogout={() => void handleLogout()}
-        onNavigate={(page) => navigateTo(pathFromPage(page))}
-      >
-        {activePage === "customers" ? (
-          <CustomersPage permissions={session.permissions} />
-        ) : activePage === "permissions" ? (
-          <AuthorizationPage permissions={session.permissions} />
-        ) : (
-          <HelloPage session={session} />
-        )}
-      </AppLayout>
+      <>
+        <GlobalLoadingOverlay />
+        <AppLayout
+          activePage={activePage}
+          canViewCustomers={canViewCustomers}
+          canViewPermissions={canViewPermissions}
+          session={session}
+          onLogout={() => void handleLogout()}
+          onNavigate={(page) => navigateTo(pathFromPage(page))}
+        >
+          {activePage === "customers" ? (
+            <CustomersPage permissions={session.permissions} />
+          ) : activePage === "permissions" ? (
+            <AuthorizationPage permissions={session.permissions} />
+          ) : (
+            <HelloPage session={session} />
+          )}
+        </AppLayout>
+      </>
     );
   }
 
-  return <LoginPage onAuthenticated={handleAuthenticated} />;
+  return (
+    <>
+      <GlobalLoadingOverlay />
+      <LoginPage onAuthenticated={handleAuthenticated} />
+    </>
+  );
 }
 
 function pageFromPath(
