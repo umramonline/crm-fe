@@ -49,6 +49,7 @@ const entryText = {
 } as const;
 
 const turkeyMobilePhoneRegex = /^05[0-9]{9}$/;
+const customerTextMaxLength = 255;
 
 type CustomerFilters = {
   situation: string;
@@ -556,6 +557,7 @@ export function CustomersPage({ permissions }: CustomersPageProps) {
                       Ad
                       <input
                         className="panel-input"
+                        maxLength={customerTextMaxLength}
                         value={newCustomerForm.ad}
                         onChange={(event) => updateNewCustomerField("ad", event.target.value)}
                       />
@@ -567,6 +569,7 @@ export function CustomersPage({ permissions }: CustomersPageProps) {
                       Soyad
                       <input
                         className="panel-input"
+                        maxLength={customerTextMaxLength}
                         value={newCustomerForm.soyad}
                         onChange={(event) => updateNewCustomerField("soyad", event.target.value)}
                       />
@@ -596,6 +599,7 @@ export function CustomersPage({ permissions }: CustomersPageProps) {
                       Ünvan
                       <input
                         className="panel-input"
+                        maxLength={customerTextMaxLength}
                         value={newCustomerForm.unvan}
                         onChange={(event) => updateNewCustomerField("unvan", event.target.value)}
                       />
@@ -607,6 +611,7 @@ export function CustomersPage({ permissions }: CustomersPageProps) {
                       Yetkili Adı
                       <input
                         className="panel-input"
+                        maxLength={customerTextMaxLength}
                         value={newCustomerForm.yetkiliAdi}
                         onChange={(event) => updateNewCustomerField("yetkiliAdi", event.target.value)}
                       />
@@ -676,6 +681,7 @@ export function CustomersPage({ permissions }: CustomersPageProps) {
                   Mahalle
                   <input
                     className="panel-input"
+                    maxLength={customerTextMaxLength}
                     value={newCustomerForm.mahalle}
                     onChange={(event) => updateNewCustomerField("mahalle", event.target.value)}
                   />
@@ -1094,17 +1100,24 @@ function validateNewCustomerForm(
 
   if (customerType === "bireysel") {
     requireField(errors, "ad", form.ad, "Ad zorunludur.");
+    validateMaxLength(errors, "ad", form.ad, "Ad");
     requireField(errors, "soyad", form.soyad, "Soyad zorunludur.");
+    validateMaxLength(errors, "soyad", form.soyad, "Soyad");
     validateMobilePhone(errors, "cep", form.cep);
   } else {
     requireField(errors, "unvan", form.unvan, "Ünvan zorunludur.");
+    validateMaxLength(errors, "unvan", form.unvan, "Ünvan");
     requireField(errors, "yetkili_adi", form.yetkiliAdi, "Yetkili adı zorunludur.");
+    validateMaxLength(errors, "yetkili_adi", form.yetkiliAdi, "Yetkili adı");
     validateMobilePhone(errors, "telefon", form.telefon);
   }
 
   requireField(errors, "il_kodu", form.ilKodu, "İl zorunludur.");
+  validateMaxLength(errors, "il_kodu", form.ilKodu, "İl");
   requireField(errors, "ilce_kodu", form.ilceKodu, "İlçe zorunludur.");
+  validateMaxLength(errors, "ilce_kodu", form.ilceKodu, "İlçe");
   requireField(errors, "mahalle", form.mahalle, "Mahalle zorunludur.");
+  validateMaxLength(errors, "mahalle", form.mahalle, "Mahalle");
   requireField(errors, "branch_id", form.branchId, "Bayi zorunludur.");
 
   return errors;
@@ -1128,6 +1141,17 @@ function validateMobilePhone(
 ): void {
   if (!turkeyMobilePhoneRegex.test(value.trim())) {
     errors[field] = "Telefon 05XXXXXXXXX formatında, toplam 11 hane olmalıdır.";
+  }
+}
+
+function validateMaxLength(
+  errors: CustomerValidationErrors,
+  field: string,
+  value: string,
+  label: string,
+): void {
+  if (value.trim().length > customerTextMaxLength) {
+    errors[field] = `${label} en fazla ${customerTextMaxLength} karakter olabilir.`;
   }
 }
 
