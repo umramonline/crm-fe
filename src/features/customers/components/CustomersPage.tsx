@@ -2,6 +2,7 @@ import { FormEvent, useEffect, useMemo, useState } from "react";
 
 import {
   createCustomer,
+  getCustomer,
   listBranches,
   listCities,
   listCustomers,
@@ -46,6 +47,8 @@ const entryText = {
   formStepTitle: "Yeni müşteri bilgileri",
   createSuccess: "Müşteri kaydedildi.",
   createFailed: "Müşteri kaydı oluşturulamadı.",
+  detailFailed: "Müşteri detayı getirilemedi.",
+  detailTitle: "Müşteri Detayı",
 } as const;
 
 const turkeyMobilePhoneRegex = /^05[0-9]{9}$/;
@@ -123,6 +126,7 @@ export function CustomersPage({ permissions }: CustomersPageProps) {
   const canListCustomers = permissionNames.has("customers.list");
   const canListZones = permissionNames.has("customers.zones.list");
   const canSearchCustomers = permissionNames.has("customers.search");
+  const canViewCustomerDetail = permissionNames.has("customers.detail");
   const canCreateCustomers = permissionNames.has("customers.create");
   const canListCities = permissionNames.has("customers.cities.list");
   const canListTowns = permissionNames.has("customers.towns.list");
@@ -154,6 +158,7 @@ export function CustomersPage({ permissions }: CustomersPageProps) {
   const [isReferenceLoading, setIsReferenceLoading] = useState(false);
   const [isCreatingCustomer, setIsCreatingCustomer] = useState(false);
   const [createErrors, setCreateErrors] = useState<CustomerValidationErrors>({});
+  const [selectedCustomerDetail, setSelectedCustomerDetail] = useState<CustomerDetail | null>(null);
 
   useEffect(() => {
     if (!canListZones) {
@@ -321,6 +326,26 @@ export function CustomersPage({ permissions }: CustomersPageProps) {
     setCurrentPage(1);
     setSortBy("");
     setSortOrder("desc");
+  }
+
+  async function handleOpenCustomerDetail(customerId: number): Promise<void> {
+    if (!customerId) {
+      setMessage(entryText.detailFailed);
+      return;
+    }
+
+    setMessage("");
+
+    try {
+      const customer = await getCustomer(customerId);
+      setSelectedCustomerDetail(customer);
+    } catch {
+      setMessage(entryText.detailFailed);
+    }
+  }
+
+  function handleCloseCustomerDetail(): void {
+    setSelectedCustomerDetail(null);
   }
 
   async function handleCustomerSearchSubmit(event: FormEvent<HTMLFormElement>): Promise<void> {
@@ -728,6 +753,50 @@ export function CustomersPage({ permissions }: CustomersPageProps) {
         </div>
       ) : null}
 
+      {selectedCustomerDetail ? (
+        <div className="customer-modal-backdrop" role="presentation">
+          <section className="customer-modal customer-modal-wide" role="dialog" aria-modal="true">
+            <div className="customer-modal-header">
+              <h2>{entryText.detailTitle}</h2>
+              <button className="customer-modal-close" type="button" onClick={handleCloseCustomerDetail}>
+                Kapat
+              </button>
+            </div>
+
+            <div className="customer-detail-grid">
+              <span>ID</span>
+              <strong>{selectedCustomerDetail.id || "-"}</strong>
+              <span>Ünvan</span>
+              <strong>{selectedCustomerDetail.unvan || "-"}</strong>
+              <span>Ad</span>
+              <strong>{selectedCustomerDetail.ad || "-"}</strong>
+              <span>Soyad</span>
+              <strong>{selectedCustomerDetail.soyad || "-"}</strong>
+              <span>Yetkili Adı</span>
+              <strong>{selectedCustomerDetail.yetkiliAdi || "-"}</strong>
+              <span>Cep</span>
+              <strong>{selectedCustomerDetail.cep || "-"}</strong>
+              <span>Telefon</span>
+              <strong>{selectedCustomerDetail.telefon || "-"}</strong>
+              <span>Mahalle</span>
+              <strong>{selectedCustomerDetail.mahalle || "-"}</strong>
+              <span>İl Kodu</span>
+              <strong>{selectedCustomerDetail.ilKodu || "-"}</strong>
+              <span>İlçe Kodu</span>
+              <strong>{selectedCustomerDetail.ilceKodu || "-"}</strong>
+              <span>Vergi No</span>
+              <strong>{selectedCustomerDetail.vergiNo || "-"}</strong>
+              <span>T.C. No</span>
+              <strong>{selectedCustomerDetail.tcNo || "-"}</strong>
+              <span>Müşteri Türü</span>
+              <strong>{formatCustomerType(selectedCustomerDetail.type)}</strong>
+              <span>Kayıt Tarihi</span>
+              <strong>{formatDate(selectedCustomerDetail.createdAt)}</strong>
+            </div>
+          </section>
+        </div>
+      ) : null}
+
       <form className="customer-filter-form" onSubmit={handleFilterSubmit}>
         <div className="customer-filter-actions">
           <button
@@ -754,6 +823,7 @@ export function CustomersPage({ permissions }: CustomersPageProps) {
         <table className="permission-table customer-table">
           <thead>
             <tr>
+              <th>İşlemler</th>
               <th>Durum</th>
               <th>Firma İsmi</th>
               <th>Yetkili Telefonu</th>
@@ -788,6 +858,7 @@ export function CustomersPage({ permissions }: CustomersPageProps) {
               <th>Müşteri Türü</th>
             </tr>
             <tr className="customer-filter-row">
+              <th />
               <th>
                 <select
                   className="panel-input"
@@ -979,12 +1050,23 @@ export function CustomersPage({ permissions }: CustomersPageProps) {
           <tbody>
             {items.length === 0 && !isLoading ? (
               <tr>
-                <td colSpan={14}>Kayıt bulunamadı.</td>
+                <td colSpan={15}>Kayıt bulunamadı.</td>
               </tr>
             ) : null}
 
             {items.map((customer, index) => (
-              <tr key={`${customer.plusCardNo}-${customer.cep}-${index}`}>
+              <tr key={`${customer.id}-${customer.plusCardNo}-${customer.cep}-${index}`}>
+                <td>
+                  <button
+                    className="customer-action-button"
+                    type="button"
+                    aria-label="Müşteri detayını görüntüle"
+                    disabled={!canViewCustomerDetail}
+                    onClick={() => void handleOpenCustomerDetail(customer.id)}
+                  >
+                    ⓘ
+                  </button>
+                </td>
                 <td>{customer.situation || "-"}</td>
                 <td>{customer.unvan || "-"}</td>
                 <td>{customer.cep || "-"}</td>

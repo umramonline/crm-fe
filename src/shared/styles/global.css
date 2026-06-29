@@ -844,6 +844,42 @@ select {
   grid-column: 1 / -1;
 }
 
+.customer-action-button {
+  width: 28px;
+  height: 28px;
+  border: 1px solid #bfdbfe;
+  border-radius: 999px;
+  color: #1d4ed8;
+  font-size: 15px;
+  font-weight: 800;
+  background: #eff6ff;
+}
+
+.customer-action-button:disabled {
+  color: #94a3b8;
+  background: #f1f5f9;
+  cursor: not-allowed;
+}
+
+.customer-detail-grid {
+  display: grid;
+  grid-template-columns: minmax(120px, 180px) 1fr;
+  gap: 10px 14px;
+}
+
+.customer-detail-grid span {
+  color: #64748b;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.customer-detail-grid strong {
+  min-width: 0;
+  color: #111827;
+  font-size: 13px;
+  overflow-wrap: anywhere;
+}
+
 .field-label {
   display: flex;
   flex-direction: column;

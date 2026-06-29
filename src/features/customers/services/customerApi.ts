@@ -1,6 +1,7 @@
 import { apiClient } from "@/services/apiClient";
 
 export type Customer = {
+  id: number;
   situation: string;
   unvan: string;
   cep: string;
@@ -230,6 +231,12 @@ export async function createCustomer(payload: CreateCustomerPayload): Promise<Cu
   }
 }
 
+export async function getCustomer(id: number): Promise<CustomerDetail> {
+  const response = await apiClient.get<ApiEnvelope<RawRecord>>(`/api/v1/customers/${id}`);
+
+  return toCustomerDetail(response.data.data ?? {});
+}
+
 export async function listCustomers(
   query: CustomerListQuery = {},
 ): Promise<CustomerListResult> {
@@ -299,6 +306,7 @@ function normalizeCustomerListResult(data: RawRecord): CustomerListResult {
 
 function toCustomer(record: RawRecord): Customer {
   return {
+    id: numberValue(record.id),
     situation: stringValue(record.situation),
     unvan: stringValue(record.unvan),
     cep: stringValue(record.cep),
