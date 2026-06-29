@@ -1,10 +1,18 @@
 import { FormEvent, useEffect, useMemo, useState } from "react";
 
 import {
+  listBranches,
+  listCities,
   listCustomers,
+  listTowns,
   listZones,
+  searchCustomer,
+  type Branch,
+  type City,
   type Customer,
+  type CustomerDetail,
   type CustomerListQuery,
+  type Town,
   type Zone,
 } from "@/features/customers/services/customerApi";
 import type { Permission } from "@/features/auth/services/authApi";
@@ -21,6 +29,20 @@ const sourceOptions = ["PlusCard", "Manuel"] as const;
 
 const typeOptions = ["Kurumsal", "Bireysel"] as const;
 
+const entryText = {
+  button: "Müşteri Giriş",
+  searchTitle: "Önce müşteri ara",
+  searchPlaceholder: "Cep, telefon, T.C. no veya vergi no yazın",
+  searchRequired: "Arama yapmak için cep, telefon, T.C. no veya vergi no yazın.",
+  searchFailed: "Müşteri araması yapılamadı.",
+  customerFound: "Müşteri kaydı bulundu. Edit formu sonraki aşamada açılacak.",
+  customerNotFound: "Müşteri bulunamadı. Yeni müşteri formunu doldurun.",
+  referenceFailed: "Form seçenekleri getirilemedi.",
+  citiesLoading: "Seçenekler yükleniyor...",
+  typeStepTitle: "Müşteri türü seçin",
+  formStepTitle: "Yeni müşteri bilgileri",
+} as const;
+
 type CustomerFilters = {
   situation: string;
   unvan: string;
@@ -35,6 +57,21 @@ type CustomerFilters = {
   town: string;
   createdAt: string;
   type: string;
+};
+
+type CustomerEntryType = "" | "bireysel" | "kurumsal";
+
+type NewCustomerForm = {
+  ad: string;
+  soyad: string;
+  cep: string;
+  unvan: string;
+  yetkiliAdi: string;
+  telefon: string;
+  ilKodu: string;
+  ilceKodu: string;
+  mahalle: string;
+  branchId: string;
 };
 
 const emptyFilters: CustomerFilters = {
@@ -53,6 +90,19 @@ const emptyFilters: CustomerFilters = {
   type: "",
 };
 
+const emptyNewCustomerForm: NewCustomerForm = {
+  ad: "",
+  soyad: "",
+  cep: "",
+  unvan: "",
+  yetkiliAdi: "",
+  telefon: "",
+  ilKodu: "",
+  ilceKodu: "",
+  mahalle: "",
+  branchId: "",
+};
+
 type CustomersPageProps = {
   permissions: Permission[];
 };
@@ -64,8 +114,15 @@ export function CustomersPage({ permissions }: CustomersPageProps) {
   );
   const canListCustomers = permissionNames.has("customers.list");
   const canListZones = permissionNames.has("customers.zones.list");
+  const canSearchCustomers = permissionNames.has("customers.search");
+  const canListCities = permissionNames.has("customers.cities.list");
+  const canListTowns = permissionNames.has("customers.towns.list");
+  const canListBranches = permissionNames.has("customers.branches.list");
 
   const [zones, setZones] = useState<Zone[]>([]);
+  const [cities, setCities] = useState<City[]>([]);
+  const [towns, setTowns] = useState<Town[]>([]);
+  const [branches, setBranches] = useState<Branch[]>([]);
   const [draftFilters, setDraftFilters] = useState<CustomerFilters>(emptyFilters);
   const [appliedFilters, setAppliedFilters] = useState<CustomerFilters>(emptyFilters);
   const [items, setItems] = useState<Customer[]>([]);
@@ -76,6 +133,16 @@ export function CustomersPage({ permissions }: CustomersPageProps) {
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc");
   const [isLoading, setIsLoading] = useState(false);
   const [message, setMessage] = useState("");
+  const [isSearchModalOpen, setIsSearchModalOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [isSearching, setIsSearching] = useState(false);
+  const [foundCustomer, setFoundCustomer] = useState<CustomerDetail | null>(null);
+  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const [createStep, setCreateStep] = useState<1 | 2>(1);
+  const [customerEntryType, setCustomerEntryType] = useState<CustomerEntryType>("");
+  const [newCustomerForm, setNewCustomerForm] =
+    useState<NewCustomerForm>(emptyNewCustomerForm);
+  const [isReferenceLoading, setIsReferenceLoading] = useState(false);
 
   useEffect(() => {
     if (!canListZones) {
@@ -103,6 +170,74 @@ export function CustomersPage({ permissions }: CustomersPageProps) {
       isActive = false;
     };
   }, [canListZones]);
+
+  useEffect(() => {
+    if (!isCreateModalOpen || (!canListCities && !canListBranches)) {
+      return;
+    }
+
+    let isActive = true;
+
+    async function loadReferenceData(): Promise<void> {
+      setIsReferenceLoading(true);
+      setMessage("");
+
+      try {
+        const [nextCities, nextBranches] = await Promise.all([
+          canListCities ? listCities() : Promise.resolve<City[]>([]),
+          canListBranches ? listBranches() : Promise.resolve<Branch[]>([]),
+        ]);
+
+        if (isActive) {
+          setCities(nextCities);
+          setBranches(nextBranches);
+        }
+      } catch {
+        if (isActive) {
+          setMessage(entryText.referenceFailed);
+        }
+      } finally {
+        if (isActive) {
+          setIsReferenceLoading(false);
+        }
+      }
+    }
+
+    void loadReferenceData();
+
+    return () => {
+      isActive = false;
+    };
+  }, [canListBranches, canListCities, isCreateModalOpen]);
+
+  useEffect(() => {
+    if (!isCreateModalOpen || !newCustomerForm.ilKodu || !canListTowns) {
+      setTowns([]);
+      return;
+    }
+
+    let isActive = true;
+
+    async function loadTowns(): Promise<void> {
+      try {
+        const nextTowns = await listTowns(Number(newCustomerForm.ilKodu));
+        if (isActive) {
+          setTowns(nextTowns);
+        }
+      } catch {
+        if (isActive) {
+          setTowns([]);
+          setMessage(entryText.referenceFailed);
+        }
+      }
+    }
+
+    void loadTowns();
+
+    return () => {
+      isActive = false;
+    };
+  }, [canListTowns, isCreateModalOpen, newCustomerForm.ilKodu]);
 
   useEffect(() => {
     if (!canListCustomers) {
@@ -177,6 +312,74 @@ export function CustomersPage({ permissions }: CustomersPageProps) {
     setSortOrder("desc");
   }
 
+  async function handleCustomerSearchSubmit(event: FormEvent<HTMLFormElement>): Promise<void> {
+    event.preventDefault();
+
+    const normalizedQuery = searchQuery.trim();
+    if (!normalizedQuery) {
+      setMessage(entryText.searchRequired);
+      return;
+    }
+
+    setIsSearching(true);
+    setMessage("");
+    setFoundCustomer(null);
+
+    try {
+      const result = await searchCustomer(normalizedQuery);
+      if (result.found && result.customer) {
+        setFoundCustomer(result.customer);
+        setMessage(`${entryText.customerFound} Kaynak: ${formatCustomerSource(result.source)}.`);
+        return;
+      }
+
+      setIsSearchModalOpen(false);
+      setIsCreateModalOpen(true);
+      setCreateStep(1);
+      setCustomerEntryType("");
+      setNewCustomerForm(emptyNewCustomerForm);
+      setMessage(entryText.customerNotFound);
+    } catch {
+      setMessage(entryText.searchFailed);
+    } finally {
+      setIsSearching(false);
+    }
+  }
+
+  function handleOpenCustomerSearch(): void {
+    setSearchQuery("");
+    setFoundCustomer(null);
+    setIsSearchModalOpen(true);
+    setMessage("");
+  }
+
+  function handleCloseCustomerSearch(): void {
+    setIsSearchModalOpen(false);
+    setFoundCustomer(null);
+  }
+
+  function handleSelectCustomerEntryType(type: CustomerEntryType): void {
+    setCustomerEntryType(type);
+    setNewCustomerForm(emptyNewCustomerForm);
+    setCreateStep(2);
+  }
+
+  function handleCloseCreateModal(): void {
+    setIsCreateModalOpen(false);
+    setCreateStep(1);
+    setCustomerEntryType("");
+    setNewCustomerForm(emptyNewCustomerForm);
+    setTowns([]);
+  }
+
+  function updateNewCustomerField(field: keyof NewCustomerForm, value: string): void {
+    setNewCustomerForm((current) => ({
+      ...current,
+      [field]: value,
+      ...(field === "ilKodu" ? { ilceKodu: "" } : {}),
+    }));
+  }
+
   function handleSort(column: "credit" | "created_at"): void {
     if (sortBy === column) {
       setSortOrder((current) => (current === "asc" ? "desc" : "asc"));
@@ -208,8 +411,217 @@ export function CustomersPage({ permissions }: CustomersPageProps) {
 
       {message ? <div className="panel-alert">{message}</div> : null}
 
+      {isSearchModalOpen ? (
+        <div className="customer-modal-backdrop" role="presentation">
+          <section className="customer-modal" role="dialog" aria-modal="true">
+            <div className="customer-modal-header">
+              <h2>{entryText.searchTitle}</h2>
+              <button className="customer-modal-close" type="button" onClick={handleCloseCustomerSearch}>
+                Kapat
+              </button>
+            </div>
+
+            <form className="panel-form" onSubmit={(event) => void handleCustomerSearchSubmit(event)}>
+              <label className="field-label">
+                Arama
+                <input
+                  className="panel-input"
+                  value={searchQuery}
+                  placeholder={entryText.searchPlaceholder}
+                  onChange={(event) => setSearchQuery(event.target.value)}
+                />
+              </label>
+
+              <div className="customer-modal-actions">
+                <button className="blue-button" type="submit" disabled={isSearching}>
+                  {isSearching ? "Aranıyor..." : "Ara"}
+                </button>
+                <button className="gray-button" type="button" onClick={handleCloseCustomerSearch}>
+                  Vazgeç
+                </button>
+              </div>
+            </form>
+
+            {foundCustomer ? (
+              <div className="customer-found-card">
+                <strong>{customerDisplayName(foundCustomer)}</strong>
+                <span>{foundCustomer.cep || foundCustomer.telefon || "-"}</span>
+                <span>{foundCustomer.tcNo || foundCustomer.vergiNo || "-"}</span>
+              </div>
+            ) : null}
+          </section>
+        </div>
+      ) : null}
+
+      {isCreateModalOpen ? (
+        <div className="customer-modal-backdrop" role="presentation">
+          <section className="customer-modal customer-modal-wide" role="dialog" aria-modal="true">
+            <div className="customer-modal-header">
+              <h2>{createStep === 1 ? entryText.typeStepTitle : entryText.formStepTitle}</h2>
+              <button className="customer-modal-close" type="button" onClick={handleCloseCreateModal}>
+                Kapat
+              </button>
+            </div>
+
+            {createStep === 1 ? (
+              <div className="customer-entry-type-grid">
+                <button
+                  className="customer-entry-type-card"
+                  type="button"
+                  onClick={() => handleSelectCustomerEntryType("bireysel")}
+                >
+                  Bireysel
+                </button>
+                <button
+                  className="customer-entry-type-card"
+                  type="button"
+                  onClick={() => handleSelectCustomerEntryType("kurumsal")}
+                >
+                  Kurumsal
+                </button>
+              </div>
+            ) : (
+              <form className="customer-entry-form">
+                {customerEntryType === "bireysel" ? (
+                  <>
+                    <label className="field-label">
+                      Ad
+                      <input
+                        className="panel-input"
+                        value={newCustomerForm.ad}
+                        onChange={(event) => updateNewCustomerField("ad", event.target.value)}
+                      />
+                    </label>
+                    <label className="field-label">
+                      Soyad
+                      <input
+                        className="panel-input"
+                        value={newCustomerForm.soyad}
+                        onChange={(event) => updateNewCustomerField("soyad", event.target.value)}
+                      />
+                    </label>
+                    <label className="field-label">
+                      Cep
+                      <input
+                        className="panel-input"
+                        value={newCustomerForm.cep}
+                        onChange={(event) => updateNewCustomerField("cep", event.target.value)}
+                      />
+                    </label>
+                  </>
+                ) : (
+                  <>
+                    <label className="field-label">
+                      Ünvan
+                      <input
+                        className="panel-input"
+                        value={newCustomerForm.unvan}
+                        onChange={(event) => updateNewCustomerField("unvan", event.target.value)}
+                      />
+                    </label>
+                    <label className="field-label">
+                      Yetkili Adı
+                      <input
+                        className="panel-input"
+                        value={newCustomerForm.yetkiliAdi}
+                        onChange={(event) => updateNewCustomerField("yetkiliAdi", event.target.value)}
+                      />
+                    </label>
+                    <label className="field-label">
+                      Telefon
+                      <input
+                        className="panel-input"
+                        value={newCustomerForm.telefon}
+                        onChange={(event) => updateNewCustomerField("telefon", event.target.value)}
+                      />
+                    </label>
+                  </>
+                )}
+
+                <label className="field-label">
+                  İl
+                  <select
+                    className="panel-input"
+                    value={newCustomerForm.ilKodu}
+                    onChange={(event) => updateNewCustomerField("ilKodu", event.target.value)}
+                    disabled={isReferenceLoading || !canListCities}
+                  >
+                    <option value="">{isReferenceLoading ? entryText.citiesLoading : "Seçiniz"}</option>
+                    {cities.map((city) => (
+                      <option key={city.id} value={city.id}>
+                        {city.title}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+
+                <label className="field-label">
+                  İlçe
+                  <select
+                    className="panel-input"
+                    value={newCustomerForm.ilceKodu}
+                    onChange={(event) => updateNewCustomerField("ilceKodu", event.target.value)}
+                    disabled={!newCustomerForm.ilKodu || !canListTowns}
+                  >
+                    <option value="">Seçiniz</option>
+                    {towns.map((town) => (
+                      <option key={town.id} value={town.id}>
+                        {town.title}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+
+                <label className="field-label">
+                  Mahalle
+                  <input
+                    className="panel-input"
+                    value={newCustomerForm.mahalle}
+                    onChange={(event) => updateNewCustomerField("mahalle", event.target.value)}
+                  />
+                </label>
+
+                <label className="field-label">
+                  Bayi
+                  <select
+                    className="panel-input"
+                    value={newCustomerForm.branchId}
+                    onChange={(event) => updateNewCustomerField("branchId", event.target.value)}
+                    disabled={isReferenceLoading || !canListBranches}
+                  >
+                    <option value="">{isReferenceLoading ? entryText.citiesLoading : "Seçiniz"}</option>
+                    {branches.map((branch) => (
+                      <option key={branch.id} value={branch.id}>
+                        {branch.name}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+
+                <div className="customer-modal-actions">
+                  <button className="gray-button" type="button" onClick={() => setCreateStep(1)}>
+                    Geri
+                  </button>
+                  <button className="blue-button" type="button" disabled>
+                    Kaydet sonraki aşamada eklenecek
+                  </button>
+                </div>
+              </form>
+            )}
+          </section>
+        </div>
+      ) : null}
+
       <form className="customer-filter-form" onSubmit={handleFilterSubmit}>
         <div className="customer-filter-actions">
+          <button
+            className="blue-button"
+            type="button"
+            onClick={handleOpenCustomerSearch}
+            disabled={!canSearchCustomers}
+          >
+            {entryText.button}
+          </button>
           <button className="blue-button" type="submit">
             Filtrele
           </button>
@@ -540,4 +952,26 @@ function formatCustomerType(value: string): string {
   }
 
   return value;
+}
+
+function formatCustomerSource(value: string): string {
+  if (value === "backend") {
+    return "Backend";
+  }
+
+  if (value === "umramonline") {
+    return "Umramonline";
+  }
+
+  return "-";
+}
+
+function customerDisplayName(customer: CustomerDetail): string {
+  const corporateName = customer.unvan.trim();
+  if (corporateName) {
+    return corporateName;
+  }
+
+  const individualName = `${customer.ad} ${customer.soyad}`.trim();
+  return individualName || "-";
 }

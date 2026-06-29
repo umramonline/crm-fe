@@ -17,6 +17,49 @@ export type Customer = {
   type: string;
 };
 
+export type CustomerDetail = {
+  id: number;
+  uoId: number;
+  branchId: number | null;
+  unvan: string;
+  ad: string;
+  soyad: string;
+  yetkiliAdi: string;
+  cep: string;
+  telefon: string;
+  mahalle: string;
+  ilKodu: string;
+  ilceKodu: string;
+  vergiNo: string;
+  tcNo: string;
+  type: string;
+  createdAt: string;
+};
+
+export type CustomerSearchResult = {
+  found: boolean;
+  source: string;
+  customer: CustomerDetail | null;
+};
+
+export type City = {
+  id: number;
+  title: string;
+};
+
+export type Town = {
+  id: number;
+  title: string;
+  cityId: number;
+  cityTitle: string;
+};
+
+export type Branch = {
+  id: number;
+  name: string;
+  title: string;
+};
+
 export type CustomerPagination = {
   currentPage: number;
   lastPage: number;
@@ -74,6 +117,60 @@ export async function listZones(): Promise<Zone[]> {
   }));
 }
 
+export async function searchCustomer(query: string): Promise<CustomerSearchResult> {
+  const response = await apiClient.get<ApiEnvelope<RawRecord>>("/api/v1/customers/search", {
+    params: {
+      q: query,
+    },
+  });
+
+  const data = response.data.data ?? {};
+  const rawCustomer = data.customer as RawRecord | undefined;
+
+  return {
+    found: Boolean(data.found),
+    source: stringValue(data.source),
+    customer: rawCustomer ? toCustomerDetail(rawCustomer) : null,
+  };
+}
+
+export async function listCities(): Promise<City[]> {
+  const response = await apiClient.get<ApiEnvelope<RawRecord>>("/api/v1/cities");
+  const items = (response.data.data?.items as RawRecord[] | undefined) ?? [];
+
+  return items.map((item) => ({
+    id: numberValue(item.id),
+    title: stringValue(item.title),
+  }));
+}
+
+export async function listTowns(cityId: number): Promise<Town[]> {
+  const response = await apiClient.get<ApiEnvelope<RawRecord>>("/api/v1/towns", {
+    params: {
+      city_id: cityId,
+    },
+  });
+  const items = (response.data.data?.items as RawRecord[] | undefined) ?? [];
+
+  return items.map((item) => ({
+    id: numberValue(item.id),
+    title: stringValue(item.title),
+    cityId: numberValue(item.city_id),
+    cityTitle: stringValue(item.city_title),
+  }));
+}
+
+export async function listBranches(): Promise<Branch[]> {
+  const response = await apiClient.get<ApiEnvelope<RawRecord>>("/api/v1/branches");
+  const items = (response.data.data?.items as RawRecord[] | undefined) ?? [];
+
+  return items.map((item) => ({
+    id: numberValue(item.id),
+    name: stringValue(item.name),
+    title: stringValue(item.title),
+  }));
+}
+
 export async function listCustomers(
   query: CustomerListQuery = {},
 ): Promise<CustomerListResult> {
@@ -100,6 +197,27 @@ export async function listCustomers(
   });
 
   return normalizeCustomerListResult(response.data.data ?? {});
+}
+
+function toCustomerDetail(record: RawRecord): CustomerDetail {
+  return {
+    id: numberValue(record.id),
+    uoId: numberValue(record.uo_id),
+    branchId: nullableNumberValue(record.branch_id),
+    unvan: stringValue(record.unvan),
+    ad: stringValue(record.ad),
+    soyad: stringValue(record.soyad),
+    yetkiliAdi: stringValue(record.yetkili_adi),
+    cep: stringValue(record.cep),
+    telefon: stringValue(record.telefon),
+    mahalle: stringValue(record.mahalle),
+    ilKodu: stringValue(record.il_kodu),
+    ilceKodu: stringValue(record.ilce_kodu),
+    vergiNo: stringValue(record.vergi_no),
+    tcNo: stringValue(record.tc_no),
+    type: stringValue(record.type),
+    createdAt: stringValue(record.created_at),
+  };
 }
 
 function normalizeCustomerListResult(data: RawRecord): CustomerListResult {

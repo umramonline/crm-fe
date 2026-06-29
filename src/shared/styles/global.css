@@ -709,6 +709,112 @@ select {
   margin-top: 12px;
 }
 
+.customer-modal-backdrop {
+  position: fixed;
+  z-index: 20;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  background: rgb(15 23 42 / 42%);
+}
+
+.customer-modal {
+  width: min(100%, 460px);
+  border-radius: 10px;
+  padding: 18px;
+  background: #ffffff;
+  box-shadow: 0 24px 60px rgb(15 23 42 / 24%);
+}
+
+.customer-modal-wide {
+  width: min(100%, 720px);
+}
+
+.customer-modal-header {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 14px;
+}
+
+.customer-modal-header h2 {
+  margin: 0;
+  color: #111827;
+  font-size: 18px;
+}
+
+.customer-modal-close {
+  border: 0;
+  color: #64748b;
+  font-size: 12px;
+  font-weight: 700;
+  background: transparent;
+}
+
+.customer-modal-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: flex-end;
+}
+
+.customer-found-card {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-top: 14px;
+  border: 1px solid #bfdbfe;
+  border-radius: 8px;
+  padding: 12px;
+  background: #eff6ff;
+}
+
+.customer-found-card strong {
+  color: #111827;
+}
+
+.customer-found-card span {
+  color: #475569;
+  font-size: 12px;
+}
+
+.customer-entry-type-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.customer-entry-type-card {
+  border: 1px solid #dbeafe;
+  border-radius: 8px;
+  padding: 28px 16px;
+  color: #1d4ed8;
+  font-weight: 800;
+  background: #eff6ff;
+}
+
+.customer-entry-form {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.customer-entry-form .customer-modal-actions {
+  grid-column: 1 / -1;
+}
+
+.field-label {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  color: #475569;
+  font-size: 12px;
+  font-weight: 700;
+}
+
 .table-sort-button {
   border: 0;
   padding: 0;
@@ -735,6 +841,13 @@ select {
   .permission-table-panel,
   .method-panel {
     grid-row: auto;
+  }
+}
+
+@media (max-width: 680px) {
+  .customer-entry-type-grid,
+  .customer-entry-form {
+    grid-template-columns: 1fr;
   }
 }
 
