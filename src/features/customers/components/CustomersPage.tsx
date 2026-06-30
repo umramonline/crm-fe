@@ -144,7 +144,7 @@ export function CustomersPage({ permissions }: CustomersPageProps) {
 
   const [zones, setZones] = useState<Zone[]>([]);
   const [customerDataSource, setCustomerDataSource] =
-    useState<CustomerDataSource>("umramonline");
+    useState<CustomerDataSource>("backend");
   const [cities, setCities] = useState<City[]>([]);
   const [towns, setTowns] = useState<Town[]>([]);
   const [branches, setBranches] = useState<Branch[]>([]);
@@ -882,7 +882,7 @@ export function CustomersPage({ permissions }: CustomersPageProps) {
               Umramonline
             </option>
             <option value="backend" disabled={!canListBackendCustomers}>
-              Backend
+              CRM
             </option>
           </select>
         </label>
