@@ -720,6 +720,18 @@ select {
   min-width: 1280px;
 }
 
+.customer-table tbody tr:nth-child(odd) {
+  background: #ffffff;
+}
+
+.customer-table tbody tr:nth-child(even) {
+  background: #f2f4f5;
+}
+
+.customer-table tbody tr:hover td {
+  background: #d8e6f4;
+}
+
 .customer-filter-row th {
   background: #ffffff;
 }

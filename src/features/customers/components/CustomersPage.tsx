@@ -555,7 +555,7 @@ export function CustomersPage({ permissions }: CustomersPageProps) {
     return (
       <section className="panel-card">
         <div className="page-title">
-          <h1>Müşteriler</h1>
+          <h1>Galeri Listesi</h1>
           <p>Bu sayfayı görüntüleme yetkiniz bulunmuyor.</p>
         </div>
       </section>
@@ -565,7 +565,7 @@ export function CustomersPage({ permissions }: CustomersPageProps) {
   return (
     <section className="panel-card permission-table-panel">
       <div className="page-title">
-        <h1>Müşteriler</h1>
+        <h1>Galeri Listesi</h1>
         <p>PlusCard müşteri listesini filtreleyebilir, sıralayabilir ve sayfalayabilirsiniz.</p>
       </div>
 

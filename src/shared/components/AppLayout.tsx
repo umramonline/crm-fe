@@ -73,7 +73,7 @@ export function AppLayout({
               onClick={() => handleNavigate("customers")}
             >
               <span aria-hidden="true">👥</span>
-              Müşteriler
+              Galeri Listesi
             </button>
           ) : null}
 
