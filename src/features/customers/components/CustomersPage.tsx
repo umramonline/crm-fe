@@ -30,8 +30,6 @@ const situationOptions = [
   "Potansiyel Müşteri",
 ] as const;
 
-const sourceOptions = ["PlusCard", "Manuel"] as const;
-
 const typeOptions = ["Kurumsal", "Bireysel"] as const;
 
 const entryText = {
@@ -65,7 +63,6 @@ type CustomerFilters = {
   branchName: string;
   zoneId: string;
   plusCardNo: string;
-  source: string;
   city: string;
   town: string;
   createdAt: string;
@@ -96,7 +93,6 @@ const emptyFilters: CustomerFilters = {
   branchName: "",
   zoneId: "",
   plusCardNo: "",
-  source: "",
   city: "",
   town: "",
   createdAt: "",
@@ -315,7 +311,6 @@ export function CustomersPage({ permissions }: CustomersPageProps) {
               ? Number(appliedFilters.zoneId)
               : undefined,
           plusCardNo: isBackendDataSource ? "" : appliedFilters.plusCardNo,
-          source: isBackendDataSource ? "" : appliedFilters.source,
           city: appliedFilters.city,
           town: appliedFilters.town,
           createdAt: appliedFilters.createdAt,
@@ -945,7 +940,6 @@ export function CustomersPage({ permissions }: CustomersPageProps) {
                   </button>
                 </th>
               ) : null}
-              <th>Müşteri Kaynağı</th>
               <th>İl</th>
               <th>İlçe</th>
               <th>
@@ -995,7 +989,6 @@ export function CustomersPage({ permissions }: CustomersPageProps) {
                   }
                 />
               </th>
-              {isBackendDataSource ? <th /> : null}
               <th>
                 <input
                   className="panel-input"
@@ -1032,6 +1025,7 @@ export function CustomersPage({ permissions }: CustomersPageProps) {
                   }
                 />
               </th>
+              {isBackendDataSource ? <th /> : null}
               <th>
                 <input
                   className="panel-input"
@@ -1081,27 +1075,6 @@ export function CustomersPage({ permissions }: CustomersPageProps) {
                 </th>
               ) : null}
               {!isBackendDataSource ? <th /> : null}
-              <th>
-                {!isBackendDataSource ? (
-                  <select
-                    className="panel-input"
-                    value={draftFilters.source}
-                    onChange={(event) =>
-                      setDraftFilters((current) => ({
-                        ...current,
-                        source: event.target.value,
-                      }))
-                    }
-                  >
-                    <option value="">Tümü</option>
-                    {sourceOptions.map((option) => (
-                      <option key={option} value={option}>
-                        {option}
-                      </option>
-                    ))}
-                  </select>
-                ) : null}
-              </th>
               <th>
                 <input
                   className="panel-input"
@@ -1162,7 +1135,7 @@ export function CustomersPage({ permissions }: CustomersPageProps) {
           <tbody>
             {items.length === 0 && !isLoading ? (
               <tr>
-                <td colSpan={isBackendDataSource ? 12 : 15}>Kayıt bulunamadı.</td>
+                <td colSpan={isBackendDataSource ? 11 : 14}>Kayıt bulunamadı.</td>
               </tr>
             ) : null}
 
@@ -1201,7 +1174,6 @@ export function CustomersPage({ permissions }: CustomersPageProps) {
                 {!isBackendDataSource ? <td>{customer.zoneName || "-"}</td> : null}
                 {!isBackendDataSource ? <td>{customer.plusCardNo || "-"}</td> : null}
                 {!isBackendDataSource ? <td>{formatCredit(customer.credit)}</td> : null}
-                <td>{customer.source || "-"}</td>
                 <td>{customer.city || "-"}</td>
                 <td>{customer.town || "-"}</td>
                 <td>{formatDate(customer.createdAt)}</td>
