@@ -302,7 +302,7 @@ export function CustomersPage({ permissions }: CustomersPageProps) {
       try {
         const result = await listCustomers({
           page: currentPage,
-          perPage: 10,
+          perPage: 20,
           dataSource: customerDataSource,
           situation: isBackendDataSource ? "" : appliedFilters.situation,
           unvan: appliedFilters.unvan,
