@@ -1169,15 +1169,27 @@ export function CustomersPage({ permissions }: CustomersPageProps) {
             {items.map((customer, index) => (
               <tr key={`${customer.id}-${customer.plusCardNo}-${customer.cep}-${index}`}>
                 <td>
-                  <button
-                    className="customer-action-button"
-                    type="button"
-                    aria-label="Müşteri detayını görüntüle"
-                    disabled={!canViewSelectedSourceDetail}
-                    onClick={() => void handleOpenCustomerDetail(customer.id)}
-                  >
-                    ⓘ
-                  </button>
+                  <div className="customer-action-group">
+                    <button
+                      className="customer-action-button"
+                      type="button"
+                      aria-label="Müşteri detayını görüntüle"
+                      disabled={!canViewSelectedSourceDetail}
+                      onClick={() => void handleOpenCustomerDetail(customer.id)}
+                    >
+                      ⓘ
+                    </button>
+                    {isBackendDataSource ? (
+                      <button
+                        className="customer-action-button"
+                        type="button"
+                        aria-label="Müşteri tam kaydını düzenle"
+                        onClick={() => navigateToFullRegistration(customer.id)}
+                      >
+                        ✎
+                      </button>
+                    ) : null}
+                  </div>
                 </td>
                 <td>{customer.situation || "-"}</td>
                 <td>{customer.unvan || "-"}</td>
