@@ -908,7 +908,7 @@ export function CustomersPage({ permissions }: CustomersPageProps) {
           <thead>
             <tr>
               <th>İşlemler</th>
-              {!isBackendDataSource ? <th>Durum</th> : null}
+              <th>Durum</th>
               <th>Firma İsmi</th>
               <th>Yetkili Telefonu</th>
               <th>Yetkili İsmi</th>
@@ -956,27 +956,29 @@ export function CustomersPage({ permissions }: CustomersPageProps) {
             </tr>
             <tr className="customer-filter-row">
               <th />
-              {!isBackendDataSource ? (
-                <th>
-                  <select
-                    className="panel-input"
-                    value={draftFilters.situation}
-                    onChange={(event) =>
-                      setDraftFilters((current) => ({
-                        ...current,
-                        situation: event.target.value,
-                      }))
-                    }
-                  >
-                    <option value="">Tümü</option>
-                    {situationOptions.map((option) => (
-                      <option key={option} value={option}>
-                        {option}
-                      </option>
-                    ))}
-                  </select>
-                </th>
-              ) : null}
+              <th>
+                {!isBackendDataSource ? (
+                  
+                    <select
+                      className="panel-input"
+                      value={draftFilters.situation}
+                      onChange={(event) =>
+                        setDraftFilters((current) => ({
+                          ...current,
+                          situation: event.target.value,
+                        }))
+                      }
+                    >
+                      <option value="">Tümü</option>
+                      {situationOptions.map((option) => (
+                        <option key={option} value={option}>
+                          {option}
+                        </option>
+                      ))}
+                    </select>
+                  
+                ) : null}
+              </th>
               <th>
                 <input
                   className="panel-input"
@@ -1135,7 +1137,7 @@ export function CustomersPage({ permissions }: CustomersPageProps) {
           <tbody>
             {items.length === 0 && !isLoading ? (
               <tr>
-                <td colSpan={isBackendDataSource ? 11 : 14}>Kayıt bulunamadı.</td>
+                <td colSpan={isBackendDataSource ? 13 : 15}>Kayıt bulunamadı.</td>
               </tr>
             ) : null}
 
@@ -1164,7 +1166,7 @@ export function CustomersPage({ permissions }: CustomersPageProps) {
                     ) : null}
                   </div>
                 </td>
-                {!isBackendDataSource ? <td>{customer.situation || "-"}</td> : null}
+                <td>{customer.situation || "-"}</td>
                 <td>{customer.unvan || "-"}</td>
                 <td>{customer.cep || "-"}</td>
                 <td>{customer.ad || "-"}</td>

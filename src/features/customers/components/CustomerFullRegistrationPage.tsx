@@ -86,13 +86,6 @@ const corporateSectorOptions = [
   "Diğer",
 ];
 
-const umramonlineEditableFields = new Set<keyof FullRegistrationForm>([
-  "corporateSector",
-  "website",
-  "googleMapLink",
-  "classifiedsWebsiteLink",
-  "vehicleStockCount",
-]);
 
 export function CustomerFullRegistrationPage({
   customerId,
@@ -105,8 +98,6 @@ export function CustomerFullRegistrationPage({
   const [towns, setTowns] = useState<Town[]>([]);
   const [errors, setErrors] = useState<CustomerValidationErrors>({});
   const [message, setMessage] = useState("");
-  const [customerUoId, setCustomerUoId] = useState(0);
-  const isUmramonlineCustomer = customerUoId > 0;
 
   useEffect(() => {
     let isActive = true;
@@ -125,9 +116,8 @@ export function CustomerFullRegistrationPage({
 
         setBranches(nextBranches);
         setCities(nextCities);
-        setCustomerUoId(customer.uoId);
         setForm({
-          type: customer.type.toLowerCase() === "kurumsal" ? "kurumsal" : "bireysel",
+          type: customer.type === "kurumsal" ? "kurumsal" : "bireysel",
           cep: customer.cep,
           ad: customer.ad,
           soyad: customer.soyad,
@@ -193,9 +183,6 @@ export function CustomerFullRegistrationPage({
   }, [form.ilKodu]);
 
   function updateField(field: keyof FullRegistrationForm, value: string): void {
-    if (isUmramonlineCustomer && !umramonlineEditableFields.has(field)) {
-      return;
-    }
 
     setForm((current) => ({
       ...current,
@@ -206,9 +193,6 @@ export function CustomerFullRegistrationPage({
   }
 
   function updateTelephone(index: number, field: keyof CustomerTelephone, value: string): void {
-    if (isUmramonlineCustomer) {
-      return;
-    }
 
     setForm((current) => ({
       ...current,
@@ -219,10 +203,6 @@ export function CustomerFullRegistrationPage({
   }
 
   function addTelephone(): void {
-    if (isUmramonlineCustomer) {
-      return;
-    }
-
     setForm((current) => ({
       ...current,
       telephones: [...current.telephones, { phoneNumber: "", title: "" }],
@@ -230,10 +210,6 @@ export function CustomerFullRegistrationPage({
   }
 
   function removeTelephone(index: number): void {
-    if (isUmramonlineCustomer) {
-      return;
-    }
-
     setForm((current) => ({
       ...current,
       telephones: current.telephones.filter((_, telephoneIndex) => telephoneIndex !== index),
@@ -241,13 +217,13 @@ export function CustomerFullRegistrationPage({
   }
 
   async function handleNext(): Promise<void> {
-    const stepErrors = validateStep(step, form, isUmramonlineCustomer);
+    const stepErrors = validateStep(step, form);
     setErrors(stepErrors);
     if (Object.keys(stepErrors).length > 0) {
       return;
     }
 
-    if (step === 1 && !isUmramonlineCustomer) {
+    if (step === 1) {
       try {
         const exists = await fullRegistrationPhoneExists(customerId, form.cep.trim());
         if (exists) {
@@ -270,7 +246,7 @@ export function CustomerFullRegistrationPage({
   async function handleSubmit(event: FormEvent<HTMLFormElement>): Promise<void> {
     event.preventDefault();
 
-    const validationErrors = validateAll(form, isUmramonlineCustomer);
+    const validationErrors = validateAll(form);
     setErrors(validationErrors);
     if (Object.keys(validationErrors).length > 0) {
       setStep(firstInvalidStep(validationErrors));
@@ -341,7 +317,6 @@ export function CustomerFullRegistrationPage({
                 { value: "kurumsal", label: "Kurumsal" },
               ]}
               error={errors.type}
-              disabled={isUmramonlineCustomer}
             />
             <FormInput
               label="Cep *"
@@ -350,18 +325,17 @@ export function CustomerFullRegistrationPage({
               error={errors.cep}
               isPhone
               maxLength={11}
-              disabled={isUmramonlineCustomer}
             />
-            <FormInput label="Ad *" value={form.ad} onChange={(value) => updateField("ad", value)} error={errors.ad} disabled={isUmramonlineCustomer} />
-            <FormInput label="Soyad *" value={form.soyad} onChange={(value) => updateField("soyad", value)} error={errors.soyad} disabled={isUmramonlineCustomer} />
+            <FormInput label="Ad *" value={form.ad} onChange={(value) => updateField("ad", value)} error={errors.ad} />
+            <FormInput label="Soyad *" value={form.soyad} onChange={(value) => updateField("soyad", value)} error={errors.soyad} />
             {form.type === "bireysel" ? (
               <>
-                <FormInput label="T.C. No" value={form.tcNo} onChange={(value) => updateField("tcNo", value)} error={errors.tc_no} disabled={isUmramonlineCustomer} />
-                <FormInput label="Doğum Tarihi" type="date" value={form.dogumTarihi} onChange={(value) => updateField("dogumTarihi", value)} error={errors.dogum_tarihi} disabled={isUmramonlineCustomer} />
+                <FormInput label="T.C. No" value={form.tcNo} onChange={(value) => updateField("tcNo", value)} error={errors.tc_no} />
+                <FormInput label="Doğum Tarihi" type="date" value={form.dogumTarihi} onChange={(value) => updateField("dogumTarihi", value)} error={errors.dogum_tarihi} />
               </>
             ) : (
               <>
-                <FormInput label="Ünvan *" value={form.unvan} onChange={(value) => updateField("unvan", value)} error={errors.unvan} disabled={isUmramonlineCustomer} />
+                <FormInput label="Ünvan *" value={form.unvan} onChange={(value) => updateField("unvan", value)} error={errors.unvan} />
                 <FormSelect
                   label="Sektör *"
                   value={form.corporateSector}
@@ -382,17 +356,16 @@ export function CustomerFullRegistrationPage({
               onChange={(value) => updateField("branchId", value)}
               options={branches.map((branch) => ({ value: String(branch.id), label: branch.name }))}
               error={errors.branch_id}
-              disabled={isUmramonlineCustomer}
             />
-            <FormInput label="E-posta" value={form.eposta} onChange={(value) => updateField("eposta", value)} error={errors.eposta} disabled={isUmramonlineCustomer} />
+            <FormInput label="E-posta" value={form.eposta} onChange={(value) => updateField("eposta", value)} error={errors.eposta} />
             <FormInput label="Website" value={form.website} onChange={(value) => updateField("website", value)} error={errors.website} />
             <FormInput label="Google Map Link" value={form.googleMapLink} onChange={(value) => updateField("googleMapLink", value)} error={errors.google_map_link} />
             <FormInput label="İlan Sitesi Linki" value={form.classifiedsWebsiteLink} onChange={(value) => updateField("classifiedsWebsiteLink", value)} error={errors.classifieds_website_link} />
             <FormInput label="Araç Stok Adedi *" type="number" value={form.vehicleStockCount} onChange={(value) => updateField("vehicleStockCount", value)} error={errors.vehicle_stock_count} />
             {form.type === "kurumsal" ? (
               <>
-                <FormInput label="Vergi No *" value={form.vergiNo} onChange={(value) => updateField("vergiNo", value)} error={errors.vergi_no} disabled={isUmramonlineCustomer} />
-                <FormInput label="Vergi Dairesi *" value={form.vergiDairesi} onChange={(value) => updateField("vergiDairesi", value)} error={errors.vergi_dairesi} disabled={isUmramonlineCustomer} />
+                <FormInput label="Vergi No *" value={form.vergiNo} onChange={(value) => updateField("vergiNo", value)} error={errors.vergi_no} />
+                <FormInput label="Vergi Dairesi *" value={form.vergiDairesi} onChange={(value) => updateField("vergiDairesi", value)} error={errors.vergi_dairesi} />
               </>
             ) : null}
           </div>
@@ -400,15 +373,15 @@ export function CustomerFullRegistrationPage({
 
         {step === 3 ? (
           <div className="full-registration-list">
-            <button className="blue-button" type="button" onClick={addTelephone} disabled={isUmramonlineCustomer}>
+            <button className="blue-button" type="button" onClick={addTelephone}>
               Cep Telefonu Ekle
             </button>
             {form.telephones.length === 0 ? <p className="muted-text">Ek cep telefonu yok.</p> : null}
             {form.telephones.map((telephone, index) => (
               <div className="full-registration-phone-row" key={`${index}-${telephone.id ?? 0}`}>
-                <FormInput label="Cep telefonu başlığı" value={telephone.title} onChange={(value) => updateTelephone(index, "title", value)} disabled={isUmramonlineCustomer} />
-                <FormInput label="Cep telefonu" value={telephone.phoneNumber} onChange={(value) => updateTelephone(index, "phoneNumber", value)} isPhone disabled={isUmramonlineCustomer} />
-                <button className="gray-button" type="button" onClick={() => removeTelephone(index)} disabled={isUmramonlineCustomer}>
+                <FormInput label="Cep telefonu başlığı" value={telephone.title} onChange={(value) => updateTelephone(index, "title", value)} />
+                <FormInput label="Cep telefonu" value={telephone.phoneNumber} onChange={(value) => updateTelephone(index, "phoneNumber", value)} isPhone />
+                <button className="gray-button" type="button" onClick={() => removeTelephone(index)}>
                   Sil
                 </button>
               </div>
@@ -425,7 +398,6 @@ export function CustomerFullRegistrationPage({
               onChange={(value) => updateField("ilKodu", value)}
               options={cities.map((city) => ({ value: String(city.id), label: city.title }))}
               error={errors.il_kodu}
-              disabled={isUmramonlineCustomer}
             />
             <FormSelect
               label="İlçe"
@@ -433,10 +405,9 @@ export function CustomerFullRegistrationPage({
               onChange={(value) => updateField("ilceKodu", value)}
               options={towns.map((town) => ({ value: String(town.id), label: town.title }))}
               error={errors.ilce_kodu}
-              disabled={isUmramonlineCustomer}
             />
-            <FormInput label="Mahalle" value={form.mahalle} onChange={(value) => updateField("mahalle", value)} error={errors.mahalle} disabled={isUmramonlineCustomer} />
-            <FormInput label="Adres Detayı *" value={form.addressDetail} onChange={(value) => updateField("addressDetail", value)} error={errors.address_detail} disabled={isUmramonlineCustomer} />
+            <FormInput label="Mahalle" value={form.mahalle} onChange={(value) => updateField("mahalle", value)} error={errors.mahalle} />
+            <FormInput label="Adres Detayı *" value={form.addressDetail} onChange={(value) => updateField("addressDetail", value)} error={errors.address_detail} />
           </div>
         ) : null}
 
@@ -467,7 +438,6 @@ type FormInputProps = {
   type?: string;
   maxLength?: number;
   isPhone?: boolean;
-  disabled?: boolean;
 };
 
 function FormInput({
@@ -478,7 +448,6 @@ function FormInput({
   type = "text",
   maxLength = customerTextMaxLength,
   isPhone = false,
-  disabled = false,
 }: FormInputProps) {
   return (
     <label className="field-label">
@@ -492,7 +461,6 @@ function FormInput({
         placeholder={isPhone ? "05XXXXXXXXX" : undefined}
         value={value}
         onChange={(event) => onChange(event.target.value)}
-        disabled={disabled}
       />
       {error ? <span className="customer-field-error">{error}</span> : null}
     </label>
@@ -505,10 +473,9 @@ type FormSelectProps = {
   options: Array<{ value: string; label: string }>;
   onChange: (value: string) => void;
   error?: string;
-  disabled?: boolean;
 };
 
-function FormSelect({ label, value, options, onChange, error, disabled = false }: FormSelectProps) {
+function FormSelect({ label, value, options, onChange, error }: FormSelectProps) {
   return (
     <label className="field-label">
       {label}
@@ -516,7 +483,6 @@ function FormSelect({ label, value, options, onChange, error, disabled = false }
         className="panel-input"
         value={value}
         onChange={(event) => onChange(event.target.value)}
-        disabled={disabled}
       >
         <option value="">Seçiniz</option>
         {options.map((option) => (
@@ -533,27 +499,8 @@ function FormSelect({ label, value, options, onChange, error, disabled = false }
 function validateStep(
   step: 1 | 2 | 3 | 4,
   form: FullRegistrationForm,
-  isUmramonlineCustomer = false,
 ): CustomerValidationErrors {
   const errors: CustomerValidationErrors = {};
-
-  if (isUmramonlineCustomer) {
-    if (step === 1 && form.type === "kurumsal") {
-      requireField(errors, "corporate_sector", form.corporateSector, "Sektör zorunludur.");
-      validateMaxLength(errors, "corporate_sector", form.corporateSector, "Sektör");
-    }
-
-    if (step === 2) {
-      validateMaxLength(errors, "website", form.website, "Website");
-      validateMaxLength(errors, "google_map_link", form.googleMapLink, "Google map link");
-      validateMaxLength(errors, "classifieds_website_link", form.classifiedsWebsiteLink, "İlan sitesi linki");
-      if (form.vehicleStockCount === "" || Number(form.vehicleStockCount) < 0) {
-        errors.vehicle_stock_count = "Araç stok adedi 0 veya daha büyük olmalıdır.";
-      }
-    }
-
-    return errors;
-  }
 
   if (step === 1) {
     requireField(errors, "type", form.type, "Müşteri türü zorunludur.");
@@ -610,12 +557,12 @@ function validateStep(
   return errors;
 }
 
-function validateAll(form: FullRegistrationForm, isUmramonlineCustomer = false): CustomerValidationErrors {
+function validateAll(form: FullRegistrationForm): CustomerValidationErrors {
   return {
-    ...validateStep(1, form, isUmramonlineCustomer),
-    ...validateStep(2, form, isUmramonlineCustomer),
-    ...validateStep(3, form, isUmramonlineCustomer),
-    ...validateStep(4, form, isUmramonlineCustomer),
+    ...validateStep(1, form),
+    ...validateStep(2, form),
+    ...validateStep(3, form),
+    ...validateStep(4, form),
   };
 }
 
