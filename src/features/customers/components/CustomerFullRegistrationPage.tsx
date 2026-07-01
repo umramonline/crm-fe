@@ -1,4 +1,4 @@
-import { FormEvent, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 
 import {
   completeFullRegistration,
@@ -245,9 +245,7 @@ export function CustomerFullRegistrationPage({
     setStep((current) => Math.max(current - 1, 1) as 1 | 2 | 3 | 4);
   }
 
-  async function handleSubmit(event: FormEvent<HTMLFormElement>): Promise<void> {
-    event.preventDefault();
-
+  async function handleCompleteRegistration(): Promise<void> {
     const validationErrors = validateAll(form, hasUoId);
     setErrors(validationErrors);
     if (Object.keys(validationErrors).length > 0) {
@@ -299,7 +297,7 @@ export function CustomerFullRegistrationPage({
 
       {message ? <div className="panel-alert">{message}</div> : null}
 
-      <form className="full-registration-form" onSubmit={(event) => void handleSubmit(event)}>
+      <form className="full-registration-form" onSubmit={(event) => event.preventDefault()}>
         <div className="full-registration-steps">
           {[1, 2, 3, 4].map((stepNumber) => (
             <span key={stepNumber} className={step === stepNumber ? "active" : ""}>
@@ -427,7 +425,7 @@ export function CustomerFullRegistrationPage({
               Sonraki
             </button>
           ) : (
-            <button className="blue-button" type="submit">
+            <button className="blue-button" type="button" onClick={() => void handleCompleteRegistration()}>
               Tam Kaydı Tamamla
             </button>
           )}
