@@ -98,6 +98,7 @@ export function CustomerFullRegistrationPage({
   const [towns, setTowns] = useState<Town[]>([]);
   const [errors, setErrors] = useState<CustomerValidationErrors>({});
   const [message, setMessage] = useState("");
+  const [hasUoId, setHasUoId] = useState(false);
 
   useEffect(() => {
     let isActive = true;
@@ -116,6 +117,7 @@ export function CustomerFullRegistrationPage({
 
         setBranches(nextBranches);
         setCities(nextCities);
+        setHasUoId(customer.uoId > 0);
         setForm({
           type: customer.type === "kurumsal" ? "kurumsal" : "bireysel",
           cep: customer.cep,
@@ -217,13 +219,13 @@ export function CustomerFullRegistrationPage({
   }
 
   async function handleNext(): Promise<void> {
-    const stepErrors = validateStep(step, form);
+    const stepErrors = validateStep(step, form, hasUoId);
     setErrors(stepErrors);
     if (Object.keys(stepErrors).length > 0) {
       return;
     }
 
-    if (step === 1) {
+    if (step === 1 && !hasUoId) {
       try {
         const exists = await fullRegistrationPhoneExists(customerId, form.cep.trim());
         if (exists) {
@@ -246,7 +248,7 @@ export function CustomerFullRegistrationPage({
   async function handleSubmit(event: FormEvent<HTMLFormElement>): Promise<void> {
     event.preventDefault();
 
-    const validationErrors = validateAll(form);
+    const validationErrors = validateAll(form, hasUoId);
     setErrors(validationErrors);
     if (Object.keys(validationErrors).length > 0) {
       setStep(firstInvalidStep(validationErrors));
@@ -317,6 +319,7 @@ export function CustomerFullRegistrationPage({
                 { value: "kurumsal", label: "Kurumsal" },
               ]}
               error={errors.type}
+              disabled={hasUoId}
             />
             <FormInput
               label="Cep *"
@@ -325,17 +328,18 @@ export function CustomerFullRegistrationPage({
               error={errors.cep}
               isPhone
               maxLength={11}
+              disabled={hasUoId}
             />
-            <FormInput label="Ad *" value={form.ad} onChange={(value) => updateField("ad", value)} error={errors.ad} />
-            <FormInput label="Soyad *" value={form.soyad} onChange={(value) => updateField("soyad", value)} error={errors.soyad} />
+            <FormInput label="Ad *" value={form.ad} onChange={(value) => updateField("ad", value)} error={errors.ad} disabled={hasUoId} />
+            <FormInput label="Soyad *" value={form.soyad} onChange={(value) => updateField("soyad", value)} error={errors.soyad} disabled={hasUoId} />
             {form.type === "bireysel" ? (
               <>
-                <FormInput label="T.C. No" value={form.tcNo} onChange={(value) => updateField("tcNo", value)} error={errors.tc_no} />
-                <FormInput label="Doğum Tarihi" type="date" value={form.dogumTarihi} onChange={(value) => updateField("dogumTarihi", value)} error={errors.dogum_tarihi} />
+                <FormInput label="T.C. No" value={form.tcNo} onChange={(value) => updateField("tcNo", value)} error={errors.tc_no} disabled={hasUoId} />
+                <FormInput label="Doğum Tarihi" type="date" value={form.dogumTarihi} onChange={(value) => updateField("dogumTarihi", value)} error={errors.dogum_tarihi} disabled={hasUoId} />
               </>
             ) : (
               <>
-                <FormInput label="Ünvan *" value={form.unvan} onChange={(value) => updateField("unvan", value)} error={errors.unvan} />
+                <FormInput label="Ünvan *" value={form.unvan} onChange={(value) => updateField("unvan", value)} error={errors.unvan} disabled={hasUoId} />
                 <FormSelect
                   label="Sektör *"
                   value={form.corporateSector}
@@ -356,16 +360,17 @@ export function CustomerFullRegistrationPage({
               onChange={(value) => updateField("branchId", value)}
               options={branches.map((branch) => ({ value: String(branch.id), label: branch.name }))}
               error={errors.branch_id}
+              disabled={hasUoId}
             />
-            <FormInput label="E-posta" value={form.eposta} onChange={(value) => updateField("eposta", value)} error={errors.eposta} />
+            <FormInput label="E-posta" value={form.eposta} onChange={(value) => updateField("eposta", value)} error={errors.eposta} disabled={hasUoId} />
             <FormInput label="Website" value={form.website} onChange={(value) => updateField("website", value)} error={errors.website} />
             <FormInput label="Google Map Link" value={form.googleMapLink} onChange={(value) => updateField("googleMapLink", value)} error={errors.google_map_link} />
             <FormInput label="İlan Sitesi Linki" value={form.classifiedsWebsiteLink} onChange={(value) => updateField("classifiedsWebsiteLink", value)} error={errors.classifieds_website_link} />
             <FormInput label="Araç Stok Adedi *" type="number" value={form.vehicleStockCount} onChange={(value) => updateField("vehicleStockCount", value)} error={errors.vehicle_stock_count} />
             {form.type === "kurumsal" ? (
               <>
-                <FormInput label="Vergi No *" value={form.vergiNo} onChange={(value) => updateField("vergiNo", value)} error={errors.vergi_no} />
-                <FormInput label="Vergi Dairesi *" value={form.vergiDairesi} onChange={(value) => updateField("vergiDairesi", value)} error={errors.vergi_dairesi} />
+                <FormInput label="Vergi No *" value={form.vergiNo} onChange={(value) => updateField("vergiNo", value)} error={errors.vergi_no} disabled={hasUoId} />
+                <FormInput label="Vergi Dairesi *" value={form.vergiDairesi} onChange={(value) => updateField("vergiDairesi", value)} error={errors.vergi_dairesi} disabled={hasUoId} />
               </>
             ) : null}
           </div>
@@ -373,15 +378,15 @@ export function CustomerFullRegistrationPage({
 
         {step === 3 ? (
           <div className="full-registration-list">
-            <button className="blue-button" type="button" onClick={addTelephone}>
+            <button className="blue-button" type="button" onClick={addTelephone} disabled={hasUoId}>
               Cep Telefonu Ekle
             </button>
             {form.telephones.length === 0 ? <p className="muted-text">Ek cep telefonu yok.</p> : null}
             {form.telephones.map((telephone, index) => (
               <div className="full-registration-phone-row" key={`${index}-${telephone.id ?? 0}`}>
-                <FormInput label="Cep telefonu başlığı" value={telephone.title} onChange={(value) => updateTelephone(index, "title", value)} />
-                <FormInput label="Cep telefonu" value={telephone.phoneNumber} onChange={(value) => updateTelephone(index, "phoneNumber", value)} isPhone />
-                <button className="gray-button" type="button" onClick={() => removeTelephone(index)}>
+                <FormInput label="Cep telefonu başlığı" value={telephone.title} onChange={(value) => updateTelephone(index, "title", value)} disabled={hasUoId} />
+                <FormInput label="Cep telefonu" value={telephone.phoneNumber} onChange={(value) => updateTelephone(index, "phoneNumber", value)} isPhone disabled={hasUoId} />
+                <button className="gray-button" type="button" onClick={() => removeTelephone(index)} disabled={hasUoId}>
                   Sil
                 </button>
               </div>
@@ -398,6 +403,7 @@ export function CustomerFullRegistrationPage({
               onChange={(value) => updateField("ilKodu", value)}
               options={cities.map((city) => ({ value: String(city.id), label: city.title }))}
               error={errors.il_kodu}
+              disabled={hasUoId}
             />
             <FormSelect
               label="İlçe"
@@ -405,9 +411,10 @@ export function CustomerFullRegistrationPage({
               onChange={(value) => updateField("ilceKodu", value)}
               options={towns.map((town) => ({ value: String(town.id), label: town.title }))}
               error={errors.ilce_kodu}
+              disabled={hasUoId}
             />
-            <FormInput label="Mahalle" value={form.mahalle} onChange={(value) => updateField("mahalle", value)} error={errors.mahalle} />
-            <FormInput label="Adres Detayı *" value={form.addressDetail} onChange={(value) => updateField("addressDetail", value)} error={errors.address_detail} />
+            <FormInput label="Mahalle" value={form.mahalle} onChange={(value) => updateField("mahalle", value)} error={errors.mahalle} disabled={hasUoId} />
+            <FormInput label="Adres Detayı *" value={form.addressDetail} onChange={(value) => updateField("addressDetail", value)} error={errors.address_detail} disabled={hasUoId} />
           </div>
         ) : null}
 
@@ -438,6 +445,7 @@ type FormInputProps = {
   type?: string;
   maxLength?: number;
   isPhone?: boolean;
+  disabled?: boolean;
 };
 
 function FormInput({
@@ -448,6 +456,7 @@ function FormInput({
   type = "text",
   maxLength = customerTextMaxLength,
   isPhone = false,
+  disabled = false,
 }: FormInputProps) {
   return (
     <label className="field-label">
@@ -461,6 +470,7 @@ function FormInput({
         placeholder={isPhone ? "05XXXXXXXXX" : undefined}
         value={value}
         onChange={(event) => onChange(event.target.value)}
+        disabled={disabled}
       />
       {error ? <span className="customer-field-error">{error}</span> : null}
     </label>
@@ -473,9 +483,10 @@ type FormSelectProps = {
   options: Array<{ value: string; label: string }>;
   onChange: (value: string) => void;
   error?: string;
+  disabled?: boolean;
 };
 
-function FormSelect({ label, value, options, onChange, error }: FormSelectProps) {
+function FormSelect({ label, value, options, onChange, error, disabled = false }: FormSelectProps) {
   return (
     <label className="field-label">
       {label}
@@ -483,6 +494,7 @@ function FormSelect({ label, value, options, onChange, error }: FormSelectProps)
         className="panel-input"
         value={value}
         onChange={(event) => onChange(event.target.value)}
+        disabled={disabled}
       >
         <option value="">Seçiniz</option>
         {options.map((option) => (
@@ -499,10 +511,20 @@ function FormSelect({ label, value, options, onChange, error }: FormSelectProps)
 function validateStep(
   step: 1 | 2 | 3 | 4,
   form: FullRegistrationForm,
+  hasUoId = false,
 ): CustomerValidationErrors {
   const errors: CustomerValidationErrors = {};
 
   if (step === 1) {
+    if (hasUoId) {
+      if (form.type === "kurumsal") {
+        requireField(errors, "corporate_sector", form.corporateSector, "Sektör zorunludur.");
+        validateMaxLength(errors, "corporate_sector", form.corporateSector, "Sektör");
+      }
+
+      return errors;
+    }
+
     requireField(errors, "type", form.type, "Müşteri türü zorunludur.");
     validatePhone(errors, "cep", form.cep);
     requireField(errors, "ad", form.ad, "Ad zorunludur.");
@@ -521,14 +543,19 @@ function validateStep(
   }
 
   if (step === 2) {
-    validateMaxLength(errors, "eposta", form.eposta, "E-posta");
-    validateEmail(errors, "eposta", form.eposta);
     validateMaxLength(errors, "website", form.website, "Website");
     validateMaxLength(errors, "google_map_link", form.googleMapLink, "Google map link");
     validateMaxLength(errors, "classifieds_website_link", form.classifiedsWebsiteLink, "İlan sitesi linki");
     if (form.vehicleStockCount === "" || Number(form.vehicleStockCount) < 0) {
       errors.vehicle_stock_count = "Araç stok adedi 0 veya daha büyük olmalıdır.";
     }
+
+    if (hasUoId) {
+      return errors;
+    }
+
+    validateMaxLength(errors, "eposta", form.eposta, "E-posta");
+    validateEmail(errors, "eposta", form.eposta);
     requireField(errors, "branch_id", form.branchId, "Bayi zorunludur.");
     if (form.type === "kurumsal") {
       requireField(errors, "vergi_no", form.vergiNo, "Vergi no zorunludur.");
@@ -538,7 +565,7 @@ function validateStep(
     }
   }
 
-  if (step === 3) {
+  if (step === 3 && !hasUoId) {
     form.telephones.forEach((telephone) => {
       if (telephone.phoneNumber.trim() || telephone.title.trim()) {
         validateOptionalPhone(errors, "telephones", telephone.phoneNumber);
@@ -547,7 +574,7 @@ function validateStep(
     });
   }
 
-  if (step === 4) {
+  if (step === 4 && !hasUoId) {
     requireField(errors, "il_kodu", form.ilKodu, "İl zorunludur.");
     validateMaxLength(errors, "mahalle", form.mahalle, "Mahalle");
     requireField(errors, "address_detail", form.addressDetail, "Adres detayı zorunludur.");
@@ -557,12 +584,12 @@ function validateStep(
   return errors;
 }
 
-function validateAll(form: FullRegistrationForm): CustomerValidationErrors {
+function validateAll(form: FullRegistrationForm, hasUoId = false): CustomerValidationErrors {
   return {
-    ...validateStep(1, form),
-    ...validateStep(2, form),
-    ...validateStep(3, form),
-    ...validateStep(4, form),
+    ...validateStep(1, form, hasUoId),
+    ...validateStep(2, form, hasUoId),
+    ...validateStep(3, form, hasUoId),
+    ...validateStep(4, form, hasUoId),
   };
 }
 
