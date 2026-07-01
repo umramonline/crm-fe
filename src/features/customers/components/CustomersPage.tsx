@@ -164,6 +164,7 @@ export function CustomersPage({ permissions }: CustomersPageProps) {
   const [newCustomerForm, setNewCustomerForm] =
     useState<NewCustomerForm>(emptyNewCustomerForm);
   const [isReferenceLoading, setIsReferenceLoading] = useState(false);
+  const [isBranchFilterLoading, setIsBranchFilterLoading] = useState(false);
   const [isCreatingCustomer, setIsCreatingCustomer] = useState(false);
   const [createErrors, setCreateErrors] = useState<CustomerValidationErrors>({});
   const [selectedCustomerDetail, setSelectedCustomerDetail] = useState<CustomerDetail | null>(null);
@@ -215,6 +216,39 @@ export function CustomersPage({ permissions }: CustomersPageProps) {
       isActive = false;
     };
   }, [canListZones]);
+
+  useEffect(() => {
+    if (!canListBranches) {
+      return;
+    }
+
+    let isActive = true;
+
+    async function loadBranchFilters(): Promise<void> {
+      setIsBranchFilterLoading(true);
+
+      try {
+        const nextBranches = await listBranches();
+        if (isActive) {
+          setBranches(nextBranches);
+        }
+      } catch {
+        if (isActive) {
+          setMessage("Bayi listesi getirilemedi.");
+        }
+      } finally {
+        if (isActive) {
+          setIsBranchFilterLoading(false);
+        }
+      }
+    }
+
+    void loadBranchFilters();
+
+    return () => {
+      isActive = false;
+    };
+  }, [canListBranches]);
 
   useEffect(() => {
     if (!isCreateModalOpen || (!canListCities && !canListBranches)) {
@@ -1027,7 +1061,7 @@ export function CustomersPage({ permissions }: CustomersPageProps) {
               </th>
               {isBackendDataSource ? <th /> : null}
               <th>
-                <input
+                <select
                   className="panel-input"
                   value={draftFilters.branchName}
                   onChange={(event) =>
@@ -1036,7 +1070,19 @@ export function CustomersPage({ permissions }: CustomersPageProps) {
                       branchName: event.target.value,
                     }))
                   }
-                />
+                  disabled={!canListBranches || isBranchFilterLoading}
+                >
+                  <option value="">Tümü</option>
+                  {branches.map((branch) => {
+                    const branchName = branch.name || branch.title;
+
+                    return (
+                      <option key={branch.id} value={branchName}>
+                        {branchName}
+                      </option>
+                    );
+                  })}
+                </select>
               </th>
               {!isBackendDataSource ? (
                 <th>
