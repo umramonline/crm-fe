@@ -725,7 +725,7 @@ select {
 }
 
 .customer-table tbody tr:nth-child(even) {
-  background: #f2f4f5;
+  background: #eef1f3;
 }
 
 .customer-table tbody tr:hover td {
