@@ -7,6 +7,7 @@ export type Customer = {
   cep: string;
   ad: string;
   soyad: string;
+  branchId: number | null;
   branchName: string;
   zoneName: string;
   plusCardNo: string;
@@ -461,6 +462,7 @@ function toCustomer(record: RawRecord): Customer {
     cep: stringValue(record.cep),
     ad: stringValue(record.ad),
     soyad: stringValue(record.soyad),
+    branchId: nullableNumberValue(record.branch_id),
     branchName: stringValue(record.branch_name),
     zoneName: stringValue(record.zone_name),
     plusCardNo: stringValue(record.plus_card_no),

@@ -740,6 +740,22 @@ select {
   background: #d8e6f4;
 }
 
+.customer-selection-cell {
+  width: 42px;
+  text-align: center !important;
+  vertical-align: middle !important;
+}
+
+.customer-selection-cell input {
+  width: 16px;
+  height: 16px;
+  cursor: pointer;
+}
+
+.customer-selection-cell input:disabled {
+  cursor: not-allowed;
+}
+
 .customer-filter-row th {
   background: #ffffff;
 }
@@ -831,6 +847,27 @@ select {
   flex-wrap: wrap;
   gap: 8px;
   justify-content: flex-end;
+}
+
+.task-assign-summary {
+  display: grid;
+  grid-template-columns: 160px 1fr;
+  gap: 8px 12px;
+  margin-bottom: 18px;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 12px;
+  background: #f8fafc;
+}
+
+.task-assign-summary span {
+  color: #64748b;
+  font-size: 12px;
+}
+
+.task-assign-summary strong {
+  color: #111827;
+  font-size: 13px;
 }
 
 .customer-found-card {

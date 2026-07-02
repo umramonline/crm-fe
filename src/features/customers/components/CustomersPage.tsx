@@ -1,4 +1,4 @@
-import { FormEvent, useEffect, useMemo, useState } from "react";
+import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
 
 import {
   createCustomer,
@@ -49,6 +49,8 @@ const entryText = {
   detailFailed: "Müşteri detayı getirilemedi.",
   detailTitle: "Müşteri Detayı",
   dataSourceLabel: "Müşteri kaynağı",
+  taskAssignButton: "Görev Ata",
+  taskAssignTitle: "Görev Ata",
 } as const;
 
 const turkeyMobilePhoneRegex = /^05[0-9]{9}$/;
@@ -168,6 +170,11 @@ export function CustomersPage({ permissions }: CustomersPageProps) {
   const [isCreatingCustomer, setIsCreatingCustomer] = useState(false);
   const [createErrors, setCreateErrors] = useState<CustomerValidationErrors>({});
   const [selectedCustomerDetail, setSelectedCustomerDetail] = useState<CustomerDetail | null>(null);
+  const [selectedTaskCustomers, setSelectedTaskCustomers] = useState<Map<number, Customer>>(
+    () => new Map(),
+  );
+  const [isTaskAssignModalOpen, setIsTaskAssignModalOpen] = useState(false);
+  const taskSelectionHeaderRef = useRef<HTMLInputElement>(null);
   const isBackendDataSource = customerDataSource === "backend";
   const canListSelectedSource = isBackendDataSource
     ? canListBackendCustomers
@@ -175,6 +182,21 @@ export function CustomersPage({ permissions }: CustomersPageProps) {
   const canViewSelectedSourceDetail = isBackendDataSource
     ? canViewBackendCustomerDetail
     : canViewUmramonlineCustomerDetail;
+  const hasAppliedBranchFilter = appliedFilters.branchName.trim() !== "";
+  const canSelectTaskCustomers = isBackendDataSource && hasAppliedBranchFilter;
+  const selectedTaskCustomerCount = selectedTaskCustomers.size;
+  const selectedCurrentPageCustomerCount = useMemo(
+    () => items.filter((customer) => selectedTaskCustomers.has(customer.id)).length,
+    [items, selectedTaskCustomers],
+  );
+  const areCurrentPageCustomersSelected =
+    canSelectTaskCustomers &&
+    items.length > 0 &&
+    selectedCurrentPageCustomerCount === items.length;
+  const areSomeCurrentPageCustomersSelected =
+    canSelectTaskCustomers &&
+    selectedCurrentPageCustomerCount > 0 &&
+    selectedCurrentPageCustomerCount < items.length;
 
   useEffect(() => {
     if (customerDataSource === "umramonline" && !canListUmramonlineCustomers && canListBackendCustomers) {
@@ -189,6 +211,19 @@ export function CustomersPage({ permissions }: CustomersPageProps) {
     canListUmramonlineCustomers,
     customerDataSource,
   ]);
+
+  useEffect(() => {
+    setSelectedTaskCustomers(new Map());
+    setIsTaskAssignModalOpen(false);
+  }, [appliedFilters.branchName, customerDataSource]);
+
+  useEffect(() => {
+    if (!taskSelectionHeaderRef.current) {
+      return;
+    }
+
+    taskSelectionHeaderRef.current.indeterminate = areSomeCurrentPageCustomersSelected;
+  }, [areSomeCurrentPageCustomersSelected]);
 
   useEffect(() => {
     if (!canListZones) {
@@ -405,6 +440,8 @@ export function CustomersPage({ permissions }: CustomersPageProps) {
     setCurrentPage(1);
     setSortBy("");
     setSortOrder("desc");
+    setSelectedTaskCustomers(new Map());
+    setIsTaskAssignModalOpen(false);
   }
 
   function handleCustomerDataSourceChange(nextDataSource: CustomerDataSource): void {
@@ -415,6 +452,8 @@ export function CustomersPage({ permissions }: CustomersPageProps) {
     setSortBy("");
     setSortOrder("desc");
     setSelectedCustomerDetail(null);
+    setSelectedTaskCustomers(new Map());
+    setIsTaskAssignModalOpen(false);
   }
 
   async function handleOpenCustomerDetail(customerId: number): Promise<void> {
@@ -502,6 +541,55 @@ export function CustomersPage({ permissions }: CustomersPageProps) {
     setNewCustomerForm(emptyNewCustomerForm);
     setCreateErrors({});
     setTowns([]);
+  }
+
+  function handleTaskCustomerToggle(customer: Customer, checked: boolean): void {
+    if (!canSelectTaskCustomers) {
+      return;
+    }
+
+    setSelectedTaskCustomers((current) => {
+      const next = new Map(current);
+      if (checked) {
+        next.set(customer.id, customer);
+      } else {
+        next.delete(customer.id);
+      }
+
+      return next;
+    });
+  }
+
+  function handleCurrentPageTaskCustomerToggle(checked: boolean): void {
+    if (!canSelectTaskCustomers) {
+      return;
+    }
+
+    if (!checked) {
+      setSelectedTaskCustomers(new Map());
+      return;
+    }
+
+    setSelectedTaskCustomers((current) => {
+      const next = new Map(current);
+      items.forEach((customer) => {
+        next.set(customer.id, customer);
+      });
+
+      return next;
+    });
+  }
+
+  function handleOpenTaskAssignModal(): void {
+    if (!canSelectTaskCustomers || selectedTaskCustomerCount === 0) {
+      return;
+    }
+
+    setIsTaskAssignModalOpen(true);
+  }
+
+  function handleCloseTaskAssignModal(): void {
+    setIsTaskAssignModalOpen(false);
   }
 
   function updateNewCustomerField(field: keyof NewCustomerForm, value: string): void {
@@ -895,6 +983,32 @@ export function CustomersPage({ permissions }: CustomersPageProps) {
         </div>
       ) : null}
 
+      {isTaskAssignModalOpen ? (
+        <div className="customer-modal-backdrop" role="presentation">
+          <section className="customer-modal customer-modal-wide" role="dialog" aria-modal="true">
+            <div className="customer-modal-header">
+              <h2>{entryText.taskAssignTitle}</h2>
+              <button className="customer-modal-close" type="button" onClick={handleCloseTaskAssignModal}>
+                Kapat
+              </button>
+            </div>
+
+            <div className="task-assign-summary">
+              <span>Seçili müşteri sayısı</span>
+              <strong>{selectedTaskCustomerCount}</strong>
+              <span>Bayi</span>
+              <strong>{appliedFilters.branchName || "-"}</strong>
+            </div>
+
+            <div className="customer-modal-actions">
+              <button className="gray-button" type="button" onClick={handleCloseTaskAssignModal}>
+                Vazgeç
+              </button>
+            </div>
+          </section>
+        </div>
+      ) : null}
+
       <form className="customer-filter-form" onSubmit={handleFilterSubmit}>
       
       <div className="customer-filter-actions">
@@ -917,6 +1031,16 @@ export function CustomersPage({ permissions }: CustomersPageProps) {
         </label>
       </div>
       <div className="customer-filter-actions">
+          {isBackendDataSource ? (
+            <button
+              className="blue-button"
+              type="button"
+              onClick={handleOpenTaskAssignModal}
+              disabled={!canSelectTaskCustomers || selectedTaskCustomerCount === 0}
+            >
+              {entryText.taskAssignButton} ({selectedTaskCustomerCount})
+            </button>
+          ) : null}
           <button
             className="blue-button"
             type="button"
@@ -941,6 +1065,18 @@ export function CustomersPage({ permissions }: CustomersPageProps) {
         <table className="permission-table customer-table">
           <thead>
             <tr>
+              {isBackendDataSource ? (
+                <th className="customer-selection-cell">
+                  <input
+                    ref={taskSelectionHeaderRef}
+                    type="checkbox"
+                    aria-label="Listelenen müşterileri seç"
+                    checked={areCurrentPageCustomersSelected}
+                    disabled={!canSelectTaskCustomers || items.length === 0}
+                    onChange={(event) => handleCurrentPageTaskCustomerToggle(event.target.checked)}
+                  />
+                </th>
+              ) : null}
               <th>İşlemler</th>
               {!isBackendDataSource ? <th>Durum</th> : null}
               <th>Firma İsmi</th>
@@ -989,6 +1125,7 @@ export function CustomersPage({ permissions }: CustomersPageProps) {
               <th>Müşteri Türü</th>
             </tr>
             <tr className="customer-filter-row">
+              {isBackendDataSource ? <th /> : null}
               <th />
               {!isBackendDataSource ? (
                 <th>
@@ -1181,12 +1318,23 @@ export function CustomersPage({ permissions }: CustomersPageProps) {
           <tbody>
             {items.length === 0 && !isLoading ? (
               <tr>
-                <td colSpan={isBackendDataSource ? 11 : 14}>Kayıt bulunamadı.</td>
+                <td colSpan={isBackendDataSource ? 12 : 14}>Kayıt bulunamadı.</td>
               </tr>
             ) : null}
 
             {items.map((customer, index) => (
               <tr key={`${customer.id}-${customer.plusCardNo}-${customer.cep}-${index}`}>
+                {isBackendDataSource ? (
+                  <td className="customer-selection-cell">
+                    <input
+                      type="checkbox"
+                      aria-label={`${customerDisplayNameFromList(customer)} müşterisini seç`}
+                      checked={selectedTaskCustomers.has(customer.id)}
+                      disabled={!canSelectTaskCustomers}
+                      onChange={(event) => handleTaskCustomerToggle(customer, event.target.checked)}
+                    />
+                  </td>
+                ) : null}
                 <td>
                   <div className="customer-action-group">
                     <button
@@ -1323,6 +1471,16 @@ function formatCustomerSource(value: string): string {
 }
 
 function customerDisplayName(customer: CustomerDetail): string {
+  const corporateName = customer.unvan.trim();
+  if (corporateName) {
+    return corporateName;
+  }
+
+  const individualName = `${customer.ad} ${customer.soyad}`.trim();
+  return individualName || "-";
+}
+
+function customerDisplayNameFromList(customer: Customer): string {
   const corporateName = customer.unvan.trim();
   if (corporateName) {
     return corporateName;
