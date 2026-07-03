@@ -2,12 +2,10 @@ import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
 
 import {
   createCustomer,
-  createTaskAssignment,
   getCustomer,
   listBranches,
   listCities,
   listCustomers,
-  listTaskAssignableUsers,
   listTowns,
   listZones,
   searchCustomer,
@@ -19,10 +17,15 @@ import {
   type CustomerDetail,
   type CustomerListQuery,
   type CustomerValidationErrors,
-  type TaskAssignableUser,
   type Town,
   type Zone,
 } from "@/features/customers/services/customerApi";
+import {
+  createTaskAssignment,
+  listTaskAssignableUsers,
+  TaskValidationError,
+  type TaskAssignableUser,
+} from "@/features/tasks/services/taskApi";
 import type { Permission } from "@/features/auth/services/authApi";
 
 const situationOptions = [
@@ -664,7 +667,7 @@ export function CustomersPage({ permissions }: CustomersPageProps) {
   }
 
   function handleOpenTaskAssignModal(): void {
-    if (!canCreateTasks || !canSelectTaskCustomers || selectedTaskCustomerCount === 0) {
+    if (!canSelectTaskCustomers || selectedTaskCustomerCount === 0) {
       return;
     }
 
@@ -745,7 +748,7 @@ export function CustomersPage({ permissions }: CustomersPageProps) {
       setTaskAssignableUsers([]);
       setMessage("Görev kaydedildi.");
     } catch (error: unknown) {
-      if (error instanceof CustomerValidationError) {
+      if (error instanceof TaskValidationError) {
         setTaskAssignErrors(error.errors);
       } else {
         setMessage("Görev kaydı oluşturulamadı.");
@@ -1273,7 +1276,7 @@ export function CustomersPage({ permissions }: CustomersPageProps) {
                 <button className="gray-button" type="button" onClick={handleCloseTaskAssignModal}>
                   Vazgeç
                 </button>
-                <button className="blue-button" type="submit" disabled={isCreatingTaskAssignment}>
+                <button className="blue-button" type="submit" disabled={!canCreateTasks || isCreatingTaskAssignment}>
                   {isCreatingTaskAssignment ? "Kaydediliyor..." : "Kaydet"}
                 </button>
               </div>
@@ -1309,7 +1312,7 @@ export function CustomersPage({ permissions }: CustomersPageProps) {
               className="blue-button"
               type="button"
               onClick={handleOpenTaskAssignModal}
-              disabled={!canCreateTasks || !canSelectTaskCustomers || selectedTaskCustomerCount === 0}
+              disabled={!canSelectTaskCustomers || selectedTaskCustomerCount === 0}
             >
               {entryText.taskAssignButton} ({selectedTaskCustomerCount})
             </button>

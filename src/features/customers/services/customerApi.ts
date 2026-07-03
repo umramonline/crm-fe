@@ -103,17 +103,6 @@ export type FullRegistrationPayload = {
   addressDetail: string;
 };
 
-export type CreateTaskAssignmentPayload = {
-  title: string;
-  description: string;
-  assignedUserId: number;
-  branchId: number;
-  visitDate: string;
-  dueDate: string;
-  priority: "high" | "medium" | "low";
-  customerIds: number[];
-};
-
 export class CustomerValidationError extends Error {
   errors: CustomerValidationErrors;
 
@@ -139,12 +128,6 @@ export type Branch = {
   id: number;
   name: string;
   title: string;
-};
-
-export type TaskAssignableUser = {
-  id: number;
-  name: string;
-  phone: string;
 };
 
 export type CustomerPagination = {
@@ -260,17 +243,6 @@ export async function listBranches(): Promise<Branch[]> {
   }));
 }
 
-export async function listTaskAssignableUsers(branchId: number): Promise<TaskAssignableUser[]> {
-  const response = await apiClient.get<ApiEnvelope<RawRecord>>(`/api/v1/branches/${branchId}/users`);
-  const items = (response.data.data?.items as RawRecord[] | undefined) ?? [];
-
-  return items.map((item) => ({
-    id: numberValue(item.id),
-    name: stringValue(item.name),
-    phone: stringValue(item.phone),
-  }));
-}
-
 export async function createCustomer(payload: CreateCustomerPayload): Promise<CustomerDetail> {
   try {
     const response = await apiClient.post<ApiEnvelope<RawRecord>>("/api/v1/customers", {
@@ -288,34 +260,6 @@ export async function createCustomer(payload: CreateCustomerPayload): Promise<Cu
     });
 
     return toCustomerDetail(response.data.data ?? {});
-  } catch (error: unknown) {
-    const apiError = error as {
-      response?: {
-        status?: number;
-        data?: ApiEnvelope<RawRecord>;
-      };
-    };
-
-    if (apiError.response?.status === 422) {
-      throw new CustomerValidationError(apiError.response.data?.errors ?? {});
-    }
-
-    throw error;
-  }
-}
-
-export async function createTaskAssignment(payload: CreateTaskAssignmentPayload): Promise<void> {
-  try {
-    await apiClient.post<ApiEnvelope<RawRecord>>("/api/v1/tasks", {
-      title: payload.title,
-      description: payload.description,
-      assigned_user_id: payload.assignedUserId,
-      branch_id: payload.branchId,
-      visit_date: payload.visitDate,
-      due_date: payload.dueDate,
-      priority: payload.priority,
-      customer_ids: payload.customerIds,
-    });
   } catch (error: unknown) {
     const apiError = error as {
       response?: {
