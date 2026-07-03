@@ -7,6 +7,7 @@ export type TaskPriority = "high" | "medium" | "low";
 export type TaskAssignableUser = {
   id: number;
   name: string;
+  assignedUserFullName: string;
   phone: string;
 };
 
@@ -14,6 +15,7 @@ export type CreateTaskAssignmentPayload = {
   title: string;
   description: string;
   assignedUserId: number;
+  assignedUserFullName: string;
   branchId: number;
   visitDate: string;
   dueDate: string;
@@ -44,8 +46,9 @@ export async function listTaskAssignableUsers(branchId: number): Promise<TaskAss
   const items = (response.data.data?.items as RawRecord[] | undefined) ?? [];
 
   return items.map((item) => ({
-    id: numberValue(item.id),
+    id: numberValue(item.assigned_user_id ?? item.id),
     name: stringValue(item.name),
+    assignedUserFullName: stringValue(item.assigned_user_full_name ?? item.name),
     phone: stringValue(item.phone),
   }));
 }
@@ -56,6 +59,7 @@ export async function createTaskAssignment(payload: CreateTaskAssignmentPayload)
       title: payload.title,
       description: payload.description,
       assigned_user_id: payload.assignedUserId,
+      assigned_user_full_name: payload.assignedUserFullName,
       branch_id: payload.branchId,
       visit_date: payload.visitDate,
       due_date: payload.dueDate,

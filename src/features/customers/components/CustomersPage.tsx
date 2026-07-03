@@ -731,10 +731,15 @@ export function CustomersPage({ permissions }: CustomersPageProps) {
     setMessage("");
 
     try {
+      const selectedAssignedUser = taskAssignableUsers.find(
+        (user) => user.id === Number(taskAssignForm.assignedUserId),
+      );
+
       await createTaskAssignment({
         title: taskAssignForm.title.trim(),
         description: taskAssignForm.description.trim(),
         assignedUserId: Number(taskAssignForm.assignedUserId),
+        assignedUserFullName: selectedAssignedUser?.assignedUserFullName ?? "",
         branchId: selectedTaskBranchId,
         visitDate: taskAssignForm.visitDate,
         dueDate: taskAssignForm.dueDate,
@@ -1206,7 +1211,7 @@ export function CustomersPage({ permissions }: CustomersPageProps) {
                   </option>
                   {taskAssignableUsers.map((user) => (
                     <option key={user.id} value={user.id}>
-                      {user.name}
+                      {user.assignedUserFullName}
                     </option>
                   ))}
                 </select>
