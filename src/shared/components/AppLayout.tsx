@@ -114,7 +114,7 @@ export function AppLayout({
 
           <div className="panel-user">
             <strong>{session.user.roleName || "Kullanıcı"}</strong>
-            <span>{session.user.name || session.user.phone || "CRM"}</span>
+            <span>{session.user.full_name || session.user.phone || "CRM"}</span>
             <button type="button" aria-label="Çıkış yap" onClick={onLogout}>
               ↪
             </button>

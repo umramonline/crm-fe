@@ -12,14 +12,14 @@ export type Permission = {
 
 export type SessionUser = {
   id: number;
-  name: string;
+  full_name: string;
   phone: string;
   roleId: number;
   roleName: string;
 };
 
 export type SessionData = {
-  userId: string;
+  userId: number;
   user: SessionUser;
   permissions: Permission[];
 };
@@ -92,10 +92,10 @@ type RawPermission = Partial<{
 }>;
 
 type RawSessionData = Partial<{
-  user_id: string;
+  user_id: number;
   user: Partial<{
     id: number;
-    name: string;
+    full_name: string;
     phone: string;
     role_id: number;
     role_name: string;
@@ -107,10 +107,10 @@ function normalizeSessionData(data: RawSessionData | undefined): SessionData {
   const user = data?.user ?? {};
 
   return {
-    userId: data?.user_id ?? "",
+    userId: data?.user_id ?? 0,
     user: {
       id: user.id ?? 0,
-      name: user.name ?? "",
+      full_name: user.full_name ?? "",
       phone: user.phone ?? "",
       roleId: user.role_id ?? 0,
       roleName: user.role_name ?? "",
