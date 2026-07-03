@@ -130,6 +130,12 @@ export type Branch = {
   title: string;
 };
 
+export type TaskAssignableUser = {
+  id: number;
+  name: string;
+  phone: string;
+};
+
 export type CustomerPagination = {
   currentPage: number;
   lastPage: number;
@@ -240,6 +246,17 @@ export async function listBranches(): Promise<Branch[]> {
     id: numberValue(item.id),
     name: stringValue(item.name),
     title: stringValue(item.title),
+  }));
+}
+
+export async function listTaskAssignableUsers(branchId: number): Promise<TaskAssignableUser[]> {
+  const response = await apiClient.get<ApiEnvelope<RawRecord>>(`/api/v1/branches/${branchId}/users`);
+  const items = (response.data.data?.items as RawRecord[] | undefined) ?? [];
+
+  return items.map((item) => ({
+    id: numberValue(item.id),
+    name: stringValue(item.name),
+    phone: stringValue(item.phone),
   }));
 }
 
