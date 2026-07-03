@@ -2,6 +2,7 @@ import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
 
 import {
   createCustomer,
+  createTaskAssignment,
   getCustomer,
   listBranches,
   listCities,
@@ -158,6 +159,7 @@ export function CustomersPage({ permissions }: CustomersPageProps) {
   const canViewBackendCustomerDetail =
     canViewCustomerDetail || permissionNames.has("customers.detail.backend");
   const canCreateCustomers = permissionNames.has("customers.create");
+  const canCreateTasks = permissionNames.has("tasks.create");
   const canListCities = permissionNames.has("customers.cities.list");
   const canListTowns = permissionNames.has("customers.towns.list");
   const canListBranches = permissionNames.has("customers.branches.list");
@@ -200,6 +202,7 @@ export function CustomersPage({ permissions }: CustomersPageProps) {
   const [taskAssignErrors, setTaskAssignErrors] = useState<CustomerValidationErrors>({});
   const [taskAssignableUsers, setTaskAssignableUsers] = useState<TaskAssignableUser[]>([]);
   const [isTaskAssignableUsersLoading, setIsTaskAssignableUsersLoading] = useState(false);
+  const [isCreatingTaskAssignment, setIsCreatingTaskAssignment] = useState(false);
   const taskSelectionHeaderRef = useRef<HTMLInputElement>(null);
   const isBackendDataSource = customerDataSource === "backend";
   const canListSelectedSource = isBackendDataSource
@@ -254,6 +257,7 @@ export function CustomersPage({ permissions }: CustomersPageProps) {
     setTaskAssignForm(emptyTaskAssignForm);
     setTaskAssignErrors({});
     setTaskAssignableUsers([]);
+    setIsCreatingTaskAssignment(false);
   }, [appliedFilters.branchName, customerDataSource]);
 
   useEffect(() => {
@@ -660,7 +664,7 @@ export function CustomersPage({ permissions }: CustomersPageProps) {
   }
 
   function handleOpenTaskAssignModal(): void {
-    if (!canSelectTaskCustomers || selectedTaskCustomerCount === 0) {
+    if (!canCreateTasks || !canSelectTaskCustomers || selectedTaskCustomerCount === 0) {
       return;
     }
 
@@ -701,17 +705,54 @@ export function CustomersPage({ permissions }: CustomersPageProps) {
     }));
   }
 
-  function handleTaskAssignSubmit(event: FormEvent<HTMLFormElement>): void {
+  async function handleTaskAssignSubmit(event: FormEvent<HTMLFormElement>): Promise<void> {
     event.preventDefault();
 
     const validationErrors = validateTaskAssignForm(taskAssignForm, selectedTaskBranchId);
+    if (selectedTaskCustomerCount === 0) {
+      validationErrors.customer_ids = "En az 1 müşteri seçilmelidir.";
+    }
+
     if (Object.keys(validationErrors).length > 0) {
       setTaskAssignErrors(validationErrors);
       return;
     }
 
+    if (!selectedTaskBranchId) {
+      setTaskAssignErrors({ branch_id: "Bayi filtresi seçilmelidir." });
+      return;
+    }
+
+    setIsCreatingTaskAssignment(true);
     setTaskAssignErrors({});
-    setMessage("Görev formu hazır. Kayıt işlemi sonraki adımda eklenecek.");
+    setMessage("");
+
+    try {
+      await createTaskAssignment({
+        title: taskAssignForm.title.trim(),
+        description: taskAssignForm.description.trim(),
+        assignedUserId: Number(taskAssignForm.assignedUserId),
+        branchId: selectedTaskBranchId,
+        visitDate: taskAssignForm.visitDate,
+        dueDate: taskAssignForm.dueDate,
+        priority: taskAssignForm.priority,
+        customerIds: Array.from(selectedTaskCustomers.keys()),
+      });
+
+      setIsTaskAssignModalOpen(false);
+      setTaskAssignForm(emptyTaskAssignForm);
+      setSelectedTaskCustomers(new Map());
+      setTaskAssignableUsers([]);
+      setMessage("Görev kaydedildi.");
+    } catch (error: unknown) {
+      if (error instanceof CustomerValidationError) {
+        setTaskAssignErrors(error.errors);
+      } else {
+        setMessage("Görev kaydı oluşturulamadı.");
+      }
+    } finally {
+      setIsCreatingTaskAssignment(false);
+    }
   }
 
   function updateNewCustomerField(field: keyof NewCustomerForm, value: string): void {
@@ -1222,13 +1263,18 @@ export function CustomersPage({ permissions }: CustomersPageProps) {
                   {taskAssignErrors.branch_id}
                 </span>
               ) : null}
+              {taskAssignErrors.customer_ids ? (
+                <span className="customer-field-error task-assign-form-wide">
+                  {taskAssignErrors.customer_ids}
+                </span>
+              ) : null}
 
               <div className="customer-modal-actions task-assign-form-wide">
                 <button className="gray-button" type="button" onClick={handleCloseTaskAssignModal}>
                   Vazgeç
                 </button>
-                <button className="blue-button" type="submit">
-                  Devam
+                <button className="blue-button" type="submit" disabled={isCreatingTaskAssignment}>
+                  {isCreatingTaskAssignment ? "Kaydediliyor..." : "Kaydet"}
                 </button>
               </div>
             </form>
@@ -1263,7 +1309,7 @@ export function CustomersPage({ permissions }: CustomersPageProps) {
               className="blue-button"
               type="button"
               onClick={handleOpenTaskAssignModal}
-              disabled={!canSelectTaskCustomers || selectedTaskCustomerCount === 0}
+              disabled={!canCreateTasks || !canSelectTaskCustomers || selectedTaskCustomerCount === 0}
             >
               {entryText.taskAssignButton} ({selectedTaskCustomerCount})
             </button>
