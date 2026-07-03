@@ -208,6 +208,7 @@ export function CustomersPage({ permissions }: CustomersPageProps) {
   const canViewSelectedSourceDetail = isBackendDataSource
     ? canViewBackendCustomerDetail
     : canViewUmramonlineCustomerDetail;
+  const todayDateInputValue = useMemo(() => formatDateInputValue(new Date()), []);
   const hasAppliedBranchFilter = appliedFilters.branchName.trim() !== "";
   const selectedTaskBranch = useMemo(
     () =>
@@ -1175,6 +1176,7 @@ export function CustomersPage({ permissions }: CustomersPageProps) {
                 <input
                   className="panel-input"
                   type="date"
+                  min={todayDateInputValue}
                   value={taskAssignForm.visitDate}
                   onChange={(event) => updateTaskAssignField("visitDate", event.target.value)}
                 />
@@ -1717,12 +1719,20 @@ function customerDisplayNameFromList(customer: Customer): string {
 
 function formatTaskPriority(priority: TaskPriority): string {
   const priorityMap: Record<TaskPriority, string> = {
-    high: "High",
-    medium: "Medium",
-    low: "Low",
+    high: "Yüksek",
+    medium: "Orta",
+    low: "Düşük",
   };
 
   return priorityMap[priority];
+}
+
+function formatDateInputValue(date: Date): string {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+
+  return `${year}-${month}-${day}`;
 }
 
 function isTaskPriority(value: string): value is TaskPriority {
@@ -1746,6 +1756,11 @@ function validateTaskAssignForm(
 
   if (!isTaskPriority(form.priority)) {
     errors.priority = "Öncelik geçersiz.";
+  }
+
+  const today = formatDateInputValue(new Date());
+  if (form.visitDate && form.visitDate < today) {
+    errors.visit_date = "Ziyaret tarihi bugünden önce olamaz.";
   }
 
   if (form.visitDate && form.dueDate && form.dueDate < form.visitDate) {
