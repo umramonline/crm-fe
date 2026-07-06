@@ -77,7 +77,7 @@ export function TasksPage({ permissions }: TasksPageProps) {
   const [selectedTask, setSelectedTask] = useState<TaskListItem | null>(null);
   const [selectedCustomer, setSelectedCustomer] = useState<CustomerDetail | null>(null);
   const [cancellingTaskUuid, setCancellingTaskUuid] = useState("");
-  const [expandedCustomerTasks, setExpandedCustomerTasks] = useState<Set<string>>(
+  const [expandedCustomerRows, setExpandedCustomerRows] = useState<Set<string>>(
     () => new Set(),
   );
 
@@ -140,7 +140,7 @@ export function TasksPage({ permissions }: TasksPageProps) {
   }, [appliedFilters, canListTasks, currentPage, sortBy, sortOrder]);
 
   useEffect(() => {
-    if (expandedCustomerTasks.size === 0) {
+    if (expandedCustomerRows.size === 0) {
       return;
     }
 
@@ -154,7 +154,7 @@ export function TasksPage({ permissions }: TasksPageProps) {
         return;
       }
 
-      setExpandedCustomerTasks(new Set());
+      setExpandedCustomerRows(new Set());
     }
 
     document.addEventListener("mousedown", handleDocumentMouseDown);
@@ -162,7 +162,7 @@ export function TasksPage({ permissions }: TasksPageProps) {
     return () => {
       document.removeEventListener("mousedown", handleDocumentMouseDown);
     };
-  }, [expandedCustomerTasks.size]);
+  }, [expandedCustomerRows.size]);
 
   function handleFilterSubmit(event: FormEvent<HTMLFormElement>): void {
     event.preventDefault();
@@ -247,7 +247,14 @@ export function TasksPage({ permissions }: TasksPageProps) {
     try {
       const cancelledTask = await cancelTask(task.uuid);
       setItems((current) =>
-        current.map((item) => (item.uuid === cancelledTask.uuid ? cancelledTask : item)),
+        current.map((item) =>
+          item.uuid === cancelledTask.uuid
+            ? {
+                ...item,
+                status: cancelledTask.status,
+              }
+            : item,
+        ),
       );
       setSelectedTask((current) =>
         current?.uuid === cancelledTask.uuid ? cancelledTask : current,
@@ -260,10 +267,10 @@ export function TasksPage({ permissions }: TasksPageProps) {
     }
   }
 
-  function handleExpandTaskCustomers(taskUuid: string): void {
-    setExpandedCustomerTasks((current) => {
+  function handleExpandTaskCustomerRow(rowId: string): void {
+    setExpandedCustomerRows((current) => {
       const next = new Set(current);
-      next.add(taskUuid);
+      next.add(rowId);
 
       return next;
     });
@@ -506,73 +513,71 @@ export function TasksPage({ permissions }: TasksPageProps) {
               </tr>
             ) : null}
 
-            {items.map((task) => (
-              <tr key={task.uuid}>
-                <td>
-                  <div className="customer-action-group">
-                    <button
-                      className="customer-action-button"
-                      type="button"
-                      aria-label="Görev detayını görüntüle"
-                      disabled={!canViewTaskDetail}
-                      onClick={() => void handleOpenTaskDetail(task.uuid)}
-                    >
-                      ⓘ
-                    </button>
-                    <button
-                      className="customer-action-button task-cancel-button"
-                      type="button"
-                      aria-label="Görevi iptal et"
-                      disabled={
-                        !canCancelTasks ||
-                        !canTaskBeCancelled(task) ||
-                        cancellingTaskUuid === task.uuid
-                      }
-                      onClick={() => void handleCancelTask(task)}
-                    >
-                      ✕
-                    </button>
-                  </div>
-                </td>
-                <td>{task.title || "Potansiyel Müşteri"}</td>
-                <td>
-                  <div className="task-customer-list" data-task-customer-cell="true">
-                    {task.customers.length === 0 ? "-" : null}
-                    {task.customers.length > 0 ? (
-                      shouldCollapseTaskCustomers(task) &&
-                      !expandedCustomerTasks.has(task.uuid) ? (
+            {items.map((task) => {
+              const rowId = taskCustomerRowId(task);
+
+              return (
+                <tr key={rowId}>
+                  <td>
+                    <div className="customer-action-group">
+                      <button
+                        className="customer-action-button"
+                        type="button"
+                        aria-label="Görev detayını görüntüle"
+                        disabled={!canViewTaskDetail}
+                        onClick={() => void handleOpenTaskDetail(task.uuid)}
+                      >
+                        ⓘ
+                      </button>
+                      <button
+                        className="customer-action-button task-cancel-button"
+                        type="button"
+                        aria-label="Görevi iptal et"
+                        disabled={
+                          !canCancelTasks ||
+                          !canTaskBeCancelled(task) ||
+                          cancellingTaskUuid === task.uuid
+                        }
+                        onClick={() => void handleCancelTask(task)}
+                      >
+                        ✕
+                      </button>
+                    </div>
+                  </td>
+                  <td>{task.title || "Potansiyel Müşteri"}</td>
+                  <td>
+                    <div className="task-customer-list" data-task-customer-cell="true">
+                      {shouldCollapseTaskCustomer(task) &&
+                      !expandedCustomerRows.has(rowId) ? (
                         <button
                           className="task-customer-preview"
                           type="button"
-                          onClick={() => handleExpandTaskCustomers(task.uuid)}
+                          onClick={() => handleExpandTaskCustomerRow(rowId)}
                         >
-                          {truncateCustomerText(taskCustomerNames(task))}
+                          {truncateCustomerText(taskPrimaryCustomerName(task))}
                         </button>
                       ) : (
-                        task.customers.map((customer) => (
-                          <button
-                            key={customer.id}
-                            className="task-customer-link"
-                            type="button"
-                            disabled={!canViewCustomerDetail}
-                            onClick={() => void handleOpenCustomerDetail(customer.id)}
-                          >
-                            {taskCustomerName(customer.unvan, customer.ad, customer.soyad)}
-                          </button>
-                        ))
-                      )
-                    ) : null}
-                  </div>
-                </td>
-                <td>{task.assignedUserFullName || "-"}</td>
-                <td>{task.branchName || "-"}</td>
-                <td>{formatDate(task.visitDate)}</td>
-                <td>{formatDate(task.dueDate)}</td>
-                <td>{formatTaskPriority(task.priority)}</td>
-                <td>{formatTaskStatus(task.status)}</td>
-                <td>{task.createdByUserFullName || "-"}</td>
-              </tr>
-            ))}
+                        <button
+                          className="task-customer-link"
+                          type="button"
+                          disabled={!canViewCustomerDetail || !task.customers[0]}
+                          onClick={() => void handleOpenCustomerDetail(task.customers[0]?.id ?? 0)}
+                        >
+                          {taskPrimaryCustomerName(task)}
+                        </button>
+                      )}
+                    </div>
+                  </td>
+                  <td>{task.assignedUserFullName || "-"}</td>
+                  <td>{task.branchName || "-"}</td>
+                  <td>{formatDate(task.visitDate)}</td>
+                  <td>{formatDate(task.dueDate)}</td>
+                  <td>{formatTaskPriority(task.priority)}</td>
+                  <td>{formatTaskStatus(task.status)}</td>
+                  <td>{task.createdByUserFullName || "-"}</td>
+                </tr>
+              );
+            })}
           </tbody>
         </table>
       </div>
@@ -612,8 +617,21 @@ function taskCustomerNames(task: TaskListItem): string {
     .join(", ");
 }
 
-function shouldCollapseTaskCustomers(task: TaskListItem): boolean {
-  return taskCustomerNames(task).length > customerPreviewMaxLength;
+function taskCustomerRowId(task: TaskListItem): string {
+  return `${task.uuid}-${task.customers[0]?.id ?? "no-customer"}`;
+}
+
+function taskPrimaryCustomerName(task: TaskListItem): string {
+  const customer = task.customers[0];
+  if (!customer) {
+    return "-";
+  }
+
+  return taskCustomerName(customer.unvan, customer.ad, customer.soyad);
+}
+
+function shouldCollapseTaskCustomer(task: TaskListItem): boolean {
+  return taskPrimaryCustomerName(task).length > customerPreviewMaxLength;
 }
 
 function truncateCustomerText(value: string): string {
