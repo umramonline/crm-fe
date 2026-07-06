@@ -203,15 +203,15 @@ export function TasksPage({ permissions }: TasksPageProps) {
     setCurrentPage(1);
   }
 
-  async function handleOpenTaskDetail(taskUuid: string): Promise<void> {
+  async function handleOpenTaskDetail(task: TaskListItem): Promise<void> {
     if (!canViewTaskDetail) {
       return;
     }
 
     try {
       setMessage("");
-      const task = await getTaskDetail(taskUuid);
-      setSelectedTask(task);
+	  const taskDetail = await getTaskDetail(task.uuid, task.customers[0]?.id);
+	  setSelectedTask(taskDetail);
     } catch {
       setMessage("Görev detayı getirilemedi.");
     }
@@ -257,7 +257,12 @@ export function TasksPage({ permissions }: TasksPageProps) {
         ),
       );
       setSelectedTask((current) =>
-        current?.uuid === cancelledTask.uuid ? cancelledTask : current,
+		current?.uuid === cancelledTask.uuid
+		  ? {
+			  ...current,
+			  status: cancelledTask.status,
+			}
+		  : current,
       );
       setMessage("Görev iptal edildi.");
     } catch {
@@ -525,7 +530,7 @@ export function TasksPage({ permissions }: TasksPageProps) {
                         type="button"
                         aria-label="Görev detayını görüntüle"
                         disabled={!canViewTaskDetail}
-                        onClick={() => void handleOpenTaskDetail(task.uuid)}
+						onClick={() => void handleOpenTaskDetail(task)}
                       >
                         ⓘ
                       </button>

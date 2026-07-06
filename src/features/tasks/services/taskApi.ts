@@ -128,8 +128,12 @@ export async function listTasks(query: TaskListQuery = {}): Promise<TaskListResu
   return normalizeTaskListResult(response.data.data ?? {});
 }
 
-export async function getTaskDetail(uuid: string): Promise<TaskListItem> {
-  const response = await apiClient.get<ApiEnvelope<RawRecord>>(`/api/v1/tasks/${uuid}`);
+export async function getTaskDetail(uuid: string, customerId?: number): Promise<TaskListItem> {
+  const response = await apiClient.get<ApiEnvelope<RawRecord>>(`/api/v1/tasks/${uuid}`, {
+    params: {
+      customer_id: customerId || undefined,
+    },
+  });
 
   return toTaskListItem(response.data.data ?? {});
 }
