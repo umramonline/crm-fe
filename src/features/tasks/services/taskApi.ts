@@ -138,9 +138,15 @@ export async function getTaskDetail(uuid: string, customerId?: number): Promise<
   return toTaskListItem(response.data.data ?? {});
 }
 
-export async function cancelTask(uuid: string): Promise<TaskListItem> {
+export async function cancelTask(uuid: string, customerId: number): Promise<TaskListItem> {
   const response = await apiClient.patch<ApiEnvelope<RawRecord>>(
     `/api/v1/tasks/${uuid}/cancel`,
+		null,
+		{
+			params: {
+				customer_id: customerId,
+			},
+		},
   );
 
   return toTaskListItem(response.data.data ?? {});

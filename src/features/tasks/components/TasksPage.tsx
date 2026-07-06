@@ -210,8 +210,8 @@ export function TasksPage({ permissions }: TasksPageProps) {
 
     try {
       setMessage("");
-	  const taskDetail = await getTaskDetail(task.uuid, task.customers[0]?.id);
-	  setSelectedTask(taskDetail);
+      const taskDetail = await getTaskDetail(task.uuid, task.customers[0]?.id);
+      setSelectedTask(taskDetail);
     } catch {
       setMessage("Görev detayı getirilemedi.");
     }
@@ -232,7 +232,8 @@ export function TasksPage({ permissions }: TasksPageProps) {
   }
 
   async function handleCancelTask(task: TaskListItem): Promise<void> {
-    if (!canCancelTasks || !canTaskBeCancelled(task)) {
+    const customerId = task.customers[0]?.id ?? 0;
+    if (!canCancelTasks || !canTaskBeCancelled(task) || customerId === 0) {
       return;
     }
 
@@ -245,10 +246,10 @@ export function TasksPage({ permissions }: TasksPageProps) {
     setMessage("");
 
     try {
-      const cancelledTask = await cancelTask(task.uuid);
+      const cancelledTask = await cancelTask(task.uuid, customerId);
       setItems((current) =>
         current.map((item) =>
-          item.uuid === cancelledTask.uuid
+          item.uuid === cancelledTask.uuid && item.customers[0]?.id === customerId
             ? {
                 ...item,
                 status: cancelledTask.status,
@@ -257,12 +258,12 @@ export function TasksPage({ permissions }: TasksPageProps) {
         ),
       );
       setSelectedTask((current) =>
-		current?.uuid === cancelledTask.uuid
-		  ? {
-			  ...current,
-			  status: cancelledTask.status,
-			}
-		  : current,
+        current?.uuid === cancelledTask.uuid && current.customers[0]?.id === customerId
+          ? {
+              ...current,
+              status: cancelledTask.status,
+            }
+          : current,
       );
       setMessage("Görev iptal edildi.");
     } catch {
@@ -541,6 +542,7 @@ export function TasksPage({ permissions }: TasksPageProps) {
                         disabled={
                           !canCancelTasks ||
                           !canTaskBeCancelled(task) ||
+                          !task.customers[0] ||
                           cancellingTaskUuid === task.uuid
                         }
                         onClick={() => void handleCancelTask(task)}
