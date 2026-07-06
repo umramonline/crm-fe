@@ -33,7 +33,6 @@ export type TaskCustomer = {
 };
 
 export type TaskListItem = {
-  id: number;
   uuid: string;
   title: string;
   description: string;
@@ -129,8 +128,8 @@ export async function listTasks(query: TaskListQuery = {}): Promise<TaskListResu
   return normalizeTaskListResult(response.data.data ?? {});
 }
 
-export async function getTaskDetail(id: number): Promise<TaskListItem> {
-  const response = await apiClient.get<ApiEnvelope<RawRecord>>(`/api/v1/tasks/${id}`);
+export async function getTaskDetail(uuid: string): Promise<TaskListItem> {
+  const response = await apiClient.get<ApiEnvelope<RawRecord>>(`/api/v1/tasks/${uuid}`);
 
   return toTaskListItem(response.data.data ?? {});
 }
@@ -209,7 +208,6 @@ function normalizeTaskListResult(data: RawRecord): TaskListResult {
 
 function toTaskListItem(record: RawRecord): TaskListItem {
   return {
-    id: numberValue(record.id),
     uuid: stringValue(record.uuid),
     title: stringValue(record.title) || "Potansiyel Müşteri",
     description: stringValue(record.description),

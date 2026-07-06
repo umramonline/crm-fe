@@ -171,14 +171,14 @@ export function TasksPage({ permissions }: TasksPageProps) {
     setCurrentPage(1);
   }
 
-  async function handleOpenTaskDetail(taskId: number): Promise<void> {
+  async function handleOpenTaskDetail(taskUuid: string): Promise<void> {
     if (!canViewTaskDetail) {
       return;
     }
 
     try {
       setMessage("");
-      const task = await getTaskDetail(taskId);
+      const task = await getTaskDetail(taskUuid);
       setSelectedTask(task);
     } catch {
       setMessage("Görev detayı getirilemedi.");
@@ -437,14 +437,14 @@ export function TasksPage({ permissions }: TasksPageProps) {
             ) : null}
 
             {items.map((task) => (
-              <tr key={task.id}>
+              <tr key={task.uuid}>
                 <td>
                   <button
                     className="customer-action-button"
                     type="button"
                     aria-label="Görev detayını görüntüle"
                     disabled={!canViewTaskDetail}
-                    onClick={() => void handleOpenTaskDetail(task.id)}
+                    onClick={() => void handleOpenTaskDetail(task.uuid)}
                   >
                     ⓘ
                   </button>
