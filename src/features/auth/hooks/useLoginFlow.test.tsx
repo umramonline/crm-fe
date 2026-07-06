@@ -18,10 +18,10 @@ const loginWithPasswordMock = vi.mocked(loginWithPassword);
 const requestOtpMock = vi.mocked(requestOtp);
 const verifyOtpMock = vi.mocked(verifyOtp);
 const sessionFixture = {
-  userId: "1",
+  userId: 1,
   user: {
     id: 1,
-    name: "Kemal Karaduman",
+    full_name: "Kemal Karaduman",
     phone: "05551234567",
     roleId: 30,
     roleName: "ADMIN",

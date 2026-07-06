@@ -17,6 +17,7 @@ export type CreateTaskAssignmentPayload = {
   assignedUserId: number;
   assignedUserFullName: string;
   branchId: number;
+  branchName: string;
   visitDate: string;
   dueDate: string;
   priority: TaskPriority;
@@ -61,6 +62,7 @@ export async function createTaskAssignment(payload: CreateTaskAssignmentPayload)
       assigned_user_id: payload.assignedUserId,
       assigned_user_full_name: payload.assignedUserFullName,
       branch_id: payload.branchId,
+      branch_name: payload.branchName,
       visit_date: payload.visitDate,
       due_date: payload.dueDate,
       priority: payload.priority,

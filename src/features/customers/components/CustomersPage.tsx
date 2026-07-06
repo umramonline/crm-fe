@@ -741,6 +741,7 @@ export function CustomersPage({ permissions }: CustomersPageProps) {
         assignedUserId: Number(taskAssignForm.assignedUserId),
         assignedUserFullName: selectedAssignedUser?.assignedUserFullName ?? "",
         branchId: selectedTaskBranchId,
+        branchName: selectedTaskBranch?.name || selectedTaskBranch?.title || appliedFilters.branchName,
         visitDate: taskAssignForm.visitDate,
         dueDate: taskAssignForm.dueDate,
         priority: taskAssignForm.priority,
