@@ -4,6 +4,7 @@ import { AuthorizationPage } from "@/features/authorization/components/Authoriza
 import { LoginPage } from "@/features/auth/components/LoginPage";
 import { CustomerFullRegistrationPage } from "@/features/customers/components/CustomerFullRegistrationPage";
 import { CustomersPage } from "@/features/customers/components/CustomersPage";
+import { TasksPage } from "@/features/tasks/components/TasksPage";
 import {
   getSession,
   logout,
@@ -114,10 +115,18 @@ export function App() {
     const canViewCustomers = session.permissions.some(
       (permission) => permission.name === "customers.menu",
     );
+    const canViewTasks = session.permissions.some(
+      (permission) => permission.name === "tasks.menu",
+    );
     const canViewPermissions = session.permissions.some(
       (permission) => permission.name === "authorization.menu",
     );
-    const activePage = pageFromPath(path, canViewCustomers, canViewPermissions);
+    const activePage = pageFromPath(
+      path,
+      canViewCustomers,
+      canViewTasks,
+      canViewPermissions,
+    );
     const fullRegistrationCustomerId = customerFullRegistrationId(path);
 
     return (
@@ -126,6 +135,7 @@ export function App() {
         <AppLayout
           activePage={activePage}
           canViewCustomers={canViewCustomers}
+          canViewTasks={canViewTasks}
           canViewPermissions={canViewPermissions}
           session={session}
           onLogout={() => void handleLogout()}
@@ -138,6 +148,8 @@ export function App() {
             />
           ) : activePage === "customers" ? (
             <CustomersPage permissions={session.permissions} />
+          ) : activePage === "tasks" ? (
+            <TasksPage permissions={session.permissions} />
           ) : activePage === "permissions" ? (
             <AuthorizationPage permissions={session.permissions} />
           ) : (
@@ -159,6 +171,7 @@ export function App() {
 function pageFromPath(
   path: string,
   canViewCustomers: boolean,
+  canViewTasks: boolean,
   canViewPermissions: boolean,
 ): AppPage {
   if (path.startsWith("/customers/full-registration/") && canViewCustomers) {
@@ -167,6 +180,10 @@ function pageFromPath(
 
   if (path === "/customers" && canViewCustomers) {
     return "customers";
+  }
+
+  if (path === "/tasks" && canViewTasks) {
+    return "tasks";
   }
 
   if (path === "/permissions" && canViewPermissions) {
@@ -189,6 +206,10 @@ function customerFullRegistrationId(path: string): number | null {
 function pathFromPage(page: AppPage): string {
   if (page === "customers") {
     return "/customers";
+  }
+
+  if (page === "tasks") {
+    return "/tasks";
   }
 
   return page === "permissions" ? "/permissions" : "/home";
