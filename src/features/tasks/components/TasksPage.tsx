@@ -6,6 +6,7 @@ import {
   type CustomerDetail,
 } from "@/features/customers/services/customerApi";
 import {
+  cancelTask,
   getTaskDetail,
   listTasks,
   type TaskListItem,
@@ -58,6 +59,7 @@ export function TasksPage({ permissions }: TasksPageProps) {
   );
   const canListTasks = permissionNames.has("tasks.list");
   const canViewTaskDetail = permissionNames.has("tasks.detail");
+  const canCancelTasks = permissionNames.has("tasks.cancel");
   const canViewCustomerDetail =
     permissionNames.has("customers.detail") ||
     permissionNames.has("customers.detail.backend");
@@ -74,6 +76,7 @@ export function TasksPage({ permissions }: TasksPageProps) {
   const [message, setMessage] = useState("");
   const [selectedTask, setSelectedTask] = useState<TaskListItem | null>(null);
   const [selectedCustomer, setSelectedCustomer] = useState<CustomerDetail | null>(null);
+  const [cancellingTaskUuid, setCancellingTaskUuid] = useState("");
   const [expandedCustomerTasks, setExpandedCustomerTasks] = useState<Set<string>>(
     () => new Set(),
   );
@@ -225,6 +228,35 @@ export function TasksPage({ permissions }: TasksPageProps) {
       setSelectedCustomer(customer);
     } catch {
       setMessage("Müşteri detayı getirilemedi.");
+    }
+  }
+
+  async function handleCancelTask(task: TaskListItem): Promise<void> {
+    if (!canCancelTasks || !canTaskBeCancelled(task)) {
+      return;
+    }
+
+    const confirmed = window.confirm("Görevi iptal etmek istediğinize emin misiniz?");
+    if (!confirmed) {
+      return;
+    }
+
+    setCancellingTaskUuid(task.uuid);
+    setMessage("");
+
+    try {
+      const cancelledTask = await cancelTask(task.uuid);
+      setItems((current) =>
+        current.map((item) => (item.uuid === cancelledTask.uuid ? cancelledTask : item)),
+      );
+      setSelectedTask((current) =>
+        current?.uuid === cancelledTask.uuid ? cancelledTask : current,
+      );
+      setMessage("Görev iptal edildi.");
+    } catch {
+      setMessage("Görev iptal edilemedi.");
+    } finally {
+      setCancellingTaskUuid("");
     }
   }
 
@@ -477,15 +509,30 @@ export function TasksPage({ permissions }: TasksPageProps) {
             {items.map((task) => (
               <tr key={task.uuid}>
                 <td>
-                  <button
-                    className="customer-action-button"
-                    type="button"
-                    aria-label="Görev detayını görüntüle"
-                    disabled={!canViewTaskDetail}
-                    onClick={() => void handleOpenTaskDetail(task.uuid)}
-                  >
-                    ⓘ
-                  </button>
+                  <div className="customer-action-group">
+                    <button
+                      className="customer-action-button"
+                      type="button"
+                      aria-label="Görev detayını görüntüle"
+                      disabled={!canViewTaskDetail}
+                      onClick={() => void handleOpenTaskDetail(task.uuid)}
+                    >
+                      ⓘ
+                    </button>
+                    <button
+                      className="customer-action-button task-cancel-button"
+                      type="button"
+                      aria-label="Görevi iptal et"
+                      disabled={
+                        !canCancelTasks ||
+                        !canTaskBeCancelled(task) ||
+                        cancellingTaskUuid === task.uuid
+                      }
+                      onClick={() => void handleCancelTask(task)}
+                    >
+                      ✕
+                    </button>
+                  </div>
                 </td>
                 <td>{task.title || "Potansiyel Müşteri"}</td>
                 <td>
@@ -585,6 +632,10 @@ function taskCustomerName(unvan: string, ad: string, soyad: string): string {
 
   const individualName = `${ad} ${soyad}`.trim();
   return individualName || "-";
+}
+
+function canTaskBeCancelled(task: TaskListItem): boolean {
+  return task.status !== "cancelled" && task.status !== "completed";
 }
 
 function formatDate(value: string): string {

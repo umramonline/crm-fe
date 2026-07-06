@@ -134,6 +134,14 @@ export async function getTaskDetail(uuid: string): Promise<TaskListItem> {
   return toTaskListItem(response.data.data ?? {});
 }
 
+export async function cancelTask(uuid: string): Promise<TaskListItem> {
+  const response = await apiClient.patch<ApiEnvelope<RawRecord>>(
+    `/api/v1/tasks/${uuid}/cancel`,
+  );
+
+  return toTaskListItem(response.data.data ?? {});
+}
+
 export async function createTaskAssignment(payload: CreateTaskAssignmentPayload): Promise<void> {
   try {
     await apiClient.post<ApiEnvelope<RawRecord>>("/api/v1/tasks", {
