@@ -976,6 +976,16 @@ select {
   text-decoration: none;
 }
 
+.task-customer-preview {
+  border: 0;
+  padding: 0;
+  color: #1d4ed8;
+  font-size: 12px;
+  font-weight: 700;
+  text-align: left;
+  background: transparent;
+}
+
 .customer-detail-grid {
   display: grid;
   grid-template-columns: minmax(120px, 180px) 1fr;

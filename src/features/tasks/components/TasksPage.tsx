@@ -21,6 +21,7 @@ const statusOptions: TaskStatus[] = [
   "cancelled",
   "completed",
 ];
+const customerPreviewMaxLength = 20;
 
 type TaskFilters = {
   title: string;
@@ -73,6 +74,9 @@ export function TasksPage({ permissions }: TasksPageProps) {
   const [message, setMessage] = useState("");
   const [selectedTask, setSelectedTask] = useState<TaskListItem | null>(null);
   const [selectedCustomer, setSelectedCustomer] = useState<CustomerDetail | null>(null);
+  const [expandedCustomerTasks, setExpandedCustomerTasks] = useState<Set<string>>(
+    () => new Set(),
+  );
 
   useEffect(() => {
     if (!canListTasks) {
@@ -131,6 +135,31 @@ export function TasksPage({ permissions }: TasksPageProps) {
       isActive = false;
     };
   }, [appliedFilters, canListTasks, currentPage, sortBy, sortOrder]);
+
+  useEffect(() => {
+    if (expandedCustomerTasks.size === 0) {
+      return;
+    }
+
+    function handleDocumentMouseDown(event: MouseEvent): void {
+      const target = event.target;
+      if (!(target instanceof Element)) {
+        return;
+      }
+
+      if (target.closest("[data-task-customer-cell='true']")) {
+        return;
+      }
+
+      setExpandedCustomerTasks(new Set());
+    }
+
+    document.addEventListener("mousedown", handleDocumentMouseDown);
+
+    return () => {
+      document.removeEventListener("mousedown", handleDocumentMouseDown);
+    };
+  }, [expandedCustomerTasks.size]);
 
   function handleFilterSubmit(event: FormEvent<HTMLFormElement>): void {
     event.preventDefault();
@@ -197,6 +226,15 @@ export function TasksPage({ permissions }: TasksPageProps) {
     } catch {
       setMessage("Müşteri detayı getirilemedi.");
     }
+  }
+
+  function handleExpandTaskCustomers(taskUuid: string): void {
+    setExpandedCustomerTasks((current) => {
+      const next = new Set(current);
+      next.add(taskUuid);
+
+      return next;
+    });
   }
 
   if (!canListTasks) {
@@ -451,19 +489,32 @@ export function TasksPage({ permissions }: TasksPageProps) {
                 </td>
                 <td>{task.title || "Potansiyel Müşteri"}</td>
                 <td>
-                  <div className="task-customer-list">
+                  <div className="task-customer-list" data-task-customer-cell="true">
                     {task.customers.length === 0 ? "-" : null}
-                    {task.customers.map((customer) => (
-                      <button
-                        key={customer.id}
-                        className="task-customer-link"
-                        type="button"
-                        disabled={!canViewCustomerDetail}
-                        onClick={() => void handleOpenCustomerDetail(customer.id)}
-                      >
-                        {taskCustomerName(customer.unvan, customer.ad, customer.soyad)}
-                      </button>
-                    ))}
+                    {task.customers.length > 0 ? (
+                      shouldCollapseTaskCustomers(task) &&
+                      !expandedCustomerTasks.has(task.uuid) ? (
+                        <button
+                          className="task-customer-preview"
+                          type="button"
+                          onClick={() => handleExpandTaskCustomers(task.uuid)}
+                        >
+                          {truncateCustomerText(taskCustomerNames(task))}
+                        </button>
+                      ) : (
+                        task.customers.map((customer) => (
+                          <button
+                            key={customer.id}
+                            className="task-customer-link"
+                            type="button"
+                            disabled={!canViewCustomerDetail}
+                            onClick={() => void handleOpenCustomerDetail(customer.id)}
+                          >
+                            {taskCustomerName(customer.unvan, customer.ad, customer.soyad)}
+                          </button>
+                        ))
+                      )
+                    ) : null}
                   </div>
                 </td>
                 <td>{task.assignedUserFullName || "-"}</td>
@@ -512,6 +563,18 @@ function taskCustomerNames(task: TaskListItem): string {
   return task.customers
     .map((customer) => taskCustomerName(customer.unvan, customer.ad, customer.soyad))
     .join(", ");
+}
+
+function shouldCollapseTaskCustomers(task: TaskListItem): boolean {
+  return taskCustomerNames(task).length > customerPreviewMaxLength;
+}
+
+function truncateCustomerText(value: string): string {
+  if (value.length <= customerPreviewMaxLength) {
+    return value;
+  }
+
+  return `${value.slice(0, customerPreviewMaxLength)}...`;
 }
 
 function taskCustomerName(unvan: string, ad: string, soyad: string): string {
