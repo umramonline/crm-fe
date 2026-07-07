@@ -8,6 +8,7 @@ import {
 import {
   cancelTask,
   getTaskDetail,
+  listAssignedTasks,
   listTasks,
   type TaskListItem,
   type TaskListQuery,
@@ -23,6 +24,7 @@ const statusOptions: TaskStatus[] = [
   "completed",
 ];
 const customerPreviewMaxLength = 20;
+const unrestrictedTaskRoleIds = new Set([30, 60, 63]);
 
 type TaskFilters = {
   title: string;
@@ -38,6 +40,7 @@ type TaskFilters = {
 
 type TasksPageProps = {
   permissions: Permission[];
+  roleId: number;
 };
 
 const emptyFilters: TaskFilters = {
@@ -52,12 +55,16 @@ const emptyFilters: TaskFilters = {
   createdByUserFullName: "",
 };
 
-export function TasksPage({ permissions }: TasksPageProps) {
+export function TasksPage({ permissions, roleId }: TasksPageProps) {
   const permissionNames = useMemo(
     () => new Set(permissions.map((permission) => permission.name)),
     [permissions],
   );
-  const canListTasks = permissionNames.has("tasks.list");
+  const shouldListOnlyAssignedTasks = !unrestrictedTaskRoleIds.has(roleId);
+  const canListTasks = shouldListOnlyAssignedTasks
+    ? permissionNames.has("tasks.assigned.list") ||
+      permissionNames.has("tasks.list")
+    : permissionNames.has("tasks.list");
   const canViewTaskDetail = permissionNames.has("tasks.detail");
   const canCancelTasks = permissionNames.has("tasks.cancel");
   const canViewCustomerDetail =
@@ -65,7 +72,8 @@ export function TasksPage({ permissions }: TasksPageProps) {
     permissionNames.has("customers.detail.backend");
 
   const [draftFilters, setDraftFilters] = useState<TaskFilters>(emptyFilters);
-  const [appliedFilters, setAppliedFilters] = useState<TaskFilters>(emptyFilters);
+  const [appliedFilters, setAppliedFilters] =
+    useState<TaskFilters>(emptyFilters);
   const [items, setItems] = useState<TaskListItem[]>([]);
   const [currentPage, setCurrentPage] = useState(1);
   const [lastPage, setLastPage] = useState(1);
@@ -75,7 +83,8 @@ export function TasksPage({ permissions }: TasksPageProps) {
   const [isLoading, setIsLoading] = useState(false);
   const [message, setMessage] = useState("");
   const [selectedTask, setSelectedTask] = useState<TaskListItem | null>(null);
-  const [selectedCustomer, setSelectedCustomer] = useState<CustomerDetail | null>(null);
+  const [selectedCustomer, setSelectedCustomer] =
+    useState<CustomerDetail | null>(null);
   const [cancellingTaskUuid, setCancellingTaskUuid] = useState("");
   const [expandedCustomerRows, setExpandedCustomerRows] = useState<Set<string>>(
     () => new Set(),
@@ -96,7 +105,10 @@ export function TasksPage({ permissions }: TasksPageProps) {
       setMessage("");
 
       try {
-        const result = await listTasks({
+        const taskListLoader = shouldListOnlyAssignedTasks
+          ? listAssignedTasks
+          : listTasks;
+        const result = await taskListLoader({
           page: currentPage,
           perPage: 20,
           title: appliedFilters.title,
@@ -137,7 +149,14 @@ export function TasksPage({ permissions }: TasksPageProps) {
     return () => {
       isActive = false;
     };
-  }, [appliedFilters, canListTasks, currentPage, sortBy, sortOrder]);
+  }, [
+    appliedFilters,
+    canListTasks,
+    currentPage,
+    shouldListOnlyAssignedTasks,
+    sortBy,
+    sortOrder,
+  ]);
 
   useEffect(() => {
     if (expandedCustomerRows.size === 0) {
@@ -237,7 +256,9 @@ export function TasksPage({ permissions }: TasksPageProps) {
       return;
     }
 
-    const confirmed = window.confirm("Görevi iptal etmek istediğinize emin misiniz?");
+    const confirmed = window.confirm(
+      "Görevi iptal etmek istediğinize emin misiniz?",
+    );
     if (!confirmed) {
       return;
     }
@@ -249,7 +270,8 @@ export function TasksPage({ permissions }: TasksPageProps) {
       const cancelledTask = await cancelTask(task.uuid, customerId);
       setItems((current) =>
         current.map((item) =>
-          item.uuid === cancelledTask.uuid && item.customers[0]?.id === customerId
+          item.uuid === cancelledTask.uuid &&
+          item.customers[0]?.id === customerId
             ? {
                 ...item,
                 status: cancelledTask.status,
@@ -258,7 +280,8 @@ export function TasksPage({ permissions }: TasksPageProps) {
         ),
       );
       setSelectedTask((current) =>
-        current?.uuid === cancelledTask.uuid && current.customers[0]?.id === customerId
+        current?.uuid === cancelledTask.uuid &&
+        current.customers[0]?.id === customerId
           ? {
               ...current,
               status: cancelledTask.status,
@@ -295,7 +318,11 @@ export function TasksPage({ permissions }: TasksPageProps) {
     <section className="panel-card permission-table-panel">
       {selectedTask ? (
         <div className="customer-modal-backdrop" role="presentation">
-          <section className="customer-modal customer-modal-wide" role="dialog" aria-modal="true">
+          <section
+            className="customer-modal customer-modal-wide"
+            role="dialog"
+            aria-modal="true"
+          >
             <div className="customer-modal-header">
               <h2>Görev Detayı</h2>
               <button
@@ -335,7 +362,11 @@ export function TasksPage({ permissions }: TasksPageProps) {
 
       {selectedCustomer ? (
         <div className="customer-modal-backdrop" role="presentation">
-          <section className="customer-modal customer-modal-wide" role="dialog" aria-modal="true">
+          <section
+            className="customer-modal customer-modal-wide"
+            role="dialog"
+            aria-modal="true"
+          >
             <div className="customer-modal-header">
               <h2>Müşteri Detayı</h2>
               <button
@@ -379,7 +410,11 @@ export function TasksPage({ permissions }: TasksPageProps) {
           <button className="blue-button" type="submit" disabled={isLoading}>
             Filtrele
           </button>
-          <button className="gray-button" type="button" onClick={handleResetFilters}>
+          <button
+            className="gray-button"
+            type="button"
+            onClick={handleResetFilters}
+          >
             Temizle
           </button>
           <span className="muted-text">
@@ -406,7 +441,11 @@ export function TasksPage({ permissions }: TasksPageProps) {
                   onClick={() => handleSort("visit_date")}
                 >
                   Ziyaret Tarihi
-                  {sortBy === "visit_date" ? (sortOrder === "asc" ? " ↑" : " ↓") : ""}
+                  {sortBy === "visit_date"
+                    ? sortOrder === "asc"
+                      ? " ↑"
+                      : " ↓"
+                    : ""}
                 </button>
               </th>
               <th>
@@ -416,7 +455,11 @@ export function TasksPage({ permissions }: TasksPageProps) {
                   onClick={() => handleSort("due_date")}
                 >
                   Son Ziyaret Tarihi
-                  {sortBy === "due_date" ? (sortOrder === "asc" ? " ↑" : " ↓") : ""}
+                  {sortBy === "due_date"
+                    ? sortOrder === "asc"
+                      ? " ↑"
+                      : " ↓"
+                    : ""}
                 </button>
               </th>
               <th>Öncelik</th>
@@ -429,14 +472,18 @@ export function TasksPage({ permissions }: TasksPageProps) {
                 <input
                   className="panel-input"
                   value={draftFilters.title}
-                  onChange={(event) => updateDraftFilter("title", event.target.value)}
+                  onChange={(event) =>
+                    updateDraftFilter("title", event.target.value)
+                  }
                 />
               </th>
               <th>
                 <input
                   className="panel-input"
                   value={draftFilters.customer}
-                  onChange={(event) => updateDraftFilter("customer", event.target.value)}
+                  onChange={(event) =>
+                    updateDraftFilter("customer", event.target.value)
+                  }
                 />
               </th>
               <th>
@@ -444,7 +491,10 @@ export function TasksPage({ permissions }: TasksPageProps) {
                   className="panel-input"
                   value={draftFilters.assignedUserFullName}
                   onChange={(event) =>
-                    updateDraftFilter("assignedUserFullName", event.target.value)
+                    updateDraftFilter(
+                      "assignedUserFullName",
+                      event.target.value,
+                    )
                   }
                 />
               </th>
@@ -452,21 +502,27 @@ export function TasksPage({ permissions }: TasksPageProps) {
                 <input
                   className="panel-input"
                   value={draftFilters.branchName}
-                  onChange={(event) => updateDraftFilter("branchName", event.target.value)}
+                  onChange={(event) =>
+                    updateDraftFilter("branchName", event.target.value)
+                  }
                 />
               </th>
               <th>
                 <input
                   className="panel-input"
                   value={draftFilters.visitDate}
-                  onChange={(event) => updateDraftFilter("visitDate", event.target.value)}
+                  onChange={(event) =>
+                    updateDraftFilter("visitDate", event.target.value)
+                  }
                 />
               </th>
               <th>
                 <input
                   className="panel-input"
                   value={draftFilters.dueDate}
-                  onChange={(event) => updateDraftFilter("dueDate", event.target.value)}
+                  onChange={(event) =>
+                    updateDraftFilter("dueDate", event.target.value)
+                  }
                 />
               </th>
               <th>
@@ -474,7 +530,10 @@ export function TasksPage({ permissions }: TasksPageProps) {
                   className="panel-input"
                   value={draftFilters.priority}
                   onChange={(event) =>
-                    updateDraftFilter("priority", event.target.value as TaskPriority | "")
+                    updateDraftFilter(
+                      "priority",
+                      event.target.value as TaskPriority | "",
+                    )
                   }
                 >
                   <option value="">Tümü</option>
@@ -490,7 +549,10 @@ export function TasksPage({ permissions }: TasksPageProps) {
                   className="panel-input"
                   value={draftFilters.status}
                   onChange={(event) =>
-                    updateDraftFilter("status", event.target.value as TaskStatus | "")
+                    updateDraftFilter(
+                      "status",
+                      event.target.value as TaskStatus | "",
+                    )
                   }
                 >
                   <option value="">Tümü</option>
@@ -506,7 +568,10 @@ export function TasksPage({ permissions }: TasksPageProps) {
                   className="panel-input"
                   value={draftFilters.createdByUserFullName}
                   onChange={(event) =>
-                    updateDraftFilter("createdByUserFullName", event.target.value)
+                    updateDraftFilter(
+                      "createdByUserFullName",
+                      event.target.value,
+                    )
                   }
                 />
               </th>
@@ -531,7 +596,7 @@ export function TasksPage({ permissions }: TasksPageProps) {
                         type="button"
                         aria-label="Görev detayını görüntüle"
                         disabled={!canViewTaskDetail}
-						onClick={() => void handleOpenTaskDetail(task)}
+                        onClick={() => void handleOpenTaskDetail(task)}
                       >
                         ⓘ
                       </button>
@@ -553,7 +618,10 @@ export function TasksPage({ permissions }: TasksPageProps) {
                   </td>
                   <td>{task.title || "Potansiyel Müşteri"}</td>
                   <td>
-                    <div className="task-customer-list" data-task-customer-cell="true">
+                    <div
+                      className="task-customer-list"
+                      data-task-customer-cell="true"
+                    >
                       {shouldCollapseTaskCustomer(task) &&
                       !expandedCustomerRows.has(rowId) ? (
                         <button
@@ -567,8 +635,14 @@ export function TasksPage({ permissions }: TasksPageProps) {
                         <button
                           className="task-customer-link"
                           type="button"
-                          disabled={!canViewCustomerDetail || !task.customers[0]}
-                          onClick={() => void handleOpenCustomerDetail(task.customers[0]?.id ?? 0)}
+                          disabled={
+                            !canViewCustomerDetail || !task.customers[0]
+                          }
+                          onClick={() =>
+                            void handleOpenCustomerDetail(
+                              task.customers[0]?.id ?? 0,
+                            )
+                          }
                         >
                           {taskPrimaryCustomerName(task)}
                         </button>
@@ -620,7 +694,9 @@ function taskCustomerNames(task: TaskListItem): string {
   }
 
   return task.customers
-    .map((customer) => taskCustomerName(customer.unvan, customer.ad, customer.soyad))
+    .map((customer) =>
+      taskCustomerName(customer.unvan, customer.ad, customer.soyad),
+    )
     .join(", ");
 }
 

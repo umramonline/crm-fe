@@ -149,7 +149,10 @@ export function App() {
           ) : activePage === "customers" ? (
             <CustomersPage permissions={session.permissions} />
           ) : activePage === "tasks" ? (
-            <TasksPage permissions={session.permissions} />
+            <TasksPage
+              permissions={session.permissions}
+              roleId={session.user.roleId}
+            />
           ) : activePage === "permissions" ? (
             <AuthorizationPage permissions={session.permissions} />
           ) : (

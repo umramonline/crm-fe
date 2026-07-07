@@ -94,65 +94,86 @@ export class TaskValidationError extends Error {
   }
 }
 
-export async function listTaskAssignableUsers(branchId: number): Promise<TaskAssignableUser[]> {
-  const response = await apiClient.get<ApiEnvelope<RawRecord>>(`/api/v1/branches/${branchId}/users`);
+export async function listTaskAssignableUsers(
+  branchId: number,
+): Promise<TaskAssignableUser[]> {
+  const response = await apiClient.get<ApiEnvelope<RawRecord>>(
+    `/api/v1/branches/${branchId}/users`,
+  );
   const items = (response.data.data?.items as RawRecord[] | undefined) ?? [];
 
   return items.map((item) => ({
     id: numberValue(item.assigned_user_id ?? item.id),
     name: stringValue(item.name),
-    assignedUserFullName: stringValue(item.assigned_user_full_name ?? item.name),
+    assignedUserFullName: stringValue(
+      item.assigned_user_full_name ?? item.name,
+    ),
     phone: stringValue(item.phone),
   }));
 }
 
-export async function listTasks(query: TaskListQuery = {}): Promise<TaskListResult> {
-  const response = await apiClient.get<ApiEnvelope<RawRecord>>("/api/v1/tasks", {
-    params: {
-      page: query.page,
-      per_page: query.perPage,
-      title: query.title || undefined,
-      customer: query.customer || undefined,
-      assigned_user_full_name: query.assignedUserFullName || undefined,
-      branch_name: query.branchName || undefined,
-      visit_date: query.visitDate || undefined,
-      due_date: query.dueDate || undefined,
-      priority: query.priority || undefined,
-      status: query.status || undefined,
-      created_by_user_full_name: query.createdByUserFullName || undefined,
-      sort_by: query.sortBy || undefined,
-      sort_order: query.sortOrder || undefined,
+export async function listTasks(
+  query: TaskListQuery = {},
+): Promise<TaskListResult> {
+  const response = await apiClient.get<ApiEnvelope<RawRecord>>(
+    "/api/v1/tasks",
+    {
+      params: taskListQueryParams(query),
     },
-  });
+  );
 
   return normalizeTaskListResult(response.data.data ?? {});
 }
 
-export async function getTaskDetail(uuid: string, customerId?: number): Promise<TaskListItem> {
-  const response = await apiClient.get<ApiEnvelope<RawRecord>>(`/api/v1/tasks/${uuid}`, {
-    params: {
-      customer_id: customerId || undefined,
+export async function listAssignedTasks(
+  query: TaskListQuery = {},
+): Promise<TaskListResult> {
+  const response = await apiClient.get<ApiEnvelope<RawRecord>>(
+    "/api/v1/tasks/assigned-to-me",
+    {
+      params: taskListQueryParams(query),
     },
-  });
+  );
 
-  return toTaskListItem(response.data.data ?? {});
+  return normalizeTaskListResult(response.data.data ?? {});
 }
 
-export async function cancelTask(uuid: string, customerId: number): Promise<TaskListItem> {
-  const response = await apiClient.patch<ApiEnvelope<RawRecord>>(
-    `/api/v1/tasks/${uuid}/cancel`,
-		null,
-		{
-			params: {
-				customer_id: customerId,
-			},
-		},
+export async function getTaskDetail(
+  uuid: string,
+  customerId?: number,
+): Promise<TaskListItem> {
+  const response = await apiClient.get<ApiEnvelope<RawRecord>>(
+    `/api/v1/tasks/${uuid}`,
+    {
+      params: {
+        customer_id: customerId || undefined,
+      },
+    },
   );
 
   return toTaskListItem(response.data.data ?? {});
 }
 
-export async function createTaskAssignment(payload: CreateTaskAssignmentPayload): Promise<void> {
+export async function cancelTask(
+  uuid: string,
+  customerId: number,
+): Promise<TaskListItem> {
+  const response = await apiClient.patch<ApiEnvelope<RawRecord>>(
+    `/api/v1/tasks/${uuid}/cancel`,
+    null,
+    {
+      params: {
+        customer_id: customerId,
+      },
+    },
+  );
+
+  return toTaskListItem(response.data.data ?? {});
+}
+
+export async function createTaskAssignment(
+  payload: CreateTaskAssignmentPayload,
+): Promise<void> {
   try {
     await apiClient.post<ApiEnvelope<RawRecord>>("/api/v1/tasks", {
       title: payload.title,
@@ -180,6 +201,24 @@ export async function createTaskAssignment(payload: CreateTaskAssignmentPayload)
 
     throw error;
   }
+}
+
+function taskListQueryParams(query: TaskListQuery): RawRecord {
+  return {
+    page: query.page,
+    per_page: query.perPage,
+    title: query.title || undefined,
+    customer: query.customer || undefined,
+    assigned_user_full_name: query.assignedUserFullName || undefined,
+    branch_name: query.branchName || undefined,
+    visit_date: query.visitDate || undefined,
+    due_date: query.dueDate || undefined,
+    priority: query.priority || undefined,
+    status: query.status || undefined,
+    created_by_user_full_name: query.createdByUserFullName || undefined,
+    sort_by: query.sortBy || undefined,
+    sort_order: query.sortOrder || undefined,
+  };
 }
 
 function numberValue(value: unknown): number {
@@ -237,7 +276,9 @@ function toTaskListItem(record: RawRecord): TaskListItem {
     priority: taskPriorityValue(record.priority),
     status: taskStatusValue(record.status),
     customers: Array.isArray(record.customers)
-      ? record.customers.map((customer) => toTaskCustomer(customer as RawRecord))
+      ? record.customers.map((customer) =>
+          toTaskCustomer(customer as RawRecord),
+        )
       : [],
   };
 }
