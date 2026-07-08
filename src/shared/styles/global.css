@@ -805,7 +805,8 @@ select {
   position: fixed;
   z-index: 20;
   inset: 0;
-  display: flex;
+  display: grid;
+  overflow: auto;
   align-items: center;
   justify-content: center;
   padding: 24px;
