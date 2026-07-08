@@ -940,6 +940,15 @@ select {
   background: #eff6ff;
 }
 
+.customer-modal .customer-action-button {
+  width: 30px;
+  height: 29px;
+}
+
+.customer-modal .customer-table{
+  min-width: 10px;
+}
+
 .customer-action-group {
   display: flex;
   gap: 6px;
@@ -1009,6 +1018,10 @@ select {
   color: #111827;
   font-size: 13px;
   overflow-wrap: anywhere;
+}
+
+.customer-modal-backdrop .blue-button {
+  float: right;
 }
 
 .field-label {

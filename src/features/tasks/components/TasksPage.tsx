@@ -66,6 +66,8 @@ export function TasksPage({ permissions, roleId }: TasksPageProps) {
   const [isLoading, setIsLoading] = useState(false);
   const [message, setMessage] = useState("");
   const [selectedTask, setSelectedTask] = useState<TaskListItem | null>(null);
+  const [selectedCustomerTask, setSelectedCustomerTask] =
+    useState<TaskListItem | null>(null);
   const [cancellingCustomerId, setCancellingCustomerId] = useState(0);
 
   useEffect(() => {
@@ -187,6 +189,16 @@ export function TasksPage({ permissions, roleId }: TasksPageProps) {
     }
   }
 
+  function handleOpenTaskCustomerDetails(task: TaskListItem): void {
+    if (task.customers.length === 0) {
+      return;
+    }
+
+    setSelectedTask(null);
+    setSelectedCustomerTask(task);
+    setMessage("");
+  }
+
   async function handleCancelTaskCustomer(
     task: TaskListItem,
     customer: TaskCustomer,
@@ -210,20 +222,31 @@ export function TasksPage({ permissions, roleId }: TasksPageProps) {
       const cancelledCustomer = cancelledTask.customers[0];
       const nextStatus = cancelledCustomer?.status ?? "cancelled";
 
-      setSelectedTask((current) =>
+      const updateTaskCustomerStatus = (
+        currentTask: TaskListItem,
+      ): TaskListItem => ({
+        ...currentTask,
+        customers: currentTask.customers.map((currentCustomer) =>
+          currentCustomer.id === customer.id
+            ? {
+                ...currentCustomer,
+                status: nextStatus,
+              }
+            : currentCustomer,
+        ),
+      });
+
+      setSelectedCustomerTask((current) =>
         current?.uuid === task.uuid
-          ? {
-              ...current,
-              customers: current.customers.map((currentCustomer) =>
-                currentCustomer.id === customer.id
-                  ? {
-                      ...currentCustomer,
-                      status: nextStatus,
-                    }
-                  : currentCustomer,
-              ),
-            }
+          ? updateTaskCustomerStatus(current)
           : current,
+      );
+      setItems((currentItems) =>
+        currentItems.map((currentTask) =>
+          currentTask.uuid === task.uuid
+            ? updateTaskCustomerStatus(currentTask)
+            : currentTask,
+        ),
       );
       setMessage("Görev iptal edildi.");
     } catch {
@@ -231,6 +254,10 @@ export function TasksPage({ permissions, roleId }: TasksPageProps) {
     } finally {
       setCancellingCustomerId(0);
     }
+  }
+
+  function handleCloseCustomerDetails(): void {
+    setSelectedCustomerTask(null);
   }
 
   if (!canListTasks) {
@@ -279,57 +306,85 @@ export function TasksPage({ permissions, roleId }: TasksPageProps) {
               <strong>{formatTaskPriority(selectedTask.priority)}</strong>
               <span>Oluşturan</span>
               <strong>{selectedTask.createdByUserFullName || "-"}</strong>
-              <span>Müşteriler</span>
-              <div className="permission-table-scroll">
-                <table className="permission-table customer-table">
-                  <thead>
-                    <tr>
-                      <th>Müşteri</th>
-                      <th>Durum</th>
-                      <th>İşlem</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {selectedTask.customers.length === 0 ? (
-                      <tr>
-                        <td colSpan={3}>Kayıt bulunamadı.</td>
-                      </tr>
-                    ) : null}
+              <span aria-hidden="true" />
+            </div>
+            <button
+              className="blue-button"
+              type="button"
+              disabled={selectedTask.customers.length === 0}
+              onClick={() => handleOpenTaskCustomerDetails(selectedTask)}
+            >
+              Müşterilerin Detayı
+            </button>
+          </section>
+        </div>
+      ) : null}
 
-                    {selectedTask.customers.map((customer) => (
-                      <tr key={customer.id}>
-                        <td>
-                          {taskCustomerName(
-                            customer.unvan,
-                            customer.ad,
-                            customer.soyad,
-                          )}
-                        </td>
-                        <td>{formatTaskStatus(customer.status)}</td>
-                        <td>
-                          <button
-                            className="customer-action-button task-cancel-button"
-                            type="button"
-                            disabled={
-                              !canCancelTasks ||
-                              !canTaskCustomerBeCancelled(customer) ||
-                              cancellingCustomerId === customer.id
-                            }
-                            onClick={() =>
-                              void handleCancelTaskCustomer(
-                                selectedTask,
-                                customer,
-                              )
-                            }
-                          >
-                            İptal Et
-                          </button>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+      {selectedCustomerTask ? (
+        <div className="customer-modal-backdrop" role="presentation">
+          <section
+            className="customer-modal customer-modal-wide"
+            role="dialog"
+            aria-modal="true"
+          >
+            <div className="customer-modal-header">
+              <h2>Müşteri Detayları</h2>
+              <button
+                className="customer-modal-close"
+                type="button"
+                onClick={handleCloseCustomerDetails}
+              >
+                Kapat
+              </button>
+            </div>
+
+            <div className="permission-table-scroll">
+              <table className="permission-table customer-table">
+                <thead>
+                  <tr>
+                    <th>ad soyad</th>
+                    <th>unvan</th>
+                    <th>durum</th>
+                    <th>iptal işlemi</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {selectedCustomerTask.customers.length === 0 ? (
+                    <tr>
+                      <td colSpan={4}>Kayıt bulunamadı.</td>
+                    </tr>
+                  ) : null}
+
+                  {selectedCustomerTask.customers.map((customer) => (
+                    <tr key={customer.id}>
+                      <td>
+                        {taskCustomerFullName(customer.ad, customer.soyad)}
+                      </td>
+                      <td>{customer.unvan || "-"}</td>
+                      <td>{formatTaskStatus(customer.status)}</td>
+                      <td>
+                        <button
+                          className="customer-action-button task-cancel-button"
+                          type="button"
+                          disabled={
+                            !canCancelTasks ||
+                            !canTaskCustomerBeCancelled(customer) ||
+                            cancellingCustomerId === customer.id
+                          }
+                          onClick={() =>
+                            void handleCancelTaskCustomer(
+                              selectedCustomerTask,
+                              customer,
+                            )
+                          }
+                        >
+                          ⓧ
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             </div>
           </section>
         </div>
@@ -543,14 +598,8 @@ export function TasksPage({ permissions, roleId }: TasksPageProps) {
   );
 }
 
-function taskCustomerName(unvan: string, ad: string, soyad: string): string {
-  const corporateName = unvan.trim();
-  if (corporateName) {
-    return corporateName;
-  }
-
-  const individualName = `${ad} ${soyad}`.trim();
-  return individualName || "-";
+function taskCustomerFullName(ad: string, soyad: string): string {
+  return `${ad} ${soyad}`.trim() || "-";
 }
 
 function canTaskCustomerBeCancelled(customer: TaskCustomer): boolean {
