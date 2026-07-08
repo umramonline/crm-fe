@@ -847,6 +847,14 @@ select {
   background: transparent;
 }
 
+.clickable-table-row {
+  cursor: pointer;
+}
+
+.clickable-table-row:hover {
+  background: #f8fafc;
+}
+
 .customer-modal-actions {
   display: flex;
   flex-wrap: wrap;
@@ -946,7 +954,7 @@ select {
   height: 29px;
 }
 
-.customer-modal .customer-table{
+.customer-modal .customer-table {
   min-width: 10px;
 }
 
@@ -1166,7 +1174,6 @@ select {
   /* .permission-table thead {
     display: none;
   } */
-
 }
 
 @media (max-width: 640px) {

@@ -2,6 +2,10 @@ import { FormEvent, useEffect, useMemo, useState } from "react";
 
 import type { Permission } from "@/features/auth/services/authApi";
 import {
+  getCustomer,
+  type CustomerDetail,
+} from "@/features/customers/services/customerApi";
+import {
   cancelTask,
   getTaskDetail,
   listAssignedTasks,
@@ -68,6 +72,9 @@ export function TasksPage({ permissions, roleId }: TasksPageProps) {
   const [selectedTask, setSelectedTask] = useState<TaskListItem | null>(null);
   const [selectedCustomerTask, setSelectedCustomerTask] =
     useState<TaskListItem | null>(null);
+  const [selectedCustomerDetail, setSelectedCustomerDetail] =
+    useState<CustomerDetail | null>(null);
+  const [isLoadingCustomerDetail, setIsLoadingCustomerDetail] = useState(false);
   const [cancellingCustomerId, setCancellingCustomerId] = useState(0);
 
   useEffect(() => {
@@ -199,6 +206,23 @@ export function TasksPage({ permissions, roleId }: TasksPageProps) {
     setMessage("");
   }
 
+  async function handleOpenCustomerDetail(
+    customer: TaskCustomer,
+  ): Promise<void> {
+    setSelectedCustomerDetail(null);
+    setIsLoadingCustomerDetail(true);
+    setMessage("");
+
+    try {
+      const customerDetail = await getCustomer(customer.id, "backend");
+      setSelectedCustomerDetail(customerDetail);
+    } catch {
+      setMessage("Müşteri detayı getirilemedi.");
+    } finally {
+      setIsLoadingCustomerDetail(false);
+    }
+  }
+
   async function handleCancelTaskCustomer(
     task: TaskListItem,
     customer: TaskCustomer,
@@ -258,6 +282,13 @@ export function TasksPage({ permissions, roleId }: TasksPageProps) {
 
   function handleCloseCustomerDetails(): void {
     setSelectedCustomerTask(null);
+    setSelectedCustomerDetail(null);
+    setIsLoadingCustomerDetail(false);
+  }
+
+  function handleCloseCustomerDetail(): void {
+    setSelectedCustomerDetail(null);
+    setIsLoadingCustomerDetail(false);
   }
 
   if (!canListTasks) {
@@ -356,7 +387,11 @@ export function TasksPage({ permissions, roleId }: TasksPageProps) {
                   ) : null}
 
                   {selectedCustomerTask.customers.map((customer) => (
-                    <tr key={customer.id}>
+                    <tr
+                      className="clickable-table-row"
+                      key={customer.id}
+                      onClick={() => void handleOpenCustomerDetail(customer)}
+                    >
                       <td>
                         {taskCustomerFullName(customer.ad, customer.soyad)}
                       </td>
@@ -371,12 +406,13 @@ export function TasksPage({ permissions, roleId }: TasksPageProps) {
                             !canTaskCustomerBeCancelled(customer) ||
                             cancellingCustomerId === customer.id
                           }
-                          onClick={() =>
+                          onClick={(event) => {
+                            event.stopPropagation();
                             void handleCancelTaskCustomer(
                               selectedCustomerTask,
                               customer,
-                            )
-                          }
+                            );
+                          }}
                         >
                           ⓧ
                         </button>
@@ -386,6 +422,90 @@ export function TasksPage({ permissions, roleId }: TasksPageProps) {
                 </tbody>
               </table>
             </div>
+          </section>
+        </div>
+      ) : null}
+
+      {selectedCustomerDetail || isLoadingCustomerDetail ? (
+        <div className="customer-modal-backdrop" role="presentation">
+          <section
+            className="customer-modal customer-modal-wide"
+            role="dialog"
+            aria-modal="true"
+          >
+            <div className="customer-modal-header">
+              <h2>Müşteri Bilgileri</h2>
+              <button
+                className="customer-modal-close"
+                type="button"
+                onClick={handleCloseCustomerDetail}
+              >
+                Kapat
+              </button>
+            </div>
+
+            {isLoadingCustomerDetail ? (
+              <p className="muted-text">Müşteri detayı yükleniyor...</p>
+            ) : selectedCustomerDetail ? (
+              <div className="customer-detail-grid">
+                <span>Ünvan</span>
+                <strong>{selectedCustomerDetail.unvan || "-"}</strong>
+                <span>Ad</span>
+                <strong>{selectedCustomerDetail.ad || "-"}</strong>
+                <span>Soyad</span>
+                <strong>{selectedCustomerDetail.soyad || "-"}</strong>
+                <span>Yetkili Adı</span>
+                <strong>{selectedCustomerDetail.yetkiliAdi || "-"}</strong>
+                <span>Cep</span>
+                <strong>{selectedCustomerDetail.cep || "-"}</strong>
+                <span>Telefon</span>
+                <strong>{selectedCustomerDetail.telefon || "-"}</strong>
+                <span>E-posta</span>
+                <strong>{selectedCustomerDetail.eposta || "-"}</strong>
+                <span>Website</span>
+                <strong>{selectedCustomerDetail.website || "-"}</strong>
+                <span>Google Map Link</span>
+                <strong>{selectedCustomerDetail.googleMapLink || "-"}</strong>
+                <span>İlan Sitesi Link</span>
+                <strong>
+                  {selectedCustomerDetail.classifiedsWebsiteLink || "-"}
+                </strong>
+                <span>Mahalle</span>
+                <strong>{selectedCustomerDetail.mahalle || "-"}</strong>
+                <span>Adres Detayı</span>
+                <strong>{selectedCustomerDetail.addressDetail || "-"}</strong>
+                <span>İl Kodu</span>
+                <strong>{selectedCustomerDetail.ilKodu || "-"}</strong>
+                <span>İlçe Kodu</span>
+                <strong>{selectedCustomerDetail.ilceKodu || "-"}</strong>
+                <span>Vergi No</span>
+                <strong>{selectedCustomerDetail.vergiNo || "-"}</strong>
+                <span>Vergi Dairesi</span>
+                <strong>{selectedCustomerDetail.vergiDairesi || "-"}</strong>
+                <span>T.C. No</span>
+                <strong>{selectedCustomerDetail.tcNo || "-"}</strong>
+                <span>Doğum Tarihi</span>
+                <strong>
+                  {formatDate(selectedCustomerDetail.dogumTarihi)}
+                </strong>
+                <span>Araç Stok Sayısı</span>
+                <strong>
+                  {selectedCustomerDetail.vehicleStockCount ?? "-"}
+                </strong>
+                <span>Kurumsal Sektör</span>
+                <strong>{selectedCustomerDetail.corporateSector || "-"}</strong>
+                <span>Müşteri Türü</span>
+                <strong>
+                  {formatCustomerType(selectedCustomerDetail.type)}
+                </strong>
+                <span>Kayıt Tarihi</span>
+                <strong>{formatDate(selectedCustomerDetail.createdAt)}</strong>
+                <span>Telefonlar</span>
+                <strong>
+                  {formatCustomerTelephones(selectedCustomerDetail.telephones)}
+                </strong>
+              </div>
+            ) : null}
           </section>
         </div>
       ) : null}
@@ -640,4 +760,32 @@ function formatTaskStatus(status: TaskStatus): string {
   };
 
   return statusMap[status];
+}
+
+function formatCustomerType(value: string): string {
+  const normalized = value.trim().toLowerCase();
+
+  if (normalized === "kurumsal") {
+    return "Kurumsal";
+  }
+
+  if (normalized === "bireysel") {
+    return "Bireysel";
+  }
+
+  return normalized ? value : "-";
+}
+
+function formatCustomerTelephones(
+  telephones: CustomerDetail["telephones"],
+): string {
+  if (telephones.length === 0) {
+    return "-";
+  }
+
+  return telephones
+    .map((telephone) =>
+      [telephone.title, telephone.phoneNumber].filter(Boolean).join(": "),
+    )
+    .join(", ");
 }
