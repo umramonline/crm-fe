@@ -2,12 +2,15 @@ import { FormEvent, useEffect, useMemo, useState } from "react";
 
 import type { Permission } from "@/features/auth/services/authApi";
 import {
+  cancelTask,
   getTaskDetail,
   listAssignedTasks,
   listTasks,
+  type TaskCustomer,
   type TaskListItem,
   type TaskListQuery,
   type TaskPriority,
+  type TaskStatus,
 } from "@/features/tasks/services/taskApi";
 
 const priorityOptions: TaskPriority[] = ["high", "medium", "low"];
@@ -49,6 +52,7 @@ export function TasksPage({ permissions, roleId }: TasksPageProps) {
       permissionNames.has("tasks.list")
     : permissionNames.has("tasks.list");
   const canViewTaskDetail = permissionNames.has("tasks.detail");
+  const canCancelTasks = permissionNames.has("tasks.cancel");
 
   const [draftFilters, setDraftFilters] = useState<TaskFilters>(emptyFilters);
   const [appliedFilters, setAppliedFilters] =
@@ -62,6 +66,7 @@ export function TasksPage({ permissions, roleId }: TasksPageProps) {
   const [isLoading, setIsLoading] = useState(false);
   const [message, setMessage] = useState("");
   const [selectedTask, setSelectedTask] = useState<TaskListItem | null>(null);
+  const [cancellingCustomerId, setCancellingCustomerId] = useState(0);
 
   useEffect(() => {
     if (!canListTasks) {
@@ -182,6 +187,52 @@ export function TasksPage({ permissions, roleId }: TasksPageProps) {
     }
   }
 
+  async function handleCancelTaskCustomer(
+    task: TaskListItem,
+    customer: TaskCustomer,
+  ): Promise<void> {
+    if (!canCancelTasks || !canTaskCustomerBeCancelled(customer)) {
+      return;
+    }
+
+    const confirmed = window.confirm(
+      "Bu müşteri için görevi iptal etmek istediğinize emin misiniz?",
+    );
+    if (!confirmed) {
+      return;
+    }
+
+    setCancellingCustomerId(customer.id);
+    setMessage("");
+
+    try {
+      const cancelledTask = await cancelTask(task.uuid, customer.id);
+      const cancelledCustomer = cancelledTask.customers[0];
+      const nextStatus = cancelledCustomer?.status ?? "cancelled";
+
+      setSelectedTask((current) =>
+        current?.uuid === task.uuid
+          ? {
+              ...current,
+              customers: current.customers.map((currentCustomer) =>
+                currentCustomer.id === customer.id
+                  ? {
+                      ...currentCustomer,
+                      status: nextStatus,
+                    }
+                  : currentCustomer,
+              ),
+            }
+          : current,
+      );
+      setMessage("Görev iptal edildi.");
+    } catch {
+      setMessage("Görev iptal edilemedi.");
+    } finally {
+      setCancellingCustomerId(0);
+    }
+  }
+
   if (!canListTasks) {
     return (
       <section className="panel-card permission-table-panel">
@@ -216,8 +267,6 @@ export function TasksPage({ permissions, roleId }: TasksPageProps) {
               <strong>{selectedTask.title || "Potansiyel Müşteri"}</strong>
               <span>Açıklama</span>
               <strong>{selectedTask.description || "-"}</strong>
-              <span>Müşteri</span>
-              <strong>{taskCustomerNames(selectedTask)}</strong>
               <span>Atanan Personel</span>
               <strong>{selectedTask.assignedUserFullName || "-"}</strong>
               <span>Müşteri Bayisi</span>
@@ -230,6 +279,57 @@ export function TasksPage({ permissions, roleId }: TasksPageProps) {
               <strong>{formatTaskPriority(selectedTask.priority)}</strong>
               <span>Oluşturan</span>
               <strong>{selectedTask.createdByUserFullName || "-"}</strong>
+              <span>Müşteriler</span>
+              <div className="permission-table-scroll">
+                <table className="permission-table customer-table">
+                  <thead>
+                    <tr>
+                      <th>Müşteri</th>
+                      <th>Durum</th>
+                      <th>İşlem</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {selectedTask.customers.length === 0 ? (
+                      <tr>
+                        <td colSpan={3}>Kayıt bulunamadı.</td>
+                      </tr>
+                    ) : null}
+
+                    {selectedTask.customers.map((customer) => (
+                      <tr key={customer.id}>
+                        <td>
+                          {taskCustomerName(
+                            customer.unvan,
+                            customer.ad,
+                            customer.soyad,
+                          )}
+                        </td>
+                        <td>{formatTaskStatus(customer.status)}</td>
+                        <td>
+                          <button
+                            className="customer-action-button task-cancel-button"
+                            type="button"
+                            disabled={
+                              !canCancelTasks ||
+                              !canTaskCustomerBeCancelled(customer) ||
+                              cancellingCustomerId === customer.id
+                            }
+                            onClick={() =>
+                              void handleCancelTaskCustomer(
+                                selectedTask,
+                                customer,
+                              )
+                            }
+                          >
+                            İptal Et
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             </div>
           </section>
         </div>
@@ -443,18 +543,6 @@ export function TasksPage({ permissions, roleId }: TasksPageProps) {
   );
 }
 
-function taskCustomerNames(task: TaskListItem): string {
-  if (task.customers.length === 0) {
-    return "-";
-  }
-
-  return task.customers
-    .map((customer) =>
-      taskCustomerName(customer.unvan, customer.ad, customer.soyad),
-    )
-    .join(", ");
-}
-
 function taskCustomerName(unvan: string, ad: string, soyad: string): string {
   const corporateName = unvan.trim();
   if (corporateName) {
@@ -463,6 +551,10 @@ function taskCustomerName(unvan: string, ad: string, soyad: string): string {
 
   const individualName = `${ad} ${soyad}`.trim();
   return individualName || "-";
+}
+
+function canTaskCustomerBeCancelled(customer: TaskCustomer): boolean {
+  return customer.status !== "cancelled" && customer.status !== "completed";
 }
 
 function formatDate(value: string): string {
@@ -488,4 +580,15 @@ function formatTaskPriority(priority: TaskPriority): string {
   };
 
   return priorityMap[priority];
+}
+
+function formatTaskStatus(status: TaskStatus): string {
+  const statusMap: Record<TaskStatus, string> = {
+    pending: "Bekliyor",
+    in_progress: "Devam Ediyor",
+    cancelled: "İptal Edildi",
+    completed: "Tamamlandı",
+  };
+
+  return statusMap[status];
 }

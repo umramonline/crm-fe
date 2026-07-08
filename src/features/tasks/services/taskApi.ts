@@ -3,6 +3,7 @@ import { apiClient } from "@/services/apiClient";
 export type TaskValidationErrors = Record<string, string>;
 
 export type TaskPriority = "high" | "medium" | "low";
+export type TaskStatus = "pending" | "in_progress" | "cancelled" | "completed";
 
 export type TaskAssignableUser = {
   id: number;
@@ -29,6 +30,7 @@ export type TaskCustomer = {
   unvan: string;
   ad: string;
   soyad: string;
+  status: TaskStatus;
 };
 
 export type TaskListItem = {
@@ -145,6 +147,23 @@ export async function getTaskDetail(
     {
       params: {
         customer_id: customerId || undefined,
+      },
+    },
+  );
+
+  return toTaskListItem(response.data.data ?? {});
+}
+
+export async function cancelTask(
+  uuid: string,
+  customerId: number,
+): Promise<TaskListItem> {
+  const response = await apiClient.patch<ApiEnvelope<RawRecord>>(
+    `/api/v1/tasks/${uuid}/cancel`,
+    null,
+    {
+      params: {
+        customer_id: customerId,
       },
     },
   );
@@ -269,9 +288,23 @@ function toTaskCustomer(record: RawRecord): TaskCustomer {
     unvan: stringValue(record.unvan),
     ad: stringValue(record.ad),
     soyad: stringValue(record.soyad),
+    status: taskStatusValue(record.status),
   };
 }
 
 function taskPriorityValue(value: unknown): TaskPriority {
   return value === "high" || value === "low" ? value : "medium";
+}
+
+function taskStatusValue(value: unknown): TaskStatus {
+  if (
+    value === "pending" ||
+    value === "in_progress" ||
+    value === "cancelled" ||
+    value === "completed"
+  ) {
+    return value;
+  }
+
+  return "pending";
 }
