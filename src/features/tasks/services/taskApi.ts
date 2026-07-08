@@ -43,6 +43,7 @@ export type TaskListItem = {
   dueDate: string;
   priority: TaskPriority;
   status: TaskStatus;
+  customerCount: number;
   customers: TaskCustomer[];
 };
 
@@ -275,6 +276,7 @@ function toTaskListItem(record: RawRecord): TaskListItem {
     dueDate: stringValue(record.due_date),
     priority: taskPriorityValue(record.priority),
     status: taskStatusValue(record.status),
+    customerCount: numberValue(record.customer_count),
     customers: Array.isArray(record.customers)
       ? record.customers.map((customer) =>
           toTaskCustomer(customer as RawRecord),
