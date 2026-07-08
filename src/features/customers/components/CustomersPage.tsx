@@ -43,7 +43,8 @@ const entryText = {
   button: "Müşteri Giriş",
   searchTitle: "Önce müşteri ara",
   searchPlaceholder: "Cep, telefon, T.C. no veya vergi no yazın",
-  searchRequired: "Arama yapmak için cep, telefon, T.C. no veya vergi no yazın.",
+  searchRequired:
+    "Arama yapmak için cep, telefon, T.C. no veya vergi no yazın.",
   searchFailed: "Müşteri araması yapılamadı.",
   customerFound: "Müşteri kaydı bulundu. Edit formu sonraki aşamada açılacak.",
   customerNotFound: "Müşteri bulunamadı. Yeni müşteri formunu doldurun.",
@@ -131,14 +132,18 @@ const emptyNewCustomerForm: NewCustomerForm = {
   branchId: "",
 };
 
-const emptyTaskAssignForm: TaskAssignForm = {
-  title: "",
-  description: "",
-  assignedUserId: "",
-  visitDate: "",
-  dueDate: "",
-  priority: "medium",
-};
+function createEmptyTaskAssignForm(
+  defaultDate = formatDateInputValue(new Date()),
+): TaskAssignForm {
+  return {
+    title: "",
+    description: "",
+    assignedUserId: "",
+    visitDate: defaultDate,
+    dueDate: defaultDate,
+    priority: "medium",
+  };
+}
 
 type CustomersPageProps = {
   permissions: Permission[];
@@ -158,7 +163,8 @@ export function CustomersPage({ permissions }: CustomersPageProps) {
   const canSearchCustomers = permissionNames.has("customers.search");
   const canViewCustomerDetail = permissionNames.has("customers.detail");
   const canViewUmramonlineCustomerDetail =
-    canViewCustomerDetail || permissionNames.has("customers.detail.umramonline");
+    canViewCustomerDetail ||
+    permissionNames.has("customers.detail.umramonline");
   const canViewBackendCustomerDetail =
     canViewCustomerDetail || permissionNames.has("customers.detail.backend");
   const canCreateCustomers = permissionNames.has("customers.create");
@@ -173,8 +179,10 @@ export function CustomersPage({ permissions }: CustomersPageProps) {
   const [cities, setCities] = useState<City[]>([]);
   const [towns, setTowns] = useState<Town[]>([]);
   const [branches, setBranches] = useState<Branch[]>([]);
-  const [draftFilters, setDraftFilters] = useState<CustomerFilters>(emptyFilters);
-  const [appliedFilters, setAppliedFilters] = useState<CustomerFilters>(emptyFilters);
+  const [draftFilters, setDraftFilters] =
+    useState<CustomerFilters>(emptyFilters);
+  const [appliedFilters, setAppliedFilters] =
+    useState<CustomerFilters>(emptyFilters);
   const [items, setItems] = useState<Customer[]>([]);
   const [currentPage, setCurrentPage] = useState(1);
   const [lastPage, setLastPage] = useState(1);
@@ -186,26 +194,39 @@ export function CustomersPage({ permissions }: CustomersPageProps) {
   const [isSearchModalOpen, setIsSearchModalOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [isSearching, setIsSearching] = useState(false);
-  const [foundCustomer, setFoundCustomer] = useState<CustomerDetail | null>(null);
+  const [foundCustomer, setFoundCustomer] = useState<CustomerDetail | null>(
+    null,
+  );
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [createStep, setCreateStep] = useState<1 | 2>(1);
-  const [customerEntryType, setCustomerEntryType] = useState<CustomerEntryType>("");
+  const [customerEntryType, setCustomerEntryType] =
+    useState<CustomerEntryType>("");
   const [newCustomerForm, setNewCustomerForm] =
     useState<NewCustomerForm>(emptyNewCustomerForm);
   const [isReferenceLoading, setIsReferenceLoading] = useState(false);
   const [isBranchFilterLoading, setIsBranchFilterLoading] = useState(false);
   const [isCreatingCustomer, setIsCreatingCustomer] = useState(false);
-  const [createErrors, setCreateErrors] = useState<CustomerValidationErrors>({});
-  const [selectedCustomerDetail, setSelectedCustomerDetail] = useState<CustomerDetail | null>(null);
-  const [selectedTaskCustomers, setSelectedTaskCustomers] = useState<Map<number, Customer>>(
-    () => new Map(),
+  const [createErrors, setCreateErrors] = useState<CustomerValidationErrors>(
+    {},
   );
+  const [selectedCustomerDetail, setSelectedCustomerDetail] =
+    useState<CustomerDetail | null>(null);
+  const [selectedTaskCustomers, setSelectedTaskCustomers] = useState<
+    Map<number, Customer>
+  >(() => new Map());
   const [isTaskAssignModalOpen, setIsTaskAssignModalOpen] = useState(false);
-  const [taskAssignForm, setTaskAssignForm] = useState<TaskAssignForm>(emptyTaskAssignForm);
-  const [taskAssignErrors, setTaskAssignErrors] = useState<CustomerValidationErrors>({});
-  const [taskAssignableUsers, setTaskAssignableUsers] = useState<TaskAssignableUser[]>([]);
-  const [isTaskAssignableUsersLoading, setIsTaskAssignableUsersLoading] = useState(false);
-  const [isCreatingTaskAssignment, setIsCreatingTaskAssignment] = useState(false);
+  const [taskAssignForm, setTaskAssignForm] = useState<TaskAssignForm>(() =>
+    createEmptyTaskAssignForm(),
+  );
+  const [taskAssignErrors, setTaskAssignErrors] =
+    useState<CustomerValidationErrors>({});
+  const [taskAssignableUsers, setTaskAssignableUsers] = useState<
+    TaskAssignableUser[]
+  >([]);
+  const [isTaskAssignableUsersLoading, setIsTaskAssignableUsersLoading] =
+    useState(false);
+  const [isCreatingTaskAssignment, setIsCreatingTaskAssignment] =
+    useState(false);
   const taskSelectionHeaderRef = useRef<HTMLInputElement>(null);
   const isBackendDataSource = customerDataSource === "backend";
   const canListSelectedSource = isBackendDataSource
@@ -214,7 +235,10 @@ export function CustomersPage({ permissions }: CustomersPageProps) {
   const canViewSelectedSourceDetail = isBackendDataSource
     ? canViewBackendCustomerDetail
     : canViewUmramonlineCustomerDetail;
-  const todayDateInputValue = useMemo(() => formatDateInputValue(new Date()), []);
+  const todayDateInputValue = useMemo(
+    () => formatDateInputValue(new Date()),
+    [],
+  );
   const hasAppliedBranchFilter = appliedFilters.branchName.trim() !== "";
   const selectedTaskBranch = useMemo(
     () =>
@@ -225,10 +249,14 @@ export function CustomersPage({ permissions }: CustomersPageProps) {
     [appliedFilters.branchName, branches],
   );
   const selectedTaskBranchId = selectedTaskBranch?.id ?? null;
-  const canSelectTaskCustomers = isBackendDataSource && hasAppliedBranchFilter && selectedTaskBranchId !== null;
+  const canSelectTaskCustomers =
+    isBackendDataSource &&
+    hasAppliedBranchFilter &&
+    selectedTaskBranchId !== null;
   const selectedTaskCustomerCount = selectedTaskCustomers.size;
   const selectedCurrentPageCustomerCount = useMemo(
-    () => items.filter((customer) => selectedTaskCustomers.has(customer.id)).length,
+    () =>
+      items.filter((customer) => selectedTaskCustomers.has(customer.id)).length,
     [items, selectedTaskCustomers],
   );
   const areCurrentPageCustomersSelected =
@@ -241,11 +269,19 @@ export function CustomersPage({ permissions }: CustomersPageProps) {
     selectedCurrentPageCustomerCount < items.length;
 
   useEffect(() => {
-    if (customerDataSource === "umramonline" && !canListUmramonlineCustomers && canListBackendCustomers) {
+    if (
+      customerDataSource === "umramonline" &&
+      !canListUmramonlineCustomers &&
+      canListBackendCustomers
+    ) {
       setCustomerDataSource("backend");
     }
 
-    if (customerDataSource === "backend" && !canListBackendCustomers && canListUmramonlineCustomers) {
+    if (
+      customerDataSource === "backend" &&
+      !canListBackendCustomers &&
+      canListUmramonlineCustomers
+    ) {
       setCustomerDataSource("umramonline");
     }
   }, [
@@ -257,7 +293,7 @@ export function CustomersPage({ permissions }: CustomersPageProps) {
   useEffect(() => {
     setSelectedTaskCustomers(new Map());
     setIsTaskAssignModalOpen(false);
-    setTaskAssignForm(emptyTaskAssignForm);
+    setTaskAssignForm(createEmptyTaskAssignForm(todayDateInputValue));
     setTaskAssignErrors({});
     setTaskAssignableUsers([]);
     setIsCreatingTaskAssignment(false);
@@ -268,7 +304,8 @@ export function CustomersPage({ permissions }: CustomersPageProps) {
       return;
     }
 
-    taskSelectionHeaderRef.current.indeterminate = areSomeCurrentPageCustomersSelected;
+    taskSelectionHeaderRef.current.indeterminate =
+      areSomeCurrentPageCustomersSelected;
   }, [areSomeCurrentPageCustomersSelected]);
 
   useEffect(() => {
@@ -530,7 +567,9 @@ export function CustomersPage({ permissions }: CustomersPageProps) {
     setIsTaskAssignModalOpen(false);
   }
 
-  function handleCustomerDataSourceChange(nextDataSource: CustomerDataSource): void {
+  function handleCustomerDataSourceChange(
+    nextDataSource: CustomerDataSource,
+  ): void {
     setCustomerDataSource(nextDataSource);
     setDraftFilters(emptyFilters);
     setAppliedFilters(emptyFilters);
@@ -562,7 +601,9 @@ export function CustomersPage({ permissions }: CustomersPageProps) {
     setSelectedCustomerDetail(null);
   }
 
-  async function handleCustomerSearchSubmit(event: FormEvent<HTMLFormElement>): Promise<void> {
+  async function handleCustomerSearchSubmit(
+    event: FormEvent<HTMLFormElement>,
+  ): Promise<void> {
     event.preventDefault();
 
     const normalizedQuery = searchQuery.trim();
@@ -584,7 +625,9 @@ export function CustomersPage({ permissions }: CustomersPageProps) {
         }
 
         setFoundCustomer(result.customer);
-        setMessage(`${entryText.customerFound} Kaynak: ${formatCustomerSource(result.source)}.`);
+        setMessage(
+          `${entryText.customerFound} Kaynak: ${formatCustomerSource(result.source)}.`,
+        );
         return;
       }
 
@@ -629,7 +672,10 @@ export function CustomersPage({ permissions }: CustomersPageProps) {
     setTowns([]);
   }
 
-  function handleTaskCustomerToggle(customer: Customer, checked: boolean): void {
+  function handleTaskCustomerToggle(
+    customer: Customer,
+    checked: boolean,
+  ): void {
     if (!canSelectTaskCustomers) {
       return;
     }
@@ -671,7 +717,7 @@ export function CustomersPage({ permissions }: CustomersPageProps) {
       return;
     }
 
-    setTaskAssignForm(emptyTaskAssignForm);
+    setTaskAssignForm(createEmptyTaskAssignForm(todayDateInputValue));
     setTaskAssignErrors({});
     setMessage("");
     setIsTaskAssignModalOpen(true);
@@ -681,7 +727,10 @@ export function CustomersPage({ permissions }: CustomersPageProps) {
     setIsTaskAssignModalOpen(false);
   }
 
-  function updateTaskAssignField(field: keyof TaskAssignForm, value: string): void {
+  function updateTaskAssignField(
+    field: keyof TaskAssignForm,
+    value: string,
+  ): void {
     if (field === "priority") {
       if (!isTaskPriority(value)) {
         return;
@@ -708,10 +757,15 @@ export function CustomersPage({ permissions }: CustomersPageProps) {
     }));
   }
 
-  async function handleTaskAssignSubmit(event: FormEvent<HTMLFormElement>): Promise<void> {
+  async function handleTaskAssignSubmit(
+    event: FormEvent<HTMLFormElement>,
+  ): Promise<void> {
     event.preventDefault();
 
-    const validationErrors = validateTaskAssignForm(taskAssignForm, selectedTaskBranchId);
+    const validationErrors = validateTaskAssignForm(
+      taskAssignForm,
+      selectedTaskBranchId,
+    );
     if (selectedTaskCustomerCount === 0) {
       validationErrors.customer_ids = "En az 1 müşteri seçilmelidir.";
     }
@@ -741,7 +795,10 @@ export function CustomersPage({ permissions }: CustomersPageProps) {
         assignedUserId: Number(taskAssignForm.assignedUserId),
         assignedUserFullName: selectedAssignedUser?.assignedUserFullName ?? "",
         branchId: selectedTaskBranchId,
-        branchName: selectedTaskBranch?.name || selectedTaskBranch?.title || appliedFilters.branchName,
+        branchName:
+          selectedTaskBranch?.name ||
+          selectedTaskBranch?.title ||
+          appliedFilters.branchName,
         visitDate: taskAssignForm.visitDate,
         dueDate: taskAssignForm.dueDate,
         priority: taskAssignForm.priority,
@@ -749,7 +806,7 @@ export function CustomersPage({ permissions }: CustomersPageProps) {
       });
 
       setIsTaskAssignModalOpen(false);
-      setTaskAssignForm(emptyTaskAssignForm);
+      setTaskAssignForm(createEmptyTaskAssignForm(todayDateInputValue));
       setSelectedTaskCustomers(new Map());
       setTaskAssignableUsers([]);
       setMessage("Görev kaydedildi.");
@@ -764,7 +821,10 @@ export function CustomersPage({ permissions }: CustomersPageProps) {
     }
   }
 
-  function updateNewCustomerField(field: keyof NewCustomerForm, value: string): void {
+  function updateNewCustomerField(
+    field: keyof NewCustomerForm,
+    value: string,
+  ): void {
     setNewCustomerForm((current) => ({
       ...current,
       [field]: value,
@@ -777,7 +837,9 @@ export function CustomersPage({ permissions }: CustomersPageProps) {
     }));
   }
 
-  async function handleCreateCustomerSubmit(event: FormEvent<HTMLFormElement>): Promise<void> {
+  async function handleCreateCustomerSubmit(
+    event: FormEvent<HTMLFormElement>,
+  ): Promise<void> {
     event.preventDefault();
 
     if (customerEntryType !== "bireysel" && customerEntryType !== "kurumsal") {
@@ -785,7 +847,10 @@ export function CustomersPage({ permissions }: CustomersPageProps) {
       return;
     }
 
-    const validationErrors = validateNewCustomerForm(customerEntryType, newCustomerForm);
+    const validationErrors = validateNewCustomerForm(
+      customerEntryType,
+      newCustomerForm,
+    );
     if (Object.keys(validationErrors).length > 0) {
       setCreateErrors(validationErrors);
       return;
@@ -825,8 +890,14 @@ export function CustomersPage({ permissions }: CustomersPageProps) {
     }
   }
 
-  function handleSort(column: "credit" | "created_at" | "vehicle_stock_count"): void {
-    if (isBackendDataSource && column !== "created_at" && column !== "vehicle_stock_count") {
+  function handleSort(
+    column: "credit" | "created_at" | "vehicle_stock_count",
+  ): void {
+    if (
+      isBackendDataSource &&
+      column !== "created_at" &&
+      column !== "vehicle_stock_count"
+    ) {
       return;
     }
 
@@ -855,7 +926,10 @@ export function CustomersPage({ permissions }: CustomersPageProps) {
     <section className="panel-card permission-table-panel">
       <div className="page-title">
         <h1>Galeri Listesi</h1>
-        <p>PlusCard müşteri listesini filtreleyebilir, sıralayabilir ve sayfalayabilirsiniz.</p>
+        <p>
+          PlusCard müşteri listesini filtreleyebilir, sıralayabilir ve
+          sayfalayabilirsiniz.
+        </p>
       </div>
 
       {message ? <div className="panel-alert">{message}</div> : null}
@@ -865,12 +939,19 @@ export function CustomersPage({ permissions }: CustomersPageProps) {
           <section className="customer-modal" role="dialog" aria-modal="true">
             <div className="customer-modal-header">
               <h2>{entryText.searchTitle}</h2>
-              <button className="customer-modal-close" type="button" onClick={handleCloseCustomerSearch}>
+              <button
+                className="customer-modal-close"
+                type="button"
+                onClick={handleCloseCustomerSearch}
+              >
                 Kapat
               </button>
             </div>
 
-            <form className="panel-form" onSubmit={(event) => void handleCustomerSearchSubmit(event)}>
+            <form
+              className="panel-form"
+              onSubmit={(event) => void handleCustomerSearchSubmit(event)}
+            >
               <label className="field-label">
                 Arama
                 <input
@@ -882,10 +963,18 @@ export function CustomersPage({ permissions }: CustomersPageProps) {
               </label>
 
               <div className="customer-modal-actions">
-                <button className="blue-button" type="submit" disabled={isSearching}>
+                <button
+                  className="blue-button"
+                  type="submit"
+                  disabled={isSearching}
+                >
                   {isSearching ? "Aranıyor..." : "Ara"}
                 </button>
-                <button className="gray-button" type="button" onClick={handleCloseCustomerSearch}>
+                <button
+                  className="gray-button"
+                  type="button"
+                  onClick={handleCloseCustomerSearch}
+                >
                   Vazgeç
                 </button>
               </div>
@@ -895,7 +984,9 @@ export function CustomersPage({ permissions }: CustomersPageProps) {
               <div className="customer-found-card">
                 <strong>{customerDisplayName(foundCustomer)}</strong>
                 <span>{foundCustomer.cep || foundCustomer.telefon || "-"}</span>
-                <span>{foundCustomer.tcNo || foundCustomer.vergiNo || "-"}</span>
+                <span>
+                  {foundCustomer.tcNo || foundCustomer.vergiNo || "-"}
+                </span>
               </div>
             ) : null}
           </section>
@@ -904,10 +995,22 @@ export function CustomersPage({ permissions }: CustomersPageProps) {
 
       {isCreateModalOpen ? (
         <div className="customer-modal-backdrop" role="presentation">
-          <section className="customer-modal customer-modal-wide" role="dialog" aria-modal="true">
+          <section
+            className="customer-modal customer-modal-wide"
+            role="dialog"
+            aria-modal="true"
+          >
             <div className="customer-modal-header">
-              <h2>{createStep === 1 ? entryText.typeStepTitle : entryText.formStepTitle}</h2>
-              <button className="customer-modal-close" type="button" onClick={handleCloseCreateModal}>
+              <h2>
+                {createStep === 1
+                  ? entryText.typeStepTitle
+                  : entryText.formStepTitle}
+              </h2>
+              <button
+                className="customer-modal-close"
+                type="button"
+                onClick={handleCloseCreateModal}
+              >
                 Kapat
               </button>
             </div>
@@ -942,10 +1045,14 @@ export function CustomersPage({ permissions }: CustomersPageProps) {
                         className="panel-input"
                         maxLength={customerTextMaxLength}
                         value={newCustomerForm.ad}
-                        onChange={(event) => updateNewCustomerField("ad", event.target.value)}
+                        onChange={(event) =>
+                          updateNewCustomerField("ad", event.target.value)
+                        }
                       />
                       {createErrors.ad ? (
-                        <span className="customer-field-error">{createErrors.ad}</span>
+                        <span className="customer-field-error">
+                          {createErrors.ad}
+                        </span>
                       ) : null}
                     </label>
                     <label className="field-label">
@@ -954,10 +1061,14 @@ export function CustomersPage({ permissions }: CustomersPageProps) {
                         className="panel-input"
                         maxLength={customerTextMaxLength}
                         value={newCustomerForm.soyad}
-                        onChange={(event) => updateNewCustomerField("soyad", event.target.value)}
+                        onChange={(event) =>
+                          updateNewCustomerField("soyad", event.target.value)
+                        }
                       />
                       {createErrors.soyad ? (
-                        <span className="customer-field-error">{createErrors.soyad}</span>
+                        <span className="customer-field-error">
+                          {createErrors.soyad}
+                        </span>
                       ) : null}
                     </label>
                     <label className="field-label">
@@ -969,10 +1080,14 @@ export function CustomersPage({ permissions }: CustomersPageProps) {
                         maxLength={11}
                         placeholder="05XXXXXXXXX"
                         value={newCustomerForm.cep}
-                        onChange={(event) => updateNewCustomerField("cep", event.target.value)}
+                        onChange={(event) =>
+                          updateNewCustomerField("cep", event.target.value)
+                        }
                       />
                       {createErrors.cep ? (
-                        <span className="customer-field-error">{createErrors.cep}</span>
+                        <span className="customer-field-error">
+                          {createErrors.cep}
+                        </span>
                       ) : null}
                     </label>
                   </>
@@ -984,10 +1099,14 @@ export function CustomersPage({ permissions }: CustomersPageProps) {
                         className="panel-input"
                         maxLength={customerTextMaxLength}
                         value={newCustomerForm.unvan}
-                        onChange={(event) => updateNewCustomerField("unvan", event.target.value)}
+                        onChange={(event) =>
+                          updateNewCustomerField("unvan", event.target.value)
+                        }
                       />
                       {createErrors.unvan ? (
-                        <span className="customer-field-error">{createErrors.unvan}</span>
+                        <span className="customer-field-error">
+                          {createErrors.unvan}
+                        </span>
                       ) : null}
                     </label>
                     <label className="field-label">
@@ -996,10 +1115,17 @@ export function CustomersPage({ permissions }: CustomersPageProps) {
                         className="panel-input"
                         maxLength={customerTextMaxLength}
                         value={newCustomerForm.yetkiliAdi}
-                        onChange={(event) => updateNewCustomerField("yetkiliAdi", event.target.value)}
+                        onChange={(event) =>
+                          updateNewCustomerField(
+                            "yetkiliAdi",
+                            event.target.value,
+                          )
+                        }
                       />
                       {createErrors.yetkili_adi ? (
-                        <span className="customer-field-error">{createErrors.yetkili_adi}</span>
+                        <span className="customer-field-error">
+                          {createErrors.yetkili_adi}
+                        </span>
                       ) : null}
                     </label>
                     <label className="field-label">
@@ -1011,10 +1137,14 @@ export function CustomersPage({ permissions }: CustomersPageProps) {
                         maxLength={11}
                         placeholder="05XXXXXXXXX"
                         value={newCustomerForm.telefon}
-                        onChange={(event) => updateNewCustomerField("telefon", event.target.value)}
+                        onChange={(event) =>
+                          updateNewCustomerField("telefon", event.target.value)
+                        }
                       />
                       {createErrors.telefon ? (
-                        <span className="customer-field-error">{createErrors.telefon}</span>
+                        <span className="customer-field-error">
+                          {createErrors.telefon}
+                        </span>
                       ) : null}
                     </label>
                   </>
@@ -1025,10 +1155,14 @@ export function CustomersPage({ permissions }: CustomersPageProps) {
                   <select
                     className="panel-input"
                     value={newCustomerForm.ilKodu}
-                    onChange={(event) => updateNewCustomerField("ilKodu", event.target.value)}
+                    onChange={(event) =>
+                      updateNewCustomerField("ilKodu", event.target.value)
+                    }
                     disabled={isReferenceLoading || !canListCities}
                   >
-                    <option value="">{isReferenceLoading ? entryText.citiesLoading : "Seçiniz"}</option>
+                    <option value="">
+                      {isReferenceLoading ? entryText.citiesLoading : "Seçiniz"}
+                    </option>
                     {cities.map((city) => (
                       <option key={city.id} value={city.id}>
                         {city.title}
@@ -1036,7 +1170,9 @@ export function CustomersPage({ permissions }: CustomersPageProps) {
                     ))}
                   </select>
                   {createErrors.il_kodu ? (
-                    <span className="customer-field-error">{createErrors.il_kodu}</span>
+                    <span className="customer-field-error">
+                      {createErrors.il_kodu}
+                    </span>
                   ) : null}
                 </label>
 
@@ -1045,7 +1181,9 @@ export function CustomersPage({ permissions }: CustomersPageProps) {
                   <select
                     className="panel-input"
                     value={newCustomerForm.ilceKodu}
-                    onChange={(event) => updateNewCustomerField("ilceKodu", event.target.value)}
+                    onChange={(event) =>
+                      updateNewCustomerField("ilceKodu", event.target.value)
+                    }
                     disabled={!newCustomerForm.ilKodu || !canListTowns}
                   >
                     <option value="">Seçiniz</option>
@@ -1056,7 +1194,9 @@ export function CustomersPage({ permissions }: CustomersPageProps) {
                     ))}
                   </select>
                   {createErrors.ilce_kodu ? (
-                    <span className="customer-field-error">{createErrors.ilce_kodu}</span>
+                    <span className="customer-field-error">
+                      {createErrors.ilce_kodu}
+                    </span>
                   ) : null}
                 </label>
 
@@ -1066,10 +1206,14 @@ export function CustomersPage({ permissions }: CustomersPageProps) {
                     className="panel-input"
                     maxLength={customerTextMaxLength}
                     value={newCustomerForm.mahalle}
-                    onChange={(event) => updateNewCustomerField("mahalle", event.target.value)}
+                    onChange={(event) =>
+                      updateNewCustomerField("mahalle", event.target.value)
+                    }
                   />
                   {createErrors.mahalle ? (
-                    <span className="customer-field-error">{createErrors.mahalle}</span>
+                    <span className="customer-field-error">
+                      {createErrors.mahalle}
+                    </span>
                   ) : null}
                 </label>
 
@@ -1078,10 +1222,14 @@ export function CustomersPage({ permissions }: CustomersPageProps) {
                   <select
                     className="panel-input"
                     value={newCustomerForm.branchId}
-                    onChange={(event) => updateNewCustomerField("branchId", event.target.value)}
+                    onChange={(event) =>
+                      updateNewCustomerField("branchId", event.target.value)
+                    }
                     disabled={isReferenceLoading || !canListBranches}
                   >
-                    <option value="">{isReferenceLoading ? entryText.citiesLoading : "Seçiniz"}</option>
+                    <option value="">
+                      {isReferenceLoading ? entryText.citiesLoading : "Seçiniz"}
+                    </option>
                     {branches.map((branch) => (
                       <option key={branch.id} value={branch.id}>
                         {branch.name}
@@ -1089,12 +1237,18 @@ export function CustomersPage({ permissions }: CustomersPageProps) {
                     ))}
                   </select>
                   {createErrors.branch_id ? (
-                    <span className="customer-field-error">{createErrors.branch_id}</span>
+                    <span className="customer-field-error">
+                      {createErrors.branch_id}
+                    </span>
                   ) : null}
                 </label>
 
                 <div className="customer-modal-actions">
-                  <button className="gray-button" type="button" onClick={() => setCreateStep(1)}>
+                  <button
+                    className="gray-button"
+                    type="button"
+                    onClick={() => setCreateStep(1)}
+                  >
                     Geri
                   </button>
                   <button
@@ -1113,10 +1267,18 @@ export function CustomersPage({ permissions }: CustomersPageProps) {
 
       {selectedCustomerDetail ? (
         <div className="customer-modal-backdrop" role="presentation">
-          <section className="customer-modal customer-modal-wide" role="dialog" aria-modal="true">
+          <section
+            className="customer-modal customer-modal-wide"
+            role="dialog"
+            aria-modal="true"
+          >
             <div className="customer-modal-header">
               <h2>{entryText.detailTitle}</h2>
-              <button className="customer-modal-close" type="button" onClick={handleCloseCustomerDetail}>
+              <button
+                className="customer-modal-close"
+                type="button"
+                onClick={handleCloseCustomerDetail}
+              >
                 Kapat
               </button>
             </div>
@@ -1157,10 +1319,18 @@ export function CustomersPage({ permissions }: CustomersPageProps) {
 
       {isTaskAssignModalOpen ? (
         <div className="customer-modal-backdrop" role="presentation">
-          <section className="customer-modal customer-modal-wide" role="dialog" aria-modal="true">
+          <section
+            className="customer-modal customer-modal-wide"
+            role="dialog"
+            aria-modal="true"
+          >
             <div className="customer-modal-header">
               <h2>{entryText.taskAssignTitle}</h2>
-              <button className="customer-modal-close" type="button" onClick={handleCloseTaskAssignModal}>
+              <button
+                className="customer-modal-close"
+                type="button"
+                onClick={handleCloseTaskAssignModal}
+              >
                 Kapat
               </button>
             </div>
@@ -1172,17 +1342,24 @@ export function CustomersPage({ permissions }: CustomersPageProps) {
               <strong>{appliedFilters.branchName || "-"}</strong>
             </div>
 
-            <form className="task-assign-form" onSubmit={handleTaskAssignSubmit}>
+            <form
+              className="task-assign-form"
+              onSubmit={handleTaskAssignSubmit}
+            >
               <label className="field-label">
                 Başlık
                 <input
                   className="panel-input"
                   maxLength={customerTextMaxLength}
                   value={taskAssignForm.title}
-                  onChange={(event) => updateTaskAssignField("title", event.target.value)}
+                  onChange={(event) =>
+                    updateTaskAssignField("title", event.target.value)
+                  }
                 />
                 {taskAssignErrors.title ? (
-                  <span className="customer-field-error">{taskAssignErrors.title}</span>
+                  <span className="customer-field-error">
+                    {taskAssignErrors.title}
+                  </span>
                 ) : null}
               </label>
 
@@ -1192,10 +1369,14 @@ export function CustomersPage({ permissions }: CustomersPageProps) {
                   className="panel-input"
                   maxLength={customerTextMaxLength}
                   value={taskAssignForm.description}
-                  onChange={(event) => updateTaskAssignField("description", event.target.value)}
+                  onChange={(event) =>
+                    updateTaskAssignField("description", event.target.value)
+                  }
                 />
                 {taskAssignErrors.description ? (
-                  <span className="customer-field-error">{taskAssignErrors.description}</span>
+                  <span className="customer-field-error">
+                    {taskAssignErrors.description}
+                  </span>
                 ) : null}
               </label>
 
@@ -1204,11 +1385,17 @@ export function CustomersPage({ permissions }: CustomersPageProps) {
                 <select
                   className="panel-input"
                   value={taskAssignForm.assignedUserId}
-                  onChange={(event) => updateTaskAssignField("assignedUserId", event.target.value)}
-                  disabled={!selectedTaskBranchId || isTaskAssignableUsersLoading}
+                  onChange={(event) =>
+                    updateTaskAssignField("assignedUserId", event.target.value)
+                  }
+                  disabled={
+                    !selectedTaskBranchId || isTaskAssignableUsersLoading
+                  }
                 >
                   <option value="">
-                    {isTaskAssignableUsersLoading ? "Kullanıcılar yükleniyor..." : "Seçiniz"}
+                    {isTaskAssignableUsersLoading
+                      ? "Kullanıcılar yükleniyor..."
+                      : "Seçiniz"}
                   </option>
                   {taskAssignableUsers.map((user) => (
                     <option key={user.id} value={user.id}>
@@ -1217,7 +1404,9 @@ export function CustomersPage({ permissions }: CustomersPageProps) {
                   ))}
                 </select>
                 {taskAssignErrors.assigned_user_id ? (
-                  <span className="customer-field-error">{taskAssignErrors.assigned_user_id}</span>
+                  <span className="customer-field-error">
+                    {taskAssignErrors.assigned_user_id}
+                  </span>
                 ) : null}
               </label>
 
@@ -1228,10 +1417,14 @@ export function CustomersPage({ permissions }: CustomersPageProps) {
                   type="date"
                   min={todayDateInputValue}
                   value={taskAssignForm.visitDate}
-                  onChange={(event) => updateTaskAssignField("visitDate", event.target.value)}
+                  onChange={(event) =>
+                    updateTaskAssignField("visitDate", event.target.value)
+                  }
                 />
                 {taskAssignErrors.visit_date ? (
-                  <span className="customer-field-error">{taskAssignErrors.visit_date}</span>
+                  <span className="customer-field-error">
+                    {taskAssignErrors.visit_date}
+                  </span>
                 ) : null}
               </label>
 
@@ -1242,10 +1435,14 @@ export function CustomersPage({ permissions }: CustomersPageProps) {
                   type="date"
                   min={taskAssignForm.visitDate || undefined}
                   value={taskAssignForm.dueDate}
-                  onChange={(event) => updateTaskAssignField("dueDate", event.target.value)}
+                  onChange={(event) =>
+                    updateTaskAssignField("dueDate", event.target.value)
+                  }
                 />
                 {taskAssignErrors.due_date ? (
-                  <span className="customer-field-error">{taskAssignErrors.due_date}</span>
+                  <span className="customer-field-error">
+                    {taskAssignErrors.due_date}
+                  </span>
                 ) : null}
               </label>
 
@@ -1254,7 +1451,9 @@ export function CustomersPage({ permissions }: CustomersPageProps) {
                 <select
                   className="panel-input"
                   value={taskAssignForm.priority}
-                  onChange={(event) => updateTaskAssignField("priority", event.target.value)}
+                  onChange={(event) =>
+                    updateTaskAssignField("priority", event.target.value)
+                  }
                 >
                   {taskPriorityOptions.map((priority) => (
                     <option key={priority} value={priority}>
@@ -1263,7 +1462,9 @@ export function CustomersPage({ permissions }: CustomersPageProps) {
                   ))}
                 </select>
                 {taskAssignErrors.priority ? (
-                  <span className="customer-field-error">{taskAssignErrors.priority}</span>
+                  <span className="customer-field-error">
+                    {taskAssignErrors.priority}
+                  </span>
                 ) : null}
               </label>
 
@@ -1279,10 +1480,18 @@ export function CustomersPage({ permissions }: CustomersPageProps) {
               ) : null}
 
               <div className="customer-modal-actions task-assign-form-wide">
-                <button className="gray-button" type="button" onClick={handleCloseTaskAssignModal}>
+                <button
+                  className="gray-button"
+                  type="button"
+                  onClick={handleCloseTaskAssignModal}
+                >
                   Vazgeç
                 </button>
-                <button className="blue-button" type="submit" disabled={!canCreateTasks || isCreatingTaskAssignment}>
+                <button
+                  className="blue-button"
+                  type="submit"
+                  disabled={!canCreateTasks || isCreatingTaskAssignment}
+                >
                   {isCreatingTaskAssignment ? "Kaydediliyor..." : "Kaydet"}
                 </button>
               </div>
@@ -1292,33 +1501,42 @@ export function CustomersPage({ permissions }: CustomersPageProps) {
       ) : null}
 
       <form className="customer-filter-form" onSubmit={handleFilterSubmit}>
-      
-      <div className="customer-filter-actions">
-        <label className="customer-source-select-label" style={{ marginBottom: "12px" }}>
-            {entryText.dataSourceLabel}
-          <select
-            className="panel-input"
-            value={customerDataSource}
-            onChange={(event) =>
-              handleCustomerDataSourceChange(event.target.value as CustomerDataSource)
-            }
+        <div className="customer-filter-actions">
+          <label
+            className="customer-source-select-label"
+            style={{ marginBottom: "12px" }}
           >
-            <option value="umramonline" disabled={!canListUmramonlineCustomers}>
-              Umramonline
-            </option>
-            <option value="backend" disabled={!canListBackendCustomers}>
-              CRM
-            </option>
-          </select>
-        </label>
-      </div>
-      <div className="customer-filter-actions">
+            {entryText.dataSourceLabel}
+            <select
+              className="panel-input"
+              value={customerDataSource}
+              onChange={(event) =>
+                handleCustomerDataSourceChange(
+                  event.target.value as CustomerDataSource,
+                )
+              }
+            >
+              <option
+                value="umramonline"
+                disabled={!canListUmramonlineCustomers}
+              >
+                Umramonline
+              </option>
+              <option value="backend" disabled={!canListBackendCustomers}>
+                CRM
+              </option>
+            </select>
+          </label>
+        </div>
+        <div className="customer-filter-actions">
           {isBackendDataSource ? (
             <button
               className="blue-button"
               type="button"
               onClick={handleOpenTaskAssignModal}
-              disabled={!canSelectTaskCustomers || selectedTaskCustomerCount === 0}
+              disabled={
+                !canSelectTaskCustomers || selectedTaskCustomerCount === 0
+              }
             >
               {entryText.taskAssignButton} ({selectedTaskCustomerCount})
             </button>
@@ -1334,7 +1552,11 @@ export function CustomersPage({ permissions }: CustomersPageProps) {
           <button className="blue-button" type="submit">
             Filtrele
           </button>
-          <button className="gray-button" type="button" onClick={handleResetFilters}>
+          <button
+            className="gray-button"
+            type="button"
+            onClick={handleResetFilters}
+          >
             Temizle
           </button>
           <span className="muted-text">
@@ -1355,7 +1577,9 @@ export function CustomersPage({ permissions }: CustomersPageProps) {
                     aria-label="Listelenen müşterileri seç"
                     checked={areCurrentPageCustomersSelected}
                     disabled={!canSelectTaskCustomers || items.length === 0}
-                    onChange={(event) => handleCurrentPageTaskCustomerToggle(event.target.checked)}
+                    onChange={(event) =>
+                      handleCurrentPageTaskCustomerToggle(event.target.checked)
+                    }
                   />
                 </th>
               ) : null}
@@ -1373,7 +1597,11 @@ export function CustomersPage({ permissions }: CustomersPageProps) {
                     onClick={() => handleSort("vehicle_stock_count")}
                   >
                     Araç Stok Adedi
-                    {sortBy === "vehicle_stock_count" ? (sortOrder === "asc" ? " ↑" : " ↓") : ""}
+                    {sortBy === "vehicle_stock_count"
+                      ? sortOrder === "asc"
+                        ? " ↑"
+                        : " ↓"
+                      : ""}
                   </button>
                 </th>
               ) : null}
@@ -1388,7 +1616,11 @@ export function CustomersPage({ permissions }: CustomersPageProps) {
                     onClick={() => handleSort("credit")}
                   >
                     Plus Card Bakiyesi
-                    {sortBy === "credit" ? (sortOrder === "asc" ? " ↑" : " ↓") : ""}
+                    {sortBy === "credit"
+                      ? sortOrder === "asc"
+                        ? " ↑"
+                        : " ↓"
+                      : ""}
                   </button>
                 </th>
               ) : null}
@@ -1401,7 +1633,11 @@ export function CustomersPage({ permissions }: CustomersPageProps) {
                   onClick={() => handleSort("created_at")}
                 >
                   Kayıt Tarihi
-                  {sortBy === "created_at" ? (sortOrder === "asc" ? " ↑" : " ↓") : ""}
+                  {sortBy === "created_at"
+                    ? sortOrder === "asc"
+                      ? " ↑"
+                      : " ↓"
+                    : ""}
                 </button>
               </th>
               <th>Müşteri Türü</th>
@@ -1600,12 +1836,16 @@ export function CustomersPage({ permissions }: CustomersPageProps) {
           <tbody>
             {items.length === 0 && !isLoading ? (
               <tr>
-                <td colSpan={isBackendDataSource ? 12 : 14}>Kayıt bulunamadı.</td>
+                <td colSpan={isBackendDataSource ? 12 : 14}>
+                  Kayıt bulunamadı.
+                </td>
               </tr>
             ) : null}
 
             {items.map((customer, index) => (
-              <tr key={`${customer.id}-${customer.plusCardNo}-${customer.cep}-${index}`}>
+              <tr
+                key={`${customer.id}-${customer.plusCardNo}-${customer.cep}-${index}`}
+              >
                 {isBackendDataSource ? (
                   <td className="customer-selection-cell">
                     <input
@@ -1613,7 +1853,9 @@ export function CustomersPage({ permissions }: CustomersPageProps) {
                       aria-label={`${customerDisplayNameFromList(customer)} müşterisini seç`}
                       checked={selectedTaskCustomers.has(customer.id)}
                       disabled={!canSelectTaskCustomers}
-                      onChange={(event) => handleTaskCustomerToggle(customer, event.target.checked)}
+                      onChange={(event) =>
+                        handleTaskCustomerToggle(customer, event.target.checked)
+                      }
                     />
                   </td>
                 ) : null}
@@ -1640,16 +1882,26 @@ export function CustomersPage({ permissions }: CustomersPageProps) {
                     ) : null}
                   </div>
                 </td>
-                {!isBackendDataSource ? <td>{customer.situation || "-"}</td> : null}
+                {!isBackendDataSource ? (
+                  <td>{customer.situation || "-"}</td>
+                ) : null}
                 <td>{customer.unvan || "-"}</td>
                 <td>{customer.cep || "-"}</td>
                 <td>{customer.ad || "-"}</td>
                 <td>{customer.soyad || "-"}</td>
-                {isBackendDataSource ? <td>{formatVehicleStockCount(customer.vehicleStockCount)}</td> : null}
+                {isBackendDataSource ? (
+                  <td>{formatVehicleStockCount(customer.vehicleStockCount)}</td>
+                ) : null}
                 <td>{customer.branchName || "-"}</td>
-                {!isBackendDataSource ? <td>{customer.zoneName || "-"}</td> : null}
-                {!isBackendDataSource ? <td>{customer.plusCardNo || "-"}</td> : null}
-                {!isBackendDataSource ? <td>{formatCredit(customer.credit)}</td> : null}
+                {!isBackendDataSource ? (
+                  <td>{customer.zoneName || "-"}</td>
+                ) : null}
+                {!isBackendDataSource ? (
+                  <td>{customer.plusCardNo || "-"}</td>
+                ) : null}
+                {!isBackendDataSource ? (
+                  <td>{formatCredit(customer.credit)}</td>
+                ) : null}
                 <td>{customer.city || "-"}</td>
                 <td>{customer.town || "-"}</td>
                 <td>{formatDate(customer.createdAt)}</td>
@@ -1686,7 +1938,11 @@ export function CustomersPage({ permissions }: CustomersPageProps) {
 }
 
 function navigateToFullRegistration(customerId: number): void {
-  window.history.pushState(null, "", `/customers/full-registration/${customerId}`);
+  window.history.pushState(
+    null,
+    "",
+    `/customers/full-registration/${customerId}`,
+  );
   window.dispatchEvent(new PopStateEvent("popstate"));
 }
 
@@ -1803,7 +2059,12 @@ function validateTaskAssignForm(
   requireField(errors, "title", form.title, "Başlık zorunludur.");
   validateMaxLength(errors, "title", form.title, "Başlık");
   validateMaxLength(errors, "description", form.description, "Açıklama");
-  requireField(errors, "assigned_user_id", form.assignedUserId, "Atanacak kullanıcı zorunludur.");
+  requireField(
+    errors,
+    "assigned_user_id",
+    form.assignedUserId,
+    "Atanacak kullanıcı zorunludur.",
+  );
 
   if (!branchId) {
     errors.branch_id = "Bayi filtresi seçilmelidir.";
@@ -1840,7 +2101,12 @@ function validateNewCustomerForm(
   } else {
     requireField(errors, "unvan", form.unvan, "Ünvan zorunludur.");
     validateMaxLength(errors, "unvan", form.unvan, "Ünvan");
-    requireField(errors, "yetkili_adi", form.yetkiliAdi, "Yetkili adı zorunludur.");
+    requireField(
+      errors,
+      "yetkili_adi",
+      form.yetkiliAdi,
+      "Yetkili adı zorunludur.",
+    );
     validateMaxLength(errors, "yetkili_adi", form.yetkiliAdi, "Yetkili adı");
     validateMobilePhone(errors, "telefon", form.telefon);
   }
@@ -1884,7 +2150,8 @@ function validateMaxLength(
   label: string,
 ): void {
   if (value.trim().length > customerTextMaxLength) {
-    errors[field] = `${label} en fazla ${customerTextMaxLength} karakter olabilir.`;
+    errors[field] =
+      `${label} en fazla ${customerTextMaxLength} karakter olabilir.`;
   }
 }
 
