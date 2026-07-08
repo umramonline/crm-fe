@@ -3,7 +3,6 @@ import { apiClient } from "@/services/apiClient";
 export type TaskValidationErrors = Record<string, string>;
 
 export type TaskPriority = "high" | "medium" | "low";
-export type TaskStatus = "pending" | "in_progress" | "cancelled" | "completed";
 
 export type TaskAssignableUser = {
   id: number;
@@ -42,7 +41,6 @@ export type TaskListItem = {
   visitDate: string;
   dueDate: string;
   priority: TaskPriority;
-  status: TaskStatus;
   customerCount: number;
   customers: TaskCustomer[];
 };
@@ -71,7 +69,6 @@ export type TaskListQuery = {
   visitDate?: string;
   dueDate?: string;
   priority?: TaskPriority | "";
-  status?: TaskStatus | "";
   createdByUserFullName?: string;
   sortBy?: "visit_date" | "due_date" | "";
   sortOrder?: "asc" | "desc";
@@ -155,23 +152,6 @@ export async function getTaskDetail(
   return toTaskListItem(response.data.data ?? {});
 }
 
-export async function cancelTask(
-  uuid: string,
-  customerId: number,
-): Promise<TaskListItem> {
-  const response = await apiClient.patch<ApiEnvelope<RawRecord>>(
-    `/api/v1/tasks/${uuid}/cancel`,
-    null,
-    {
-      params: {
-        customer_id: customerId,
-      },
-    },
-  );
-
-  return toTaskListItem(response.data.data ?? {});
-}
-
 export async function createTaskAssignment(
   payload: CreateTaskAssignmentPayload,
 ): Promise<void> {
@@ -215,7 +195,6 @@ function taskListQueryParams(query: TaskListQuery): RawRecord {
     visit_date: query.visitDate || undefined,
     due_date: query.dueDate || undefined,
     priority: query.priority || undefined,
-    status: query.status || undefined,
     created_by_user_full_name: query.createdByUserFullName || undefined,
     sort_by: query.sortBy || undefined,
     sort_order: query.sortOrder || undefined,
@@ -275,7 +254,6 @@ function toTaskListItem(record: RawRecord): TaskListItem {
     visitDate: stringValue(record.visit_date),
     dueDate: stringValue(record.due_date),
     priority: taskPriorityValue(record.priority),
-    status: taskStatusValue(record.status),
     customerCount: numberValue(record.customer_count),
     customers: Array.isArray(record.customers)
       ? record.customers.map((customer) =>
@@ -296,17 +274,4 @@ function toTaskCustomer(record: RawRecord): TaskCustomer {
 
 function taskPriorityValue(value: unknown): TaskPriority {
   return value === "high" || value === "low" ? value : "medium";
-}
-
-function taskStatusValue(value: unknown): TaskStatus {
-  if (
-    value === "pending" ||
-    value === "in_progress" ||
-    value === "cancelled" ||
-    value === "completed"
-  ) {
-    return value;
-  }
-
-  return "pending";
 }

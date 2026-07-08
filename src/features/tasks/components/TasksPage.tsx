@@ -2,23 +2,15 @@ import { FormEvent, useEffect, useMemo, useState } from "react";
 
 import type { Permission } from "@/features/auth/services/authApi";
 import {
-  cancelTask,
   getTaskDetail,
   listAssignedTasks,
   listTasks,
   type TaskListItem,
   type TaskListQuery,
   type TaskPriority,
-  type TaskStatus,
 } from "@/features/tasks/services/taskApi";
 
 const priorityOptions: TaskPriority[] = ["high", "medium", "low"];
-const statusOptions: TaskStatus[] = [
-  "pending",
-  "in_progress",
-  "cancelled",
-  "completed",
-];
 const unrestrictedTaskRoleIds = new Set([30, 60, 63]);
 
 type TaskFilters = {
@@ -28,7 +20,6 @@ type TaskFilters = {
   visitDate: string;
   dueDate: string;
   priority: TaskPriority | "";
-  status: TaskStatus | "";
   createdByUserFullName: string;
 };
 
@@ -44,7 +35,6 @@ const emptyFilters: TaskFilters = {
   visitDate: "",
   dueDate: "",
   priority: "",
-  status: "",
   createdByUserFullName: "",
 };
 
@@ -59,7 +49,6 @@ export function TasksPage({ permissions, roleId }: TasksPageProps) {
       permissionNames.has("tasks.list")
     : permissionNames.has("tasks.list");
   const canViewTaskDetail = permissionNames.has("tasks.detail");
-  const canCancelTasks = permissionNames.has("tasks.cancel");
 
   const [draftFilters, setDraftFilters] = useState<TaskFilters>(emptyFilters);
   const [appliedFilters, setAppliedFilters] =
@@ -73,7 +62,6 @@ export function TasksPage({ permissions, roleId }: TasksPageProps) {
   const [isLoading, setIsLoading] = useState(false);
   const [message, setMessage] = useState("");
   const [selectedTask, setSelectedTask] = useState<TaskListItem | null>(null);
-  const [cancellingTaskUuid, setCancellingTaskUuid] = useState("");
 
   useEffect(() => {
     if (!canListTasks) {
@@ -102,7 +90,6 @@ export function TasksPage({ permissions, roleId }: TasksPageProps) {
           visitDate: appliedFilters.visitDate,
           dueDate: appliedFilters.dueDate,
           priority: appliedFilters.priority,
-          status: appliedFilters.status,
           createdByUserFullName: appliedFilters.createdByUserFullName,
           sortBy,
           sortOrder,
@@ -195,55 +182,6 @@ export function TasksPage({ permissions, roleId }: TasksPageProps) {
     }
   }
 
-  async function handleCancelTask(task: TaskListItem): Promise<void> {
-    const customerId = task.customers[0]?.id ?? 0;
-    if (
-      !canCancelTasks ||
-      !canTaskBeCancelled(task) ||
-      task.customerCount !== 1 ||
-      customerId === 0
-    ) {
-      return;
-    }
-
-    const confirmed = window.confirm(
-      "Görevi iptal etmek istediğinize emin misiniz?",
-    );
-    if (!confirmed) {
-      return;
-    }
-
-    setCancellingTaskUuid(task.uuid);
-    setMessage("");
-
-    try {
-      const cancelledTask = await cancelTask(task.uuid, customerId);
-      setItems((current) =>
-        current.map((item) =>
-          item.uuid === cancelledTask.uuid
-            ? {
-                ...item,
-                status: cancelledTask.status,
-              }
-            : item,
-        ),
-      );
-      setSelectedTask((current) =>
-        current?.uuid === cancelledTask.uuid
-          ? {
-              ...current,
-              status: cancelledTask.status,
-            }
-          : current,
-      );
-      setMessage("Görev iptal edildi.");
-    } catch {
-      setMessage("Görev iptal edilemedi.");
-    } finally {
-      setCancellingTaskUuid("");
-    }
-  }
-
   if (!canListTasks) {
     return (
       <section className="panel-card permission-table-panel">
@@ -290,8 +228,6 @@ export function TasksPage({ permissions, roleId }: TasksPageProps) {
               <strong>{formatDate(selectedTask.dueDate)}</strong>
               <span>Öncelik</span>
               <strong>{formatTaskPriority(selectedTask.priority)}</strong>
-              <span>Durum</span>
-              <strong>{formatTaskStatus(selectedTask.status)}</strong>
               <span>Oluşturan</span>
               <strong>{selectedTask.createdByUserFullName || "-"}</strong>
             </div>
@@ -358,7 +294,6 @@ export function TasksPage({ permissions, roleId }: TasksPageProps) {
                 </button>
               </th>
               <th>Öncelik</th>
-              <th>Durum</th>
               <th>Oluşturan</th>
             </tr>
             <tr className="customer-filter-row">
@@ -432,25 +367,6 @@ export function TasksPage({ permissions, roleId }: TasksPageProps) {
                 </select>
               </th>
               <th>
-                <select
-                  className="panel-input"
-                  value={draftFilters.status}
-                  onChange={(event) =>
-                    updateDraftFilter(
-                      "status",
-                      event.target.value as TaskStatus | "",
-                    )
-                  }
-                >
-                  <option value="">Tümü</option>
-                  {statusOptions.map((status) => (
-                    <option key={status} value={status}>
-                      {formatTaskStatus(status)}
-                    </option>
-                  ))}
-                </select>
-              </th>
-              <th>
                 <input
                   className="panel-input"
                   value={draftFilters.createdByUserFullName}
@@ -467,7 +383,7 @@ export function TasksPage({ permissions, roleId }: TasksPageProps) {
           <tbody>
             {items.length === 0 && !isLoading ? (
               <tr>
-                <td colSpan={10}>Kayıt bulunamadı.</td>
+                <td colSpan={9}>Kayıt bulunamadı.</td>
               </tr>
             ) : null}
 
@@ -485,21 +401,6 @@ export function TasksPage({ permissions, roleId }: TasksPageProps) {
                       >
                         ⓘ
                       </button>
-                      <button
-                        className="customer-action-button task-cancel-button"
-                        type="button"
-                        aria-label="Görevi iptal et"
-                        disabled={
-                          !canCancelTasks ||
-                          !canTaskBeCancelled(task) ||
-                          task.customerCount !== 1 ||
-                          !task.customers[0] ||
-                          cancellingTaskUuid === task.uuid
-                        }
-                        onClick={() => void handleCancelTask(task)}
-                      >
-                        ✕
-                      </button>
                     </div>
                   </td>
                   <td>{task.title || "Potansiyel Müşteri"}</td>
@@ -509,7 +410,6 @@ export function TasksPage({ permissions, roleId }: TasksPageProps) {
                   <td>{formatDate(task.visitDate)}</td>
                   <td>{formatDate(task.dueDate)}</td>
                   <td>{formatTaskPriority(task.priority)}</td>
-                  <td>{formatTaskStatus(task.status)}</td>
                   <td>{task.createdByUserFullName || "-"}</td>
                 </tr>
               );
@@ -565,10 +465,6 @@ function taskCustomerName(unvan: string, ad: string, soyad: string): string {
   return individualName || "-";
 }
 
-function canTaskBeCancelled(task: TaskListItem): boolean {
-  return task.status !== "cancelled" && task.status !== "completed";
-}
-
 function formatDate(value: string): string {
   if (!value) {
     return "-";
@@ -592,15 +488,4 @@ function formatTaskPriority(priority: TaskPriority): string {
   };
 
   return priorityMap[priority];
-}
-
-function formatTaskStatus(status: TaskStatus): string {
-  const statusMap: Record<TaskStatus, string> = {
-    pending: "Bekliyor",
-    in_progress: "Devam Ediyor",
-    cancelled: "İptal Edildi",
-    completed: "Tamamlandı",
-  };
-
-  return statusMap[status];
 }
