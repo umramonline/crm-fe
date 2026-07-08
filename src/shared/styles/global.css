@@ -976,6 +976,12 @@ select {
   background: #fef2f2;
 }
 
+.task-follow-button {
+  border-color: #bbf7d0;
+  color: #15803d;
+  background: #f0fdf4;
+}
+
 .task-customer-list {
   display: flex;
   min-width: 180px;

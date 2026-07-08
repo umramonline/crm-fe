@@ -35,6 +35,11 @@ type TasksPageProps = {
   roleId: number;
 };
 
+type FollowRecordSelection = {
+  task: TaskListItem;
+  customer: TaskCustomer;
+};
+
 const emptyFilters: TaskFilters = {
   title: "",
   assignedUserFullName: "",
@@ -74,6 +79,8 @@ export function TasksPage({ permissions, roleId }: TasksPageProps) {
     useState<TaskListItem | null>(null);
   const [selectedCustomerDetail, setSelectedCustomerDetail] =
     useState<CustomerDetail | null>(null);
+  const [selectedFollowRecord, setSelectedFollowRecord] =
+    useState<FollowRecordSelection | null>(null);
   const [isLoadingCustomerDetail, setIsLoadingCustomerDetail] = useState(false);
   const [cancellingCustomerId, setCancellingCustomerId] = useState(0);
 
@@ -223,6 +230,18 @@ export function TasksPage({ permissions, roleId }: TasksPageProps) {
     }
   }
 
+  function handleOpenFollowRecordModal(
+    task: TaskListItem,
+    customer: TaskCustomer,
+  ): void {
+    if (!canTaskCustomerOpenFollowRecord(customer)) {
+      return;
+    }
+
+    setSelectedFollowRecord({ task, customer });
+    setMessage("");
+  }
+
   async function handleCancelTaskCustomer(
     task: TaskListItem,
     customer: TaskCustomer,
@@ -283,12 +302,17 @@ export function TasksPage({ permissions, roleId }: TasksPageProps) {
   function handleCloseCustomerDetails(): void {
     setSelectedCustomerTask(null);
     setSelectedCustomerDetail(null);
+    setSelectedFollowRecord(null);
     setIsLoadingCustomerDetail(false);
   }
 
   function handleCloseCustomerDetail(): void {
     setSelectedCustomerDetail(null);
     setIsLoadingCustomerDetail(false);
+  }
+
+  function handleCloseFollowRecordModal(): void {
+    setSelectedFollowRecord(null);
   }
 
   if (!canListTasks) {
@@ -376,7 +400,7 @@ export function TasksPage({ permissions, roleId }: TasksPageProps) {
                     <th>ad soyad</th>
                     <th>unvan</th>
                     <th>durum</th>
-                    <th>iptal işlemi</th>
+                    <th>İşlemler</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -398,30 +422,84 @@ export function TasksPage({ permissions, roleId }: TasksPageProps) {
                       <td>{customer.unvan || "-"}</td>
                       <td>{formatTaskStatus(customer.status)}</td>
                       <td>
-                        <button
-                          className="customer-action-button task-cancel-button"
-                          type="button"
-                          disabled={
-                            !canCancelTasks ||
-                            !canTaskCustomerBeCancelled(customer) ||
-                            cancellingCustomerId === customer.id
-                          }
-                          onClick={(event) => {
-                            event.stopPropagation();
-                            void handleCancelTaskCustomer(
-                              selectedCustomerTask,
-                              customer,
-                            );
-                          }}
-                        >
-                          ⓧ
-                        </button>
+                        <div className="customer-action-group">
+                          {canTaskCustomerOpenFollowRecord(customer) ? (
+                            <button
+                              className="customer-action-button task-follow-button"
+                              type="button"
+                              aria-label="Takip kaydı oluştur"
+                              onClick={(event) => {
+                                event.stopPropagation();
+                                handleOpenFollowRecordModal(
+                                  selectedCustomerTask,
+                                  customer,
+                                );
+                              }}
+                            >
+                              ✎
+                            </button>
+                          ) : null}
+                          <button
+                            className="customer-action-button task-cancel-button"
+                            type="button"
+                            disabled={
+                              !canCancelTasks ||
+                              !canTaskCustomerBeCancelled(customer) ||
+                              cancellingCustomerId === customer.id
+                            }
+                            onClick={(event) => {
+                              event.stopPropagation();
+                              void handleCancelTaskCustomer(
+                                selectedCustomerTask,
+                                customer,
+                              );
+                            }}
+                          >
+                            ⓧ
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   ))}
                 </tbody>
               </table>
             </div>
+          </section>
+        </div>
+      ) : null}
+
+      {selectedFollowRecord ? (
+        <div className="customer-modal-backdrop" role="presentation">
+          <section className="customer-modal" role="dialog" aria-modal="true">
+            <div className="customer-modal-header">
+              <h2>Takip Kaydı</h2>
+              <button
+                className="customer-modal-close"
+                type="button"
+                onClick={handleCloseFollowRecordModal}
+              >
+                Kapat
+              </button>
+            </div>
+
+            <form
+              className="panel-form"
+              onSubmit={(event) => event.preventDefault()}
+            >
+              <div className="customer-detail-grid">
+                <span>Görev</span>
+                <strong>
+                  {selectedFollowRecord.task.title || "Potansiyel Müşteri"}
+                </strong>
+                <span>Müşteri</span>
+                <strong>
+                  {taskCustomerFullName(
+                    selectedFollowRecord.customer.ad,
+                    selectedFollowRecord.customer.soyad,
+                  )}
+                </strong>
+              </div>
+            </form>
           </section>
         </div>
       ) : null}
@@ -724,6 +802,10 @@ function taskCustomerFullName(ad: string, soyad: string): string {
 
 function canTaskCustomerBeCancelled(customer: TaskCustomer): boolean {
   return customer.status !== "cancelled" && customer.status !== "completed";
+}
+
+function canTaskCustomerOpenFollowRecord(customer: TaskCustomer): boolean {
+  return customer.status === "pending" || customer.status === "in_progress";
 }
 
 function formatDate(value: string): string {
