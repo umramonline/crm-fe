@@ -82,7 +82,8 @@ export function TasksPage({ permissions, roleId }: TasksPageProps) {
   const [selectedFollowRecord, setSelectedFollowRecord] =
     useState<FollowRecordSelection | null>(null);
   const [isLoadingCustomerDetail, setIsLoadingCustomerDetail] = useState(false);
-  const [cancellingCustomerId, setCancellingCustomerId] = useState(0);
+  const [cancellingTaskCustomerUuid, setCancellingTaskCustomerUuid] =
+    useState("");
 
   useEffect(() => {
     if (!canListTasks) {
@@ -221,7 +222,7 @@ export function TasksPage({ permissions, roleId }: TasksPageProps) {
     setMessage("");
 
     try {
-      const customerDetail = await getCustomer(customer.id, "backend");
+      const customerDetail = await getCustomer(customer.customerId, "backend");
       setSelectedCustomerDetail(customerDetail);
     } catch {
       setMessage("Müşteri detayı getirilemedi.");
@@ -257,11 +258,11 @@ export function TasksPage({ permissions, roleId }: TasksPageProps) {
       return;
     }
 
-    setCancellingCustomerId(customer.id);
+    setCancellingTaskCustomerUuid(customer.uuid);
     setMessage("");
 
     try {
-      const cancelledTask = await cancelTask(task.uuid, customer.id);
+      const cancelledTask = await cancelTask(task.uuid, customer.uuid);
       const cancelledCustomer = cancelledTask.customers[0];
       const nextStatus = cancelledCustomer?.status ?? "cancelled";
 
@@ -270,7 +271,7 @@ export function TasksPage({ permissions, roleId }: TasksPageProps) {
       ): TaskListItem => ({
         ...currentTask,
         customers: currentTask.customers.map((currentCustomer) =>
-          currentCustomer.id === customer.id
+          currentCustomer.uuid === customer.uuid
             ? {
                 ...currentCustomer,
                 status: nextStatus,
@@ -295,7 +296,7 @@ export function TasksPage({ permissions, roleId }: TasksPageProps) {
     } catch {
       setMessage("Görev iptal edilemedi.");
     } finally {
-      setCancellingCustomerId(0);
+      setCancellingTaskCustomerUuid("");
     }
   }
 
@@ -413,7 +414,7 @@ export function TasksPage({ permissions, roleId }: TasksPageProps) {
                   {selectedCustomerTask.customers.map((customer) => (
                     <tr
                       className="clickable-table-row"
-                      key={customer.id}
+                      key={customer.uuid}
                       onClick={() => void handleOpenCustomerDetail(customer)}
                     >
                       <td>
@@ -445,7 +446,7 @@ export function TasksPage({ permissions, roleId }: TasksPageProps) {
                             disabled={
                               !canCancelTasks ||
                               !canTaskCustomerBeCancelled(customer) ||
-                              cancellingCustomerId === customer.id
+                              cancellingTaskCustomerUuid === customer.uuid
                             }
                             onClick={(event) => {
                               event.stopPropagation();

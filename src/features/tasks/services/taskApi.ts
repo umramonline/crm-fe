@@ -26,7 +26,8 @@ export type CreateTaskAssignmentPayload = {
 };
 
 export type TaskCustomer = {
-  id: number;
+  uuid: string;
+  customerId: number;
   unvan: string;
   ad: string;
   soyad: string;
@@ -140,13 +141,13 @@ export async function listAssignedTasks(
 
 export async function getTaskDetail(
   uuid: string,
-  customerId?: number,
+  tasksCustomerUuid?: string,
 ): Promise<TaskListItem> {
   const response = await apiClient.get<ApiEnvelope<RawRecord>>(
     `/api/v1/tasks/${uuid}`,
     {
       params: {
-        customer_id: customerId || undefined,
+        tasks_customer_uuid: tasksCustomerUuid || undefined,
       },
     },
   );
@@ -156,14 +157,14 @@ export async function getTaskDetail(
 
 export async function cancelTask(
   uuid: string,
-  customerId: number,
+  tasksCustomerUuid: string,
 ): Promise<TaskListItem> {
   const response = await apiClient.patch<ApiEnvelope<RawRecord>>(
     `/api/v1/tasks/${uuid}/cancel`,
     null,
     {
       params: {
-        customer_id: customerId,
+        tasks_customer_uuid: tasksCustomerUuid,
       },
     },
   );
@@ -284,7 +285,8 @@ function toTaskListItem(record: RawRecord): TaskListItem {
 
 function toTaskCustomer(record: RawRecord): TaskCustomer {
   return {
-    id: numberValue(record.id),
+    uuid: stringValue(record.uuid),
+    customerId: numberValue(record.customer_id),
     unvan: stringValue(record.unvan),
     ad: stringValue(record.ad),
     soyad: stringValue(record.soyad),
