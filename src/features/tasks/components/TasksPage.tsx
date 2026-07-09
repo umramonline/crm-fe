@@ -102,20 +102,24 @@ const emptyFilters: TaskFilters = {
   createdByUserFullName: "",
 };
 
-const emptyFollowUpForm: FollowUpForm = {
-  visitDate: "",
-  nextVisitDate: "",
-  visitType: "Yerinde Ziyaret",
-  meetPersonTitle: "",
-  meetPersonName: "",
-  meetPersonSurname: "",
-  meetPersonPhone: "",
-  meetPersonEmail: "",
-  agreementReached: false,
-  agreementFailureReason: "",
-  note: "",
-  images: [],
-};
+function createEmptyFollowUpForm(): FollowUpForm {
+  const today = todayDateInputValue();
+
+  return {
+    visitDate: today,
+    nextVisitDate: today,
+    visitType: "Yerinde Ziyaret",
+    meetPersonTitle: "",
+    meetPersonName: "",
+    meetPersonSurname: "",
+    meetPersonPhone: "",
+    meetPersonEmail: "",
+    agreementReached: false,
+    agreementFailureReason: "",
+    note: "",
+    images: [],
+  };
+}
 
 export function TasksPage({ permissions, roleId, userId }: TasksPageProps) {
   const permissionNames = useMemo(
@@ -149,7 +153,7 @@ export function TasksPage({ permissions, roleId, userId }: TasksPageProps) {
   const [selectedFollowRecord, setSelectedFollowRecord] =
     useState<FollowRecordSelection | null>(null);
   const [followUpForm, setFollowUpForm] =
-    useState<FollowUpForm>(emptyFollowUpForm);
+    useState<FollowUpForm>(() => createEmptyFollowUpForm());
   const [followUpErrors, setFollowUpErrors] = useState<FollowUpFormErrors>({});
   const [isCreatingFollowUp, setIsCreatingFollowUp] = useState(false);
   const [isLoadingCustomerDetail, setIsLoadingCustomerDetail] = useState(false);
@@ -310,7 +314,7 @@ export function TasksPage({ permissions, roleId, userId }: TasksPageProps) {
       return;
     }
 
-    setFollowUpForm(emptyFollowUpForm);
+    setFollowUpForm(createEmptyFollowUpForm());
     setFollowUpErrors({});
     setSelectedFollowRecord({ task, customer });
     setMessage("");
@@ -328,6 +332,13 @@ export function TasksPage({ permissions, roleId, userId }: TasksPageProps) {
 
       if (field === "agreementReached" && value === true) {
         nextForm.agreementFailureReason = "";
+      }
+      if (
+        field === "visitDate" &&
+        typeof value === "string" &&
+        nextForm.nextVisitDate < value
+      ) {
+        nextForm.nextVisitDate = value;
       }
 
       return nextForm;
@@ -382,7 +393,7 @@ export function TasksPage({ permissions, roleId, userId }: TasksPageProps) {
         images: followUpForm.images,
       });
       setSelectedFollowRecord(null);
-      setFollowUpForm(emptyFollowUpForm);
+      setFollowUpForm(createEmptyFollowUpForm());
       setMessage("Takip kaydı oluşturuldu.");
     } catch (error: unknown) {
       if (error instanceof FollowUpValidationError) {
@@ -468,7 +479,7 @@ export function TasksPage({ permissions, roleId, userId }: TasksPageProps) {
 
   function handleCloseFollowRecordModal(): void {
     setSelectedFollowRecord(null);
-    setFollowUpForm(emptyFollowUpForm);
+    setFollowUpForm(createEmptyFollowUpForm());
     setFollowUpErrors({});
     setIsCreatingFollowUp(false);
   }
@@ -669,6 +680,7 @@ export function TasksPage({ permissions, roleId, userId }: TasksPageProps) {
                   <input
                     className="panel-input"
                     type="date"
+                    min={todayDateInputValue()}
                     value={followUpForm.visitDate}
                     onChange={(event) =>
                       updateFollowUpForm("visitDate", event.target.value)
@@ -685,6 +697,7 @@ export function TasksPage({ permissions, roleId, userId }: TasksPageProps) {
                   <input
                     className="panel-input"
                     type="date"
+                    min={followUpForm.visitDate}
                     value={followUpForm.nextVisitDate}
                     onChange={(event) =>
                       updateFollowUpForm("nextVisitDate", event.target.value)
@@ -784,8 +797,12 @@ export function TasksPage({ permissions, roleId, userId }: TasksPageProps) {
                   Telefon*
                   <input
                     className="panel-input"
+                    inputMode="tel"
+                    pattern="05[0-9]{9}"
+                    placeholder="05XXXXXXXXX"
+                    type="tel"
                     value={followUpForm.meetPersonPhone}
-                    maxLength={20}
+                    maxLength={11}
                     onChange={(event) =>
                       updateFollowUpForm("meetPersonPhone", event.target.value)
                     }
@@ -1249,6 +1266,8 @@ function validateFollowUpForm(form: FollowUpForm): FollowUpFormErrors {
   }
   if (!form.meetPersonPhone.trim()) {
     errors.meetPersonPhone = "Telefon zorunludur.";
+  } else if (!/^05[0-9]{9}$/.test(form.meetPersonPhone.trim())) {
+    errors.meetPersonPhone = "Telefon 05XXXXXXXXX formatında olmalıdır.";
   }
   if (!form.meetPersonEmail.trim()) {
     errors.meetPersonEmail = "Eposta zorunludur.";
@@ -1336,6 +1355,15 @@ function canTaskCustomerOpenFollowRecord(
     task.assignedUserId === userId &&
     (customer.status === "pending" || customer.status === "in_progress")
   );
+}
+
+function todayDateInputValue(): string {
+  const today = new Date();
+  const year = today.getFullYear();
+  const month = String(today.getMonth() + 1).padStart(2, "0");
+  const day = String(today.getDate()).padStart(2, "0");
+
+  return `${year}-${month}-${day}`;
 }
 
 function formatDate(value: string): string {
