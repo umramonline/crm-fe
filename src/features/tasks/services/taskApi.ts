@@ -258,7 +258,9 @@ export async function createFollowUp(
   const formData = new FormData();
   formData.append("tasks_customer_uuid", payload.tasksCustomerUuid);
   formData.append("visit_date", payload.visitDate);
-  formData.append("next_visit_date", payload.nextVisitDate);
+  if (payload.nextVisitDate) {
+    formData.append("next_visit_date", payload.nextVisitDate);
+  }
   formData.append("visit_type", payload.visitType);
   formData.append("agreement_reached", String(payload.agreementReached));
 
