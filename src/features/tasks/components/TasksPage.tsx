@@ -7,9 +7,14 @@ import {
 } from "@/features/customers/services/customerApi";
 import {
   cancelTask,
+  createFollowUp,
+  FollowUpValidationError,
   getTaskDetail,
   listAssignedTasks,
   listTasks,
+  type FollowUpAgreementFailureReason,
+  type FollowUpMeetPersonTitle,
+  type FollowUpVisitType,
   type TaskCustomer,
   type TaskListItem,
   type TaskListQuery,
@@ -19,6 +24,35 @@ import {
 
 const priorityOptions: TaskPriority[] = ["high", "medium", "low"];
 const unrestrictedTaskRoleIds = new Set([30, 60, 63]);
+const followUpVisitTypes: FollowUpVisitType[] = ["Yerinde Ziyaret"];
+const followUpAgreementFailureReasons: FollowUpAgreementFailureReason[] = [
+  "Fiyat yüksek",
+  "Mesafe Uzak",
+  "Bayi ile yaşanan sorunlar",
+  "Ekpertize ihtiyaç duymuyor",
+  "Kendisi yapıyor",
+  "Başka ekspertize yaptırıyor",
+  "Değerlendirme",
+];
+const followUpMeetPersonTitles: FollowUpMeetPersonTitle[] = [
+  "Genel Müdür",
+  "Satış Müdürü",
+  "Operasyon Müdürü",
+  "Pazarlama Müdürü",
+  "İşletme Müdürü",
+  "Bölge Müdürü",
+  "Şube Müdürü",
+  "Yönetici",
+  "Sahibi",
+  "Ortağı",
+];
+const followUpImageTypes = new Set([
+  "image/jpeg",
+  "image/png",
+  "image/gif",
+  "image/webp",
+]);
+const followUpMaxImageTotalSize = 5 * 1024 * 1024;
 
 type TaskFilters = {
   title: string;
@@ -33,12 +67,30 @@ type TaskFilters = {
 type TasksPageProps = {
   permissions: Permission[];
   roleId: number;
+  userId: number;
 };
 
 type FollowRecordSelection = {
   task: TaskListItem;
   customer: TaskCustomer;
 };
+
+type FollowUpForm = {
+  visitDate: string;
+  nextVisitDate: string;
+  visitType: FollowUpVisitType | "";
+  meetPersonTitle: FollowUpMeetPersonTitle | "";
+  meetPersonName: string;
+  meetPersonSurname: string;
+  meetPersonPhone: string;
+  meetPersonEmail: string;
+  agreementReached: boolean;
+  agreementFailureReason: FollowUpAgreementFailureReason | "";
+  note: string;
+  images: File[];
+};
+
+type FollowUpFormErrors = Partial<Record<keyof FollowUpForm | "form", string>>;
 
 const emptyFilters: TaskFilters = {
   title: "",
@@ -50,7 +102,22 @@ const emptyFilters: TaskFilters = {
   createdByUserFullName: "",
 };
 
-export function TasksPage({ permissions, roleId }: TasksPageProps) {
+const emptyFollowUpForm: FollowUpForm = {
+  visitDate: "",
+  nextVisitDate: "",
+  visitType: "Yerinde Ziyaret",
+  meetPersonTitle: "",
+  meetPersonName: "",
+  meetPersonSurname: "",
+  meetPersonPhone: "",
+  meetPersonEmail: "",
+  agreementReached: false,
+  agreementFailureReason: "",
+  note: "",
+  images: [],
+};
+
+export function TasksPage({ permissions, roleId, userId }: TasksPageProps) {
   const permissionNames = useMemo(
     () => new Set(permissions.map((permission) => permission.name)),
     [permissions],
@@ -81,6 +148,10 @@ export function TasksPage({ permissions, roleId }: TasksPageProps) {
     useState<CustomerDetail | null>(null);
   const [selectedFollowRecord, setSelectedFollowRecord] =
     useState<FollowRecordSelection | null>(null);
+  const [followUpForm, setFollowUpForm] =
+    useState<FollowUpForm>(emptyFollowUpForm);
+  const [followUpErrors, setFollowUpErrors] = useState<FollowUpFormErrors>({});
+  const [isCreatingFollowUp, setIsCreatingFollowUp] = useState(false);
   const [isLoadingCustomerDetail, setIsLoadingCustomerDetail] = useState(false);
   const [cancellingTaskCustomerUuid, setCancellingTaskCustomerUuid] =
     useState("");
@@ -235,12 +306,95 @@ export function TasksPage({ permissions, roleId }: TasksPageProps) {
     task: TaskListItem,
     customer: TaskCustomer,
   ): void {
-    if (!canTaskCustomerOpenFollowRecord(customer)) {
+    if (!canTaskCustomerOpenFollowRecord(task, customer, userId)) {
       return;
     }
 
+    setFollowUpForm(emptyFollowUpForm);
+    setFollowUpErrors({});
     setSelectedFollowRecord({ task, customer });
     setMessage("");
+  }
+
+  function updateFollowUpForm<K extends keyof FollowUpForm>(
+    field: K,
+    value: FollowUpForm[K],
+  ): void {
+    setFollowUpForm((current) => {
+      const nextForm = {
+        ...current,
+        [field]: value,
+      };
+
+      if (field === "agreementReached" && value === true) {
+        nextForm.agreementFailureReason = "";
+      }
+
+      return nextForm;
+    });
+    setFollowUpErrors((current) => ({
+      ...current,
+      [field]: "",
+      form: "",
+    }));
+  }
+
+  function handleFollowUpImageChange(files: FileList | null): void {
+    const images = Array.from(files ?? []);
+    updateFollowUpForm("images", images);
+  }
+
+  async function handleFollowUpSubmit(
+    event: FormEvent<HTMLFormElement>,
+  ): Promise<void> {
+    event.preventDefault();
+
+    if (!selectedFollowRecord) {
+      return;
+    }
+
+    const validationErrors = validateFollowUpForm(followUpForm);
+    if (Object.keys(validationErrors).length > 0) {
+      setFollowUpErrors(validationErrors);
+      return;
+    }
+
+    setIsCreatingFollowUp(true);
+    setFollowUpErrors({});
+    setMessage("");
+
+    try {
+      await createFollowUp({
+        tasksCustomerUuid: selectedFollowRecord.customer.uuid,
+        visitDate: followUpForm.visitDate,
+        nextVisitDate: followUpForm.nextVisitDate,
+        visitType: followUpForm.visitType as FollowUpVisitType,
+        agreementReached: followUpForm.agreementReached,
+        agreementFailureReason: followUpForm.agreementFailureReason,
+        note: followUpForm.note,
+        meetPerson: {
+          title: followUpForm.meetPersonTitle,
+          name: followUpForm.meetPersonName.trim(),
+          surname: followUpForm.meetPersonSurname.trim(),
+          phone: followUpForm.meetPersonPhone.trim(),
+          email: followUpForm.meetPersonEmail.trim(),
+        },
+        images: followUpForm.images,
+      });
+      setSelectedFollowRecord(null);
+      setFollowUpForm(emptyFollowUpForm);
+      setMessage("Takip kaydı oluşturuldu.");
+    } catch (error: unknown) {
+      if (error instanceof FollowUpValidationError) {
+        setFollowUpErrors(apiFollowUpErrorsToFormErrors(error.errors));
+      } else {
+        setFollowUpErrors({
+          form: "Takip kaydı oluşturulamadı.",
+        });
+      }
+    } finally {
+      setIsCreatingFollowUp(false);
+    }
   }
 
   async function handleCancelTaskCustomer(
@@ -314,6 +468,9 @@ export function TasksPage({ permissions, roleId }: TasksPageProps) {
 
   function handleCloseFollowRecordModal(): void {
     setSelectedFollowRecord(null);
+    setFollowUpForm(emptyFollowUpForm);
+    setFollowUpErrors({});
+    setIsCreatingFollowUp(false);
   }
 
   if (!canListTasks) {
@@ -424,7 +581,11 @@ export function TasksPage({ permissions, roleId }: TasksPageProps) {
                       <td>{formatTaskStatus(customer.status)}</td>
                       <td>
                         <div className="customer-action-group">
-                          {canTaskCustomerOpenFollowRecord(customer) ? (
+                          {canTaskCustomerOpenFollowRecord(
+                            selectedCustomerTask,
+                            customer,
+                            userId,
+                          ) ? (
                             <button
                               className="customer-action-button task-follow-button"
                               type="button"
@@ -471,7 +632,11 @@ export function TasksPage({ permissions, roleId }: TasksPageProps) {
 
       {selectedFollowRecord ? (
         <div className="customer-modal-backdrop" role="presentation">
-          <section className="customer-modal" role="dialog" aria-modal="true">
+          <section
+            className="customer-modal customer-modal-wide"
+            role="dialog"
+            aria-modal="true"
+          >
             <div className="customer-modal-header">
               <h2>Takip Kaydı</h2>
               <button
@@ -482,12 +647,10 @@ export function TasksPage({ permissions, roleId }: TasksPageProps) {
                 Kapat
               </button>
             </div>
+            <hr className="hr-line-grid" />
 
-            <form
-              className="panel-form"
-              onSubmit={(event) => event.preventDefault()}
-            >
-              <div className="customer-detail-grid">
+            <form className="customer-entry-form" onSubmit={handleFollowUpSubmit}>
+              <div className="customer-detail-grid task-assign-form-wide">
                 <span>Görev</span>
                 <strong>
                   {selectedFollowRecord.task.title || "Potansiyel Müşteri"}
@@ -499,6 +662,264 @@ export function TasksPage({ permissions, roleId }: TasksPageProps) {
                     selectedFollowRecord.customer.soyad,
                   )}
                 </strong>
+              </div>
+              <h3 className="task-assign-form-wide">Ziyaret Bilgileri</h3>
+              <label className="field-label">
+                  Görüşme Tarihi*
+                  <input
+                    className="panel-input"
+                    type="date"
+                    value={followUpForm.visitDate}
+                    onChange={(event) =>
+                      updateFollowUpForm("visitDate", event.target.value)
+                    }
+                  />
+                  {followUpErrors.visitDate ? (
+                    <span className="customer-field-error">
+                      {followUpErrors.visitDate}
+                    </span>
+                  ) : null}
+              </label>
+              <label className="field-label">
+                  Bir Sonraki Ziyaret Tarihi*
+                  <input
+                    className="panel-input"
+                    type="date"
+                    value={followUpForm.nextVisitDate}
+                    onChange={(event) =>
+                      updateFollowUpForm("nextVisitDate", event.target.value)
+                    }
+                  />
+                  {followUpErrors.nextVisitDate ? (
+                    <span className="customer-field-error">
+                      {followUpErrors.nextVisitDate}
+                    </span>
+                  ) : null}
+              </label>
+              <label className="field-label">
+                Görüşme Türü*
+                <select
+                  className="panel-input"
+                  value={followUpForm.visitType}
+                  onChange={(event) =>
+                    updateFollowUpForm(
+                      "visitType",
+                      event.target.value as FollowUpVisitType | "",
+                    )
+                  }
+                >
+                  <option value="">Seçiniz</option>
+                  {followUpVisitTypes.map((visitType) => (
+                    <option key={visitType} value={visitType}>
+                      {visitType}
+                    </option>
+                  ))}
+                </select>
+                {followUpErrors.visitType ? (
+                  <span className="customer-field-error">
+                    {followUpErrors.visitType}
+                  </span>
+                ) : null}
+              </label>
+
+              <h3 className="task-assign-form-wide">Görüşülen Kişi Bilgileri</h3>
+              <label className="field-label">
+                Görevi*
+                <select
+                  className="panel-input"
+                  value={followUpForm.meetPersonTitle}
+                  onChange={(event) =>
+                    updateFollowUpForm(
+                      "meetPersonTitle",
+                      event.target.value as FollowUpMeetPersonTitle | "",
+                    )
+                  }
+                >
+                  <option value="">Seçiniz</option>
+                  {followUpMeetPersonTitles.map((title) => (
+                    <option key={title} value={title}>
+                      {title}
+                    </option>
+                  ))}
+                </select>
+                {followUpErrors.meetPersonTitle ? (
+                  <span className="customer-field-error">
+                    {followUpErrors.meetPersonTitle}
+                  </span>
+                ) : null}
+              </label>
+              <label className="field-label">
+                  Ad*
+                  <input
+                    className="panel-input"
+                    value={followUpForm.meetPersonName}
+                    maxLength={50}
+                    onChange={(event) =>
+                      updateFollowUpForm("meetPersonName", event.target.value)
+                    }
+                  />
+                  {followUpErrors.meetPersonName ? (
+                    <span className="customer-field-error">
+                      {followUpErrors.meetPersonName}
+                    </span>
+                  ) : null}
+              </label>
+              <label className="field-label">
+                  Soyad*
+                  <input
+                    className="panel-input"
+                    value={followUpForm.meetPersonSurname}
+                    maxLength={50}
+                    onChange={(event) =>
+                      updateFollowUpForm("meetPersonSurname", event.target.value)
+                    }
+                  />
+                  {followUpErrors.meetPersonSurname ? (
+                    <span className="customer-field-error">
+                      {followUpErrors.meetPersonSurname}
+                    </span>
+                  ) : null}
+              </label>
+              <label className="field-label">
+                  Telefon*
+                  <input
+                    className="panel-input"
+                    value={followUpForm.meetPersonPhone}
+                    maxLength={20}
+                    onChange={(event) =>
+                      updateFollowUpForm("meetPersonPhone", event.target.value)
+                    }
+                  />
+                  {followUpErrors.meetPersonPhone ? (
+                    <span className="customer-field-error">
+                      {followUpErrors.meetPersonPhone}
+                    </span>
+                  ) : null}
+              </label>
+              <label className="field-label">
+                  Eposta*
+                  <input
+                    className="panel-input"
+                    type="email"
+                    value={followUpForm.meetPersonEmail}
+                    maxLength={100}
+                    onChange={(event) =>
+                      updateFollowUpForm("meetPersonEmail", event.target.value)
+                    }
+                  />
+                  {followUpErrors.meetPersonEmail ? (
+                    <span className="customer-field-error">
+                      {followUpErrors.meetPersonEmail}
+                    </span>
+                  ) : null}
+              </label>
+
+              <h3 className="task-assign-form-wide">Anlaşma Bilgileri</h3>
+              <label className="field-label">
+                Anlaşma Sağlandı mı?
+                <select
+                  className="panel-input"
+                  value={followUpForm.agreementReached ? "true" : "false"}
+                  onChange={(event) =>
+                    updateFollowUpForm(
+                      "agreementReached",
+                      event.target.value === "true",
+                    )
+                  }
+                >
+                  <option value="false">Hayır</option>
+                  <option value="true">Evet</option>
+                </select>
+              </label>
+              {!followUpForm.agreementReached ? (
+                <label className="field-label">
+                  Anlaşamama Sebebi*
+                  <select
+                    className="panel-input"
+                    value={followUpForm.agreementFailureReason}
+                    onChange={(event) =>
+                      updateFollowUpForm(
+                        "agreementFailureReason",
+                        event.target
+                          .value as FollowUpAgreementFailureReason | "",
+                      )
+                    }
+                  >
+                    <option value="">Seçiniz</option>
+                    {followUpAgreementFailureReasons.map((reason) => (
+                      <option key={reason} value={reason}>
+                        {reason}
+                      </option>
+                    ))}
+                  </select>
+                  {followUpErrors.agreementFailureReason ? (
+                    <span className="customer-field-error">
+                      {followUpErrors.agreementFailureReason}
+                    </span>
+                  ) : null}
+                </label>
+              ) : null}
+              <label className="field-label task-assign-form-wide">
+                Not
+                <textarea
+                  className="panel-input"
+                  value={followUpForm.note}
+                  maxLength={150}
+                  onChange={(event) =>
+                    updateFollowUpForm("note", event.target.value)
+                  }
+                />
+                {followUpErrors.note ? (
+                  <span className="customer-field-error">
+                    {followUpErrors.note}
+                  </span>
+                ) : null}
+              </label>
+
+              <h3 className="task-assign-form-wide">Resim</h3>
+              <label className="field-label task-assign-form-wide">
+                Maksimum 3 Resim
+                <input
+                  className="panel-input"
+                  type="file"
+                  accept="image/jpeg,image/png,image/gif,image/webp"
+                  multiple
+                  onChange={(event) =>
+                    handleFollowUpImageChange(event.target.files)
+                  }
+                />
+                {followUpErrors.images ? (
+                  <span className="customer-field-error">
+                    {followUpErrors.images}
+                  </span>
+                ) : null}
+              </label>
+              {followUpForm.images.length > 0 ? (
+                <p className="muted-text task-assign-form-wide">
+                  {followUpForm.images.map((image) => image.name).join(", ")}
+                </p>
+              ) : null}
+              {followUpErrors.form ? (
+                <p className="customer-field-error task-assign-form-wide">
+                  {followUpErrors.form}
+                </p>
+              ) : null}
+              <div className="customer-modal-actions">
+                <button
+                  className="gray-button"
+                  type="button"
+                  disabled={isCreatingFollowUp}
+                  onClick={handleCloseFollowRecordModal}
+                >
+                  Vazgeç
+                </button>
+                <button
+                  className="blue-button"
+                  type="submit"
+                  disabled={isCreatingFollowUp}
+                >
+                  {isCreatingFollowUp ? "Kaydediliyor..." : "Kaydet"}
+                </button>
               </div>
             </form>
           </section>
@@ -801,12 +1222,120 @@ function taskCustomerFullName(ad: string, soyad: string): string {
   return `${ad} ${soyad}`.trim() || "-";
 }
 
+function validateFollowUpForm(form: FollowUpForm): FollowUpFormErrors {
+  const errors: FollowUpFormErrors = {};
+
+  if (!form.visitDate) {
+    errors.visitDate = "Görüşme tarihi zorunludur.";
+  }
+  if (!form.nextVisitDate) {
+    errors.nextVisitDate = "Bir sonraki ziyaret tarihi zorunludur.";
+  }
+  if (form.visitDate && form.nextVisitDate && form.nextVisitDate < form.visitDate) {
+    errors.nextVisitDate =
+      "Bir sonraki ziyaret tarihi görüşme tarihinden önce olamaz.";
+  }
+  if (!form.visitType) {
+    errors.visitType = "Görüşme türü zorunludur.";
+  }
+  if (!form.meetPersonTitle) {
+    errors.meetPersonTitle = "Görev zorunludur.";
+  }
+  if (!form.meetPersonName.trim()) {
+    errors.meetPersonName = "Ad zorunludur.";
+  }
+  if (!form.meetPersonSurname.trim()) {
+    errors.meetPersonSurname = "Soyad zorunludur.";
+  }
+  if (!form.meetPersonPhone.trim()) {
+    errors.meetPersonPhone = "Telefon zorunludur.";
+  }
+  if (!form.meetPersonEmail.trim()) {
+    errors.meetPersonEmail = "Eposta zorunludur.";
+  }
+  if (!form.agreementReached && !form.agreementFailureReason) {
+    errors.agreementFailureReason = "Anlaşamama sebebi zorunludur.";
+  }
+  if (form.note.trim().length > 150) {
+    errors.note = "Not en fazla 150 karakter olabilir.";
+  }
+  if (form.images.length > 3) {
+    errors.images = "En fazla 3 resim yüklenebilir.";
+  }
+
+  const totalImageSize = form.images.reduce((total, image) => total + image.size, 0);
+  if (totalImageSize > followUpMaxImageTotalSize) {
+    errors.images = "Resimlerin toplam boyutu en fazla 5 MB olabilir.";
+  }
+  if (form.images.some((image) => !followUpImageTypes.has(image.type))) {
+    errors.images = "Sadece JPEG, PNG, JPG, GIF veya WebP dosyaları yüklenebilir.";
+  }
+
+  return errors;
+}
+
+function apiFollowUpErrorsToFormErrors(
+  errors: Record<string, string>,
+): FollowUpFormErrors {
+  const formErrors: FollowUpFormErrors = {};
+
+  for (const [field, message] of Object.entries(errors)) {
+    switch (field) {
+      case "visit_date":
+        formErrors.visitDate = message;
+        break;
+      case "next_visit_date":
+        formErrors.nextVisitDate = message;
+        break;
+      case "visit_type":
+        formErrors.visitType = message;
+        break;
+      case "agreement_failure_reason":
+        formErrors.agreementFailureReason = message;
+        break;
+      case "note":
+        formErrors.note = message;
+        break;
+      case "images":
+        formErrors.images = message;
+        break;
+      case "meet_people.0.title":
+        formErrors.meetPersonTitle = message;
+        break;
+      case "meet_people.0.name":
+        formErrors.meetPersonName = message;
+        break;
+      case "meet_people.0.surname":
+        formErrors.meetPersonSurname = message;
+        break;
+      case "meet_people.0.phone":
+        formErrors.meetPersonPhone = message;
+        break;
+      case "meet_people.0.email":
+        formErrors.meetPersonEmail = message;
+        break;
+      default:
+        formErrors.form = message;
+        break;
+    }
+  }
+
+  return formErrors;
+}
+
 function canTaskCustomerBeCancelled(customer: TaskCustomer): boolean {
   return customer.status !== "cancelled" && customer.status !== "completed";
 }
 
-function canTaskCustomerOpenFollowRecord(customer: TaskCustomer): boolean {
-  return customer.status === "pending" || customer.status === "in_progress";
+function canTaskCustomerOpenFollowRecord(
+  task: TaskListItem,
+  customer: TaskCustomer,
+  userId: number,
+): boolean {
+  return (
+    task.assignedUserId === userId &&
+    (customer.status === "pending" || customer.status === "in_progress")
+  );
 }
 
 function formatDate(value: string): string {

@@ -4,6 +4,26 @@ export type TaskValidationErrors = Record<string, string>;
 
 export type TaskPriority = "high" | "medium" | "low";
 export type TaskStatus = "pending" | "in_progress" | "cancelled" | "completed";
+export type FollowUpVisitType = "Yerinde Ziyaret";
+export type FollowUpAgreementFailureReason =
+  | "Fiyat yüksek"
+  | "Mesafe Uzak"
+  | "Bayi ile yaşanan sorunlar"
+  | "Ekpertize ihtiyaç duymuyor"
+  | "Kendisi yapıyor"
+  | "Başka ekspertize yaptırıyor"
+  | "Değerlendirme";
+export type FollowUpMeetPersonTitle =
+  | "Genel Müdür"
+  | "Satış Müdürü"
+  | "Operasyon Müdürü"
+  | "Pazarlama Müdürü"
+  | "İşletme Müdürü"
+  | "Bölge Müdürü"
+  | "Şube Müdürü"
+  | "Yönetici"
+  | "Sahibi"
+  | "Ortağı";
 
 export type TaskAssignableUser = {
   id: number;
@@ -25,6 +45,24 @@ export type CreateTaskAssignmentPayload = {
   customerIds: number[];
 };
 
+export type CreateFollowUpPayload = {
+  tasksCustomerUuid: string;
+  visitDate: string;
+  nextVisitDate: string;
+  visitType: FollowUpVisitType;
+  agreementReached: boolean;
+  agreementFailureReason: FollowUpAgreementFailureReason | "";
+  note: string;
+  meetPerson: {
+    title: FollowUpMeetPersonTitle | "";
+    name: string;
+    surname: string;
+    phone: string;
+    email: string;
+  };
+  images: File[];
+};
+
 export type TaskCustomer = {
   uuid: string;
   customerId: number;
@@ -38,6 +76,7 @@ export type TaskListItem = {
   uuid: string;
   title: string;
   description: string;
+  assignedUserId: number;
   createdByUserFullName: string;
   assignedUserFullName: string;
   branchName: string;
@@ -91,6 +130,15 @@ export class TaskValidationError extends Error {
 
   constructor(errors: TaskValidationErrors) {
     super("Görev bilgileri geçersiz.");
+    this.errors = errors;
+  }
+}
+
+export class FollowUpValidationError extends Error {
+  errors: TaskValidationErrors;
+
+  constructor(errors: TaskValidationErrors) {
+    super("Takip kaydı bilgileri geçersiz.");
     this.errors = errors;
   }
 }
@@ -204,6 +252,62 @@ export async function createTaskAssignment(
   }
 }
 
+export async function createFollowUp(
+  payload: CreateFollowUpPayload,
+): Promise<void> {
+  const formData = new FormData();
+  formData.append("tasks_customer_uuid", payload.tasksCustomerUuid);
+  formData.append("visit_date", payload.visitDate);
+  formData.append("next_visit_date", payload.nextVisitDate);
+  formData.append("visit_type", payload.visitType);
+  formData.append("agreement_reached", String(payload.agreementReached));
+
+  if (!payload.agreementReached && payload.agreementFailureReason) {
+    formData.append("agreement_failure_reason", payload.agreementFailureReason);
+  }
+
+  if (payload.note.trim()) {
+    formData.append("note", payload.note.trim());
+  }
+
+  formData.append(
+    "meet_people",
+    JSON.stringify([
+      {
+        title: payload.meetPerson.title,
+        name: payload.meetPerson.name,
+        surname: payload.meetPerson.surname,
+        phone: payload.meetPerson.phone,
+        email: payload.meetPerson.email,
+      },
+    ]),
+  );
+
+  payload.images.forEach((image) => {
+    formData.append("images", image);
+  });
+
+  try {
+    await apiClient.post<ApiEnvelope<RawRecord>>(
+      "/api/v1/follow-ups",
+      formData,
+    );
+  } catch (error: unknown) {
+    const apiError = error as {
+      response?: {
+        status?: number;
+        data?: ApiEnvelope<RawRecord>;
+      };
+    };
+
+    if (apiError.response?.status === 422) {
+      throw new FollowUpValidationError(apiError.response.data?.errors ?? {});
+    }
+
+    throw error;
+  }
+}
+
 function taskListQueryParams(query: TaskListQuery): RawRecord {
   return {
     page: query.page,
@@ -268,6 +372,7 @@ function toTaskListItem(record: RawRecord): TaskListItem {
     uuid: stringValue(record.uuid),
     title: stringValue(record.title) || "Potansiyel Müşteri",
     description: stringValue(record.description),
+    assignedUserId: numberValue(record.assigned_user_id),
     createdByUserFullName: stringValue(record.created_by_user_full_name),
     assignedUserFullName: stringValue(record.assigned_user_full_name),
     branchName: stringValue(record.branch_name),

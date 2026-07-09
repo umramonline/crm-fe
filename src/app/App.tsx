@@ -152,6 +152,7 @@ export function App() {
             <TasksPage
               permissions={session.permissions}
               roleId={session.user.roleId}
+              userId={session.userId}
             />
           ) : activePage === "permissions" ? (
             <AuthorizationPage permissions={session.permissions} />
