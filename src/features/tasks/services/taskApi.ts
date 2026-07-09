@@ -291,6 +291,11 @@ export async function createFollowUp(
     await apiClient.post<ApiEnvelope<RawRecord>>(
       "/api/v1/follow-ups",
       formData,
+      {
+        headers: {
+          "Content-Type": "multipart/form-data",
+        },
+      },
     );
   } catch (error: unknown) {
     const apiError = error as {
