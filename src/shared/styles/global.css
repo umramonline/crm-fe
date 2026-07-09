@@ -982,6 +982,85 @@ select {
   background: #f0fdf4;
 }
 
+.follow-up-upload-box {
+  position: relative;
+  display: flex;
+  min-height: 96px;
+  flex-direction: column;
+  gap: 6px;
+  align-items: center;
+  justify-content: center;
+  border: 1px dashed #93c5fd;
+  border-radius: 10px;
+  padding: 16px;
+  color: #1d4ed8;
+  background: #eff6ff;
+  text-align: center;
+  cursor: pointer;
+  transition:
+    border-color 0.15s ease,
+    background-color 0.15s ease;
+}
+
+.follow-up-upload-box:hover {
+  border-color: #2563eb;
+  background: #dbeafe;
+}
+
+.follow-up-upload-input {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  cursor: pointer;
+}
+
+.follow-up-upload-title {
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.follow-up-upload-help {
+  max-width: 360px;
+  color: #64748b;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.follow-up-upload-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.follow-up-upload-list li {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  justify-content: space-between;
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
+  padding: 8px 10px;
+  color: #334155;
+  font-size: 12px;
+  background: #f8fafc;
+}
+
+.follow-up-upload-list span:first-child {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.follow-up-upload-list span:last-child {
+  color: #64748b;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
 .task-customer-list {
   display: flex;
   min-width: 180px;

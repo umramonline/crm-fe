@@ -896,15 +896,23 @@ export function TasksPage({ permissions, roleId, userId }: TasksPageProps) {
               <h3 className="task-assign-form-wide">Resim</h3>
               <label className="field-label task-assign-form-wide">
                 Maksimum 3 Resim
-                <input
-                  className="panel-input"
-                  type="file"
-                  accept="image/jpeg,image/png,image/gif,image/webp"
-                  multiple
-                  onChange={(event) =>
-                    handleFollowUpImageChange(event.target.files)
-                  }
-                />
+                <span className="follow-up-upload-box">
+                  <input
+                    className="follow-up-upload-input"
+                    type="file"
+                    accept="image/jpeg,image/png,image/gif,image/webp"
+                    multiple
+                    onChange={(event) =>
+                      handleFollowUpImageChange(event.target.files)
+                    }
+                  />
+                  <span className="follow-up-upload-title">
+                    Resim seçmek için tıklayın
+                  </span>
+                  <span className="follow-up-upload-help">
+                    JPEG, PNG, JPG, GIF veya WebP. Maksimum 3 resim, toplam 5 MB.
+                  </span>
+                </span>
                 {followUpErrors.images ? (
                   <span className="customer-field-error">
                     {followUpErrors.images}
@@ -912,9 +920,14 @@ export function TasksPage({ permissions, roleId, userId }: TasksPageProps) {
                 ) : null}
               </label>
               {followUpForm.images.length > 0 ? (
-                <p className="muted-text task-assign-form-wide">
-                  {followUpForm.images.map((image) => image.name).join(", ")}
-                </p>
+                <ul className="follow-up-upload-list task-assign-form-wide">
+                  {followUpForm.images.map((image) => (
+                    <li key={`${image.name}-${image.size}`}>
+                      <span>{image.name}</span>
+                      <span>{formatFileSize(image.size)}</span>
+                    </li>
+                  ))}
+                </ul>
               ) : null}
               {followUpErrors.form ? (
                 <p className="customer-field-error task-assign-form-wide">
@@ -1364,6 +1377,18 @@ function todayDateInputValue(): string {
   const day = String(today.getDate()).padStart(2, "0");
 
   return `${year}-${month}-${day}`;
+}
+
+function formatFileSize(size: number): string {
+  if (size < 1024) {
+    return `${size} B`;
+  }
+
+  if (size < 1024 * 1024) {
+    return `${(size / 1024).toFixed(1)} KB`;
+  }
+
+  return `${(size / (1024 * 1024)).toFixed(1)} MB`;
 }
 
 function formatDate(value: string): string {
