@@ -53,13 +53,13 @@ export type CreateFollowUpPayload = {
   agreementReached: boolean;
   agreementFailureReason: FollowUpAgreementFailureReason | "";
   note: string;
-  meetPerson: {
+  meetPeople: {
     title: FollowUpMeetPersonTitle | "";
     name: string;
     surname: string;
     phone: string;
     email: string;
-  };
+  }[];
   images: File[];
 };
 
@@ -272,15 +272,15 @@ export async function createFollowUp(
 
   formData.append(
     "meet_people",
-    JSON.stringify([
-      {
-        title: payload.meetPerson.title,
-        name: payload.meetPerson.name,
-        surname: payload.meetPerson.surname,
-        phone: payload.meetPerson.phone,
-        email: payload.meetPerson.email,
-      },
-    ]),
+    JSON.stringify(
+      payload.meetPeople.map((person) => ({
+        title: person.title,
+        name: person.name,
+        surname: person.surname,
+        phone: person.phone,
+        email: person.email,
+      })),
+    ),
   );
 
   payload.images.forEach((image) => {

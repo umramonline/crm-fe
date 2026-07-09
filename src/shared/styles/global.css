@@ -1061,6 +1061,39 @@ select {
   white-space: nowrap;
 }
 
+.follow-up-meet-people {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.follow-up-meet-person-card {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  padding: 14px;
+  background: #f8fafc;
+}
+
+.follow-up-meet-person-header {
+  grid-column: 1 / -1;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.follow-up-meet-person-header strong {
+  color: #0f172a;
+  font-size: 13px;
+}
+
+.follow-up-add-person-button {
+  align-self: flex-start;
+}
+
 .task-customer-list {
   display: flex;
   min-width: 180px;
@@ -1274,7 +1307,8 @@ select {
   }
 
   .button-row,
-  .two-column-form {
+  .two-column-form,
+  .follow-up-meet-person-card {
     grid-template-columns: 1fr;
   }
 

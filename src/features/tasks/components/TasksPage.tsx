@@ -79,18 +79,25 @@ type FollowUpForm = {
   visitDate: string;
   nextVisitDate: string;
   visitType: FollowUpVisitType | "";
-  meetPersonTitle: FollowUpMeetPersonTitle | "";
-  meetPersonName: string;
-  meetPersonSurname: string;
-  meetPersonPhone: string;
-  meetPersonEmail: string;
+  meetPeople: FollowUpMeetPersonForm[];
   agreementReached: boolean;
   agreementFailureReason: FollowUpAgreementFailureReason | "";
   note: string;
   images: File[];
 };
 
-type FollowUpFormErrors = Partial<Record<keyof FollowUpForm | "form", string>>;
+type FollowUpMeetPersonForm = {
+  id: string;
+  title: FollowUpMeetPersonTitle | "";
+  name: string;
+  surname: string;
+  phone: string;
+  email: string;
+};
+
+type FollowUpMeetPersonField = keyof Omit<FollowUpMeetPersonForm, "id">;
+
+type FollowUpFormErrors = Record<string, string | undefined>;
 
 const emptyFilters: TaskFilters = {
   title: "",
@@ -109,15 +116,22 @@ function createEmptyFollowUpForm(): FollowUpForm {
     visitDate: today,
     nextVisitDate: today,
     visitType: "Yerinde Ziyaret",
-    meetPersonTitle: "",
-    meetPersonName: "",
-    meetPersonSurname: "",
-    meetPersonPhone: "",
-    meetPersonEmail: "",
+    meetPeople: [createEmptyFollowUpMeetPerson()],
     agreementReached: false,
     agreementFailureReason: "",
     note: "",
     images: [],
+  };
+}
+
+function createEmptyFollowUpMeetPerson(): FollowUpMeetPersonForm {
+  return {
+    id: `${Date.now()}-${Math.random().toString(36).slice(2)}`,
+    title: "",
+    name: "",
+    surname: "",
+    phone: "",
+    email: "",
   };
 }
 
@@ -355,6 +369,59 @@ export function TasksPage({ permissions, roleId, userId }: TasksPageProps) {
     updateFollowUpForm("images", images);
   }
 
+  function updateFollowUpMeetPerson(
+    personID: string,
+    field: FollowUpMeetPersonField,
+    value: string,
+  ): void {
+    setFollowUpForm((current) => ({
+      ...current,
+      meetPeople: current.meetPeople.map((person) =>
+        person.id === personID
+          ? {
+              ...person,
+              [field]: value,
+            }
+          : person,
+      ),
+    }));
+    setFollowUpErrors((current) => ({
+      ...current,
+      [followUpMeetPersonErrorKey(personID, field)]: "",
+      form: "",
+    }));
+  }
+
+  function addFollowUpMeetPerson(): void {
+    setFollowUpForm((current) => ({
+      ...current,
+      meetPeople: [...current.meetPeople, createEmptyFollowUpMeetPerson()],
+    }));
+    setFollowUpErrors((current) => ({
+      ...current,
+      meetPeople: "",
+      form: "",
+    }));
+  }
+
+  function removeFollowUpMeetPerson(personID: string): void {
+    setFollowUpForm((current) => {
+      if (current.meetPeople.length <= 1) {
+        return current;
+      }
+
+      return {
+        ...current,
+        meetPeople: current.meetPeople.filter((person) => person.id !== personID),
+      };
+    });
+    setFollowUpErrors((current) => ({
+      ...current,
+      meetPeople: "",
+      form: "",
+    }));
+  }
+
   async function handleFollowUpSubmit(
     event: FormEvent<HTMLFormElement>,
   ): Promise<void> {
@@ -383,13 +450,13 @@ export function TasksPage({ permissions, roleId, userId }: TasksPageProps) {
         agreementReached: followUpForm.agreementReached,
         agreementFailureReason: followUpForm.agreementFailureReason,
         note: followUpForm.note,
-        meetPerson: {
-          title: followUpForm.meetPersonTitle,
-          name: followUpForm.meetPersonName.trim(),
-          surname: followUpForm.meetPersonSurname.trim(),
-          phone: followUpForm.meetPersonPhone.trim(),
-          email: followUpForm.meetPersonEmail.trim(),
-        },
+        meetPeople: followUpForm.meetPeople.map((person) => ({
+          title: person.title,
+          name: person.name.trim(),
+          surname: person.surname.trim(),
+          phone: person.phone.trim(),
+          email: person.email.trim(),
+        })),
         images: followUpForm.images,
       });
       setSelectedFollowRecord(null);
@@ -397,7 +464,9 @@ export function TasksPage({ permissions, roleId, userId }: TasksPageProps) {
       setMessage("Takip kaydı oluşturuldu.");
     } catch (error: unknown) {
       if (error instanceof FollowUpValidationError) {
-        setFollowUpErrors(apiFollowUpErrorsToFormErrors(error.errors));
+        setFollowUpErrors(
+          apiFollowUpErrorsToFormErrors(error.errors, followUpForm.meetPeople),
+        );
       } else {
         setFollowUpErrors({
           form: "Takip kaydı oluşturulamadı.",
@@ -736,100 +805,176 @@ export function TasksPage({ permissions, roleId, userId }: TasksPageProps) {
               </label>
 
               <h3 className="task-assign-form-wide">Görüşülen Kişi Bilgileri</h3>
-              <label className="field-label">
-                Görevi*
-                <select
-                  className="panel-input"
-                  value={followUpForm.meetPersonTitle}
-                  onChange={(event) =>
-                    updateFollowUpForm(
-                      "meetPersonTitle",
-                      event.target.value as FollowUpMeetPersonTitle | "",
-                    )
-                  }
-                >
-                  <option value="">Seçiniz</option>
-                  {followUpMeetPersonTitles.map((title) => (
-                    <option key={title} value={title}>
-                      {title}
-                    </option>
-                  ))}
-                </select>
-                {followUpErrors.meetPersonTitle ? (
+              <div className="follow-up-meet-people task-assign-form-wide">
+                {followUpForm.meetPeople.map((person, index) => (
+                  <div className="follow-up-meet-person-card" key={person.id}>
+                    <div className="follow-up-meet-person-header">
+                      <strong>Görüşülen Kişi {index + 1}</strong>
+                      <button
+                        className="gray-button"
+                        type="button"
+                        disabled={followUpForm.meetPeople.length <= 1}
+                        onClick={() => removeFollowUpMeetPerson(person.id)}
+                      >
+                        Sil
+                      </button>
+                    </div>
+                    <label className="field-label">
+                      Görevi*
+                      <select
+                        className="panel-input"
+                        value={person.title}
+                        onChange={(event) =>
+                          updateFollowUpMeetPerson(
+                            person.id,
+                            "title",
+                            event.target.value as FollowUpMeetPersonTitle | "",
+                          )
+                        }
+                      >
+                        <option value="">Seçiniz</option>
+                        {followUpMeetPersonTitles.map((title) => (
+                          <option key={title} value={title}>
+                            {title}
+                          </option>
+                        ))}
+                      </select>
+                      {followUpErrors[
+                        followUpMeetPersonErrorKey(person.id, "title")
+                      ] ? (
+                        <span className="customer-field-error">
+                          {
+                            followUpErrors[
+                              followUpMeetPersonErrorKey(person.id, "title")
+                            ]
+                          }
+                        </span>
+                      ) : null}
+                    </label>
+                    <label className="field-label">
+                      Ad*
+                      <input
+                        className="panel-input"
+                        value={person.name}
+                        maxLength={50}
+                        onChange={(event) =>
+                          updateFollowUpMeetPerson(
+                            person.id,
+                            "name",
+                            event.target.value,
+                          )
+                        }
+                      />
+                      {followUpErrors[
+                        followUpMeetPersonErrorKey(person.id, "name")
+                      ] ? (
+                        <span className="customer-field-error">
+                          {
+                            followUpErrors[
+                              followUpMeetPersonErrorKey(person.id, "name")
+                            ]
+                          }
+                        </span>
+                      ) : null}
+                    </label>
+                    <label className="field-label">
+                      Soyad*
+                      <input
+                        className="panel-input"
+                        value={person.surname}
+                        maxLength={50}
+                        onChange={(event) =>
+                          updateFollowUpMeetPerson(
+                            person.id,
+                            "surname",
+                            event.target.value,
+                          )
+                        }
+                      />
+                      {followUpErrors[
+                        followUpMeetPersonErrorKey(person.id, "surname")
+                      ] ? (
+                        <span className="customer-field-error">
+                          {
+                            followUpErrors[
+                              followUpMeetPersonErrorKey(person.id, "surname")
+                            ]
+                          }
+                        </span>
+                      ) : null}
+                    </label>
+                    <label className="field-label">
+                      Telefon*
+                      <input
+                        className="panel-input"
+                        inputMode="tel"
+                        pattern="05[0-9]{9}"
+                        placeholder="05XXXXXXXXX"
+                        type="tel"
+                        value={person.phone}
+                        maxLength={11}
+                        onChange={(event) =>
+                          updateFollowUpMeetPerson(
+                            person.id,
+                            "phone",
+                            event.target.value,
+                          )
+                        }
+                      />
+                      {followUpErrors[
+                        followUpMeetPersonErrorKey(person.id, "phone")
+                      ] ? (
+                        <span className="customer-field-error">
+                          {
+                            followUpErrors[
+                              followUpMeetPersonErrorKey(person.id, "phone")
+                            ]
+                          }
+                        </span>
+                      ) : null}
+                    </label>
+                    <label className="field-label">
+                      Eposta*
+                      <input
+                        className="panel-input"
+                        type="email"
+                        value={person.email}
+                        maxLength={100}
+                        onChange={(event) =>
+                          updateFollowUpMeetPerson(
+                            person.id,
+                            "email",
+                            event.target.value,
+                          )
+                        }
+                      />
+                      {followUpErrors[
+                        followUpMeetPersonErrorKey(person.id, "email")
+                      ] ? (
+                        <span className="customer-field-error">
+                          {
+                            followUpErrors[
+                              followUpMeetPersonErrorKey(person.id, "email")
+                            ]
+                          }
+                        </span>
+                      ) : null}
+                    </label>
+                  </div>
+                ))}
+                {followUpErrors.meetPeople ? (
                   <span className="customer-field-error">
-                    {followUpErrors.meetPersonTitle}
+                    {followUpErrors.meetPeople}
                   </span>
                 ) : null}
-              </label>
-              <label className="field-label">
-                  Ad*
-                  <input
-                    className="panel-input"
-                    value={followUpForm.meetPersonName}
-                    maxLength={50}
-                    onChange={(event) =>
-                      updateFollowUpForm("meetPersonName", event.target.value)
-                    }
-                  />
-                  {followUpErrors.meetPersonName ? (
-                    <span className="customer-field-error">
-                      {followUpErrors.meetPersonName}
-                    </span>
-                  ) : null}
-              </label>
-              <label className="field-label">
-                  Soyad*
-                  <input
-                    className="panel-input"
-                    value={followUpForm.meetPersonSurname}
-                    maxLength={50}
-                    onChange={(event) =>
-                      updateFollowUpForm("meetPersonSurname", event.target.value)
-                    }
-                  />
-                  {followUpErrors.meetPersonSurname ? (
-                    <span className="customer-field-error">
-                      {followUpErrors.meetPersonSurname}
-                    </span>
-                  ) : null}
-              </label>
-              <label className="field-label">
-                  Telefon*
-                  <input
-                    className="panel-input"
-                    inputMode="tel"
-                    pattern="05[0-9]{9}"
-                    placeholder="05XXXXXXXXX"
-                    type="tel"
-                    value={followUpForm.meetPersonPhone}
-                    maxLength={11}
-                    onChange={(event) =>
-                      updateFollowUpForm("meetPersonPhone", event.target.value)
-                    }
-                  />
-                  {followUpErrors.meetPersonPhone ? (
-                    <span className="customer-field-error">
-                      {followUpErrors.meetPersonPhone}
-                    </span>
-                  ) : null}
-              </label>
-              <label className="field-label">
-                  Eposta*
-                  <input
-                    className="panel-input"
-                    type="email"
-                    value={followUpForm.meetPersonEmail}
-                    maxLength={100}
-                    onChange={(event) =>
-                      updateFollowUpForm("meetPersonEmail", event.target.value)
-                    }
-                  />
-                  {followUpErrors.meetPersonEmail ? (
-                    <span className="customer-field-error">
-                      {followUpErrors.meetPersonEmail}
-                    </span>
-                  ) : null}
-              </label>
+                <button
+                  className="blue-button follow-up-add-person-button"
+                  type="button"
+                  onClick={addFollowUpMeetPerson}
+                >
+                  Kişi Ekle
+                </button>
+              </div>
 
               <h3 className="task-assign-form-wide">Anlaşma Bilgileri</h3>
               <label className="field-label">
@@ -895,7 +1040,6 @@ export function TasksPage({ permissions, roleId, userId }: TasksPageProps) {
 
               <h3 className="task-assign-form-wide">Resim</h3>
               <label className="field-label task-assign-form-wide">
-                Maksimum 3 Resim
                 <span className="follow-up-upload-box">
                   <input
                     className="follow-up-upload-input"
@@ -1268,23 +1412,33 @@ function validateFollowUpForm(form: FollowUpForm): FollowUpFormErrors {
   if (!form.visitType) {
     errors.visitType = "Görüşme türü zorunludur.";
   }
-  if (!form.meetPersonTitle) {
-    errors.meetPersonTitle = "Görev zorunludur.";
+  if (form.meetPeople.length === 0) {
+    errors.meetPeople = "En az bir kişi bilgisi girilmelidir.";
   }
-  if (!form.meetPersonName.trim()) {
-    errors.meetPersonName = "Ad zorunludur.";
-  }
-  if (!form.meetPersonSurname.trim()) {
-    errors.meetPersonSurname = "Soyad zorunludur.";
-  }
-  if (!form.meetPersonPhone.trim()) {
-    errors.meetPersonPhone = "Telefon zorunludur.";
-  } else if (!/^05[0-9]{9}$/.test(form.meetPersonPhone.trim())) {
-    errors.meetPersonPhone = "Telefon 05XXXXXXXXX formatında olmalıdır.";
-  }
-  if (!form.meetPersonEmail.trim()) {
-    errors.meetPersonEmail = "Eposta zorunludur.";
-  }
+  form.meetPeople.forEach((person) => {
+    if (!person.title) {
+      errors[followUpMeetPersonErrorKey(person.id, "title")] =
+        "Görev zorunludur.";
+    }
+    if (!person.name.trim()) {
+      errors[followUpMeetPersonErrorKey(person.id, "name")] = "Ad zorunludur.";
+    }
+    if (!person.surname.trim()) {
+      errors[followUpMeetPersonErrorKey(person.id, "surname")] =
+        "Soyad zorunludur.";
+    }
+    if (!person.phone.trim()) {
+      errors[followUpMeetPersonErrorKey(person.id, "phone")] =
+        "Telefon zorunludur.";
+    } else if (!/^05[0-9]{9}$/.test(person.phone.trim())) {
+      errors[followUpMeetPersonErrorKey(person.id, "phone")] =
+        "Telefon 05XXXXXXXXX formatında olmalıdır.";
+    }
+    if (!person.email.trim()) {
+      errors[followUpMeetPersonErrorKey(person.id, "email")] =
+        "Eposta zorunludur.";
+    }
+  });
   if (!form.agreementReached && !form.agreementFailureReason) {
     errors.agreementFailureReason = "Anlaşamama sebebi zorunludur.";
   }
@@ -1308,10 +1462,27 @@ function validateFollowUpForm(form: FollowUpForm): FollowUpFormErrors {
 
 function apiFollowUpErrorsToFormErrors(
   errors: Record<string, string>,
+  meetPeople: FollowUpMeetPersonForm[],
 ): FollowUpFormErrors {
   const formErrors: FollowUpFormErrors = {};
 
   for (const [field, message] of Object.entries(errors)) {
+    const meetPersonField = field.match(
+      /^meet_people\.(\d+)\.(title|name|surname|phone|email)$/,
+    );
+    if (meetPersonField) {
+      const personIndex = Number(meetPersonField[1]);
+      const personField = meetPersonField[2] as FollowUpMeetPersonField;
+      const personID = meetPeople[personIndex]?.id;
+
+      if (personID) {
+        formErrors[followUpMeetPersonErrorKey(personID, personField)] = message;
+      } else {
+        formErrors.meetPeople = message;
+      }
+      continue;
+    }
+
     switch (field) {
       case "visit_date":
         formErrors.visitDate = message;
@@ -1331,20 +1502,8 @@ function apiFollowUpErrorsToFormErrors(
       case "images":
         formErrors.images = message;
         break;
-      case "meet_people.0.title":
-        formErrors.meetPersonTitle = message;
-        break;
-      case "meet_people.0.name":
-        formErrors.meetPersonName = message;
-        break;
-      case "meet_people.0.surname":
-        formErrors.meetPersonSurname = message;
-        break;
-      case "meet_people.0.phone":
-        formErrors.meetPersonPhone = message;
-        break;
-      case "meet_people.0.email":
-        formErrors.meetPersonEmail = message;
+      case "meet_people":
+        formErrors.meetPeople = message;
         break;
       default:
         formErrors.form = message;
@@ -1353,6 +1512,13 @@ function apiFollowUpErrorsToFormErrors(
   }
 
   return formErrors;
+}
+
+function followUpMeetPersonErrorKey(
+  personID: string,
+  field: FollowUpMeetPersonField,
+): string {
+  return `meetPeople.${personID}.${field}`;
 }
 
 function canTaskCustomerBeCancelled(customer: TaskCustomer): boolean {
