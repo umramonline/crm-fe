@@ -47,6 +47,9 @@ export type CustomerDetail = {
   type: string;
   createdAt: string;
   telephones: CustomerTelephone[];
+  plusCardNo: string;
+  credit: string;
+  point: string;
 };
 
 export type CustomerTelephone = {
@@ -425,6 +428,9 @@ function toCustomerDetail(record: RawRecord): CustomerDetail {
     telephones: Array.isArray(record.telephones)
       ? record.telephones.map((telephone) => toCustomerTelephone(telephone as RawRecord))
       : [],
+    plusCardNo: stringValue(record.plus_card_no),
+    credit: stringValue(record.credit),
+    point: stringValue(record.point),
   };
 }
 

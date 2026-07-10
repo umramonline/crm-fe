@@ -65,10 +65,13 @@ export type CreateFollowUpPayload = {
 
 export type TaskCustomer = {
   uuid: string;
+  uoId: string;
+  vehicleStockCount: number | null;
   customerId: number;
   unvan: string;
   ad: string;
   soyad: string;
+  eposta: string;
   status: TaskStatus;
 };
 
@@ -398,10 +401,13 @@ function toTaskListItem(record: RawRecord): TaskListItem {
 function toTaskCustomer(record: RawRecord): TaskCustomer {
   return {
     uuid: stringValue(record.uuid),
+    uoId: stringValue(record.uo_id),
+    vehicleStockCount: nullableNumberValue(record.vehicle_stock_count),
     customerId: numberValue(record.customer_id),
     unvan: stringValue(record.unvan),
     ad: stringValue(record.ad),
     soyad: stringValue(record.soyad),
+    eposta: stringValue(record.eposta),
     status: taskStatusValue(record.status),
   };
 }

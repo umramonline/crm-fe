@@ -99,6 +99,12 @@ type FollowUpMeetPersonField = keyof Omit<FollowUpMeetPersonForm, "id">;
 
 type FollowUpFormErrors = Record<string, string | undefined>;
 
+type FollowUpCompanyInfo = {
+  plusCardNo: string;
+  credit: string;
+  point: string;
+};
+
 const emptyFilters: TaskFilters = {
   title: "",
   assignedUserFullName: "",
@@ -107,6 +113,12 @@ const emptyFilters: TaskFilters = {
   dueDate: "",
   priority: "",
   createdByUserFullName: "",
+};
+
+const emptyFollowUpCompanyInfo: FollowUpCompanyInfo = {
+  plusCardNo: "",
+  credit: "",
+  point: "",
 };
 
 function createEmptyFollowUpForm(): FollowUpForm {
@@ -166,6 +178,12 @@ export function TasksPage({ permissions, roleId, userId }: TasksPageProps) {
     useState<CustomerDetail | null>(null);
   const [selectedFollowRecord, setSelectedFollowRecord] =
     useState<FollowRecordSelection | null>(null);
+  const [followUpCompanyInfo, setFollowUpCompanyInfo] =
+    useState<FollowUpCompanyInfo>(emptyFollowUpCompanyInfo);
+  const [isLoadingFollowUpCompanyInfo, setIsLoadingFollowUpCompanyInfo] =
+    useState(false);
+  const [followUpCompanyInfoMessage, setFollowUpCompanyInfoMessage] =
+    useState("");
   const [followUpForm, setFollowUpForm] =
     useState<FollowUpForm>(() => createEmptyFollowUpForm());
   const [followUpErrors, setFollowUpErrors] = useState<FollowUpFormErrors>({});
@@ -320,18 +338,40 @@ export function TasksPage({ permissions, roleId, userId }: TasksPageProps) {
     }
   }
 
-  function handleOpenFollowRecordModal(
+  async function handleOpenFollowRecordModal(
     task: TaskListItem,
     customer: TaskCustomer,
-  ): void {
+  ): Promise<void> {
     if (!canTaskCustomerOpenFollowRecord(task, customer, userId)) {
       return;
     }
 
     setFollowUpForm(createEmptyFollowUpForm());
     setFollowUpErrors({});
+    setFollowUpCompanyInfo(emptyFollowUpCompanyInfo);
+    setFollowUpCompanyInfoMessage("");
     setSelectedFollowRecord({ task, customer });
     setMessage("");
+
+    const uoID = Number(customer.uoId);
+    if (!customer.uoId.trim() || !Number.isFinite(uoID) || uoID <= 0) {
+      return;
+    }
+
+    setIsLoadingFollowUpCompanyInfo(true);
+    try {
+      const customerDetail = await getCustomer(uoID, "umramonline");
+      setFollowUpCompanyInfo({
+        plusCardNo: customerDetail.plusCardNo,
+        credit: customerDetail.credit,
+        point: customerDetail.point,
+      });
+    } catch {
+      setFollowUpCompanyInfo(emptyFollowUpCompanyInfo);
+      setFollowUpCompanyInfoMessage("PlusCard bilgileri getirilemedi.");
+    } finally {
+      setIsLoadingFollowUpCompanyInfo(false);
+    }
   }
 
   function updateFollowUpForm<K extends keyof FollowUpForm>(
@@ -491,6 +531,9 @@ export function TasksPage({ permissions, roleId, userId }: TasksPageProps) {
       }
       setSelectedFollowRecord(null);
       setFollowUpForm(createEmptyFollowUpForm());
+      setFollowUpCompanyInfo(emptyFollowUpCompanyInfo);
+      setFollowUpCompanyInfoMessage("");
+      setIsLoadingFollowUpCompanyInfo(false);
       setMessage("Takip kaydı oluşturuldu.");
     } catch (error: unknown) {
       if (error instanceof FollowUpValidationError) {
@@ -583,6 +626,9 @@ export function TasksPage({ permissions, roleId, userId }: TasksPageProps) {
     setSelectedFollowRecord(null);
     setFollowUpForm(createEmptyFollowUpForm());
     setFollowUpErrors({});
+    setFollowUpCompanyInfo(emptyFollowUpCompanyInfo);
+    setFollowUpCompanyInfoMessage("");
+    setIsLoadingFollowUpCompanyInfo(false);
     setIsCreatingFollowUp(false);
   }
 
@@ -705,7 +751,7 @@ export function TasksPage({ permissions, roleId, userId }: TasksPageProps) {
                               aria-label="Takip kaydı oluştur"
                               onClick={(event) => {
                                 event.stopPropagation();
-                                handleOpenFollowRecordModal(
+                                void handleOpenFollowRecordModal(
                                   selectedCustomerTask,
                                   customer,
                                 );
@@ -1035,6 +1081,41 @@ export function TasksPage({ permissions, roleId, userId }: TasksPageProps) {
                   Kişi Ekle
                 </button>
               </div>
+
+              <h3 className="task-assign-form-wide">Firma Bilgileri</h3>
+              <div className="customer-detail-grid task-assign-form-wide">
+                <span>Firma Adı</span>
+                <strong>{selectedFollowRecord.customer.unvan || "-"}</strong>
+                <span>E-posta</span>
+                <strong>{selectedFollowRecord.customer.eposta || "-"}</strong>
+                <span>Pluscard No</span>
+                <strong>
+                  {isLoadingFollowUpCompanyInfo
+                    ? "Yükleniyor..."
+                    : followUpCompanyInfo.plusCardNo || "-"}
+                </strong>
+                <span>PlusCard Kredi</span>
+                <strong>
+                  {isLoadingFollowUpCompanyInfo
+                    ? "Yükleniyor..."
+                    : followUpCompanyInfo.credit || "-"}
+                </strong>
+                <span>Pluscard Puan</span>
+                <strong>
+                  {isLoadingFollowUpCompanyInfo
+                    ? "Yükleniyor..."
+                    : followUpCompanyInfo.point || "-"}
+                </strong>
+                <span>Araç Stok Adedi</span>
+                <strong>
+                  {selectedFollowRecord.customer.vehicleStockCount ?? "-"}
+                </strong>
+              </div>
+              {followUpCompanyInfoMessage ? (
+                <p className="customer-field-error task-assign-form-wide">
+                  {followUpCompanyInfoMessage}
+                </p>
+              ) : null}
 
               <h3 className="task-assign-form-wide">Anlaşma Bilgileri</h3>
               <label className="field-label">
