@@ -408,7 +408,7 @@ export function FollowUpsPage({ permissions }: FollowUpsPageProps) {
               <tr>
                 <th>İşlemler</th>
                 <th>
-                  TAKİP BAŞLIĞI
+                  Görev Başlığı
                 </th>
                 <th>Müşteri</th>
                 <th>Atanan Personel</th>
