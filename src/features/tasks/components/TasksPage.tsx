@@ -501,34 +501,35 @@ export function TasksPage({ permissions, roleId, userId }: TasksPageProps) {
         })),
         images: followUpForm.images,
       });
-      if (!followUpForm.nextVisitDate.trim()) {
-        const updateTaskCustomerStatus = (
-          currentTask: TaskListItem,
-        ): TaskListItem => ({
-          ...currentTask,
-          customers: currentTask.customers.map((currentCustomer) =>
-            currentCustomer.uuid === selectedFollowRecord.customer.uuid
-              ? {
-                  ...currentCustomer,
-                  status: "completed",
-                }
-              : currentCustomer,
-          ),
-        });
+      const nextStatus: TaskStatus = followUpForm.nextVisitDate.trim()
+        ? "in_progress"
+        : "completed";
+      const updateTaskCustomerStatus = (
+        currentTask: TaskListItem,
+      ): TaskListItem => ({
+        ...currentTask,
+        customers: currentTask.customers.map((currentCustomer) =>
+          currentCustomer.uuid === selectedFollowRecord.customer.uuid
+            ? {
+                ...currentCustomer,
+                status: nextStatus,
+              }
+            : currentCustomer,
+        ),
+      });
 
-        setSelectedCustomerTask((current) =>
-          current?.uuid === selectedFollowRecord.task.uuid
-            ? updateTaskCustomerStatus(current)
-            : current,
-        );
-        setItems((currentItems) =>
-          currentItems.map((currentTask) =>
-            currentTask.uuid === selectedFollowRecord.task.uuid
-              ? updateTaskCustomerStatus(currentTask)
-              : currentTask,
-          ),
-        );
-      }
+      setSelectedCustomerTask((current) =>
+        current?.uuid === selectedFollowRecord.task.uuid
+          ? updateTaskCustomerStatus(current)
+          : current,
+      );
+      setItems((currentItems) =>
+        currentItems.map((currentTask) =>
+          currentTask.uuid === selectedFollowRecord.task.uuid
+            ? updateTaskCustomerStatus(currentTask)
+            : currentTask,
+        ),
+      );
       setSelectedFollowRecord(null);
       setFollowUpForm(createEmptyFollowUpForm());
       setFollowUpCompanyInfo(emptyFollowUpCompanyInfo);
