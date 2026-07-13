@@ -36,6 +36,25 @@ export type FollowUpMeetPerson = {
   email: string;
 };
 
+export type FollowUpUpdateMeetPerson = {
+  title: string;
+  name: string;
+  surname: string;
+  phone: string;
+  email: string;
+};
+
+export type FollowUpUpdateInput = {
+  visitType: string;
+  nextVisitDate: string;
+  agreementReached: boolean;
+  agreementFailureReason: string;
+  note: string;
+  existingImageUuids: string[];
+  images: File[];
+  meetPeople: FollowUpUpdateMeetPerson[];
+};
+
 export type FollowUpPagination = {
   currentPage: number;
   lastPage: number;
@@ -111,6 +130,30 @@ async function requestFollowUps(
 export async function getFollowUp(uuid: string): Promise<FollowUpDetail> {
   const response = await apiClient.get<ApiEnvelope<RawRecord>>(
     `/api/v1/follow-ups/${uuid}`,
+  );
+
+  return toFollowUpDetail(response.data.data ?? {});
+}
+
+export async function updateFollowUp(
+  uuid: string,
+  input: FollowUpUpdateInput,
+): Promise<FollowUpDetail> {
+  const formData = new FormData();
+  formData.append("visit_type", input.visitType);
+  formData.append("next_visit_date", input.nextVisitDate);
+  formData.append("agreement_reached", String(input.agreementReached));
+  formData.append("agreement_failure_reason", input.agreementFailureReason);
+  formData.append("note", input.note);
+  formData.append("existing_image_uuids", JSON.stringify(input.existingImageUuids));
+  formData.append("meet_people", JSON.stringify(input.meetPeople));
+  input.images.forEach((image) => {
+    formData.append("images", image);
+  });
+
+  const response = await apiClient.put<ApiEnvelope<RawRecord>>(
+    `/api/v1/follow-ups/${uuid}`,
+    formData,
   );
 
   return toFollowUpDetail(response.data.data ?? {});

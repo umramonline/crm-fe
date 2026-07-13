@@ -1061,6 +1061,16 @@ select {
   list-style: none;
 }
 
+.follow-up-upload-list span{
+  color: #475569;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.follow-up-upload-list button{
+  margin-left: 5%;
+}
+
 .follow-up-upload-list li {
   display: flex;
   gap: 8px;

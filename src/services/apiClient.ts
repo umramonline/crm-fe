@@ -48,6 +48,9 @@ function stopTrackedApiLoading(config?: InternalAxiosRequestConfig): void {
 apiClient.interceptors.request.use((config) => {
   const trackedConfig = config as RetriableRequestConfig;
   trackedConfig._globalLoadingTracked = true;
+  if (trackedConfig.data instanceof FormData) {
+    delete trackedConfig.headers["Content-Type"];
+  }
   startApiLoading();
 
   return trackedConfig;
