@@ -10,9 +10,11 @@ import {
   listAssignedFollowUps,
   listFollowUps,
   type FollowUpDetail,
+  type FollowUpImage,
   type FollowUpListItem,
   type FollowUpListQuery,
 } from "@/features/followUps/services/followUpApi";
+import { apiBaseUrl } from "@/services/apiClient";
 
 type FollowUpsPageProps = {
   permissions: Permission[];
@@ -71,6 +73,9 @@ export function FollowUpsPage({ permissions }: FollowUpsPageProps) {
   const [message, setMessage] = useState("");
   const [selectedFollowUp, setSelectedFollowUp] =
     useState<FollowUpDetail | null>(null);
+  const [selectedImageIndex, setSelectedImageIndex] = useState<number | null>(
+    null,
+  );
   const [selectedCustomerDetail, setSelectedCustomerDetail] =
     useState<CustomerDetail | null>(null);
   const [isLoadingCustomerDetail, setIsLoadingCustomerDetail] = useState(false);
@@ -205,9 +210,44 @@ export function FollowUpsPage({ permissions }: FollowUpsPageProps) {
     try {
       const detail = await getFollowUp(followUp.uuid);
       setSelectedFollowUp(detail);
+      setSelectedImageIndex(null);
     } catch {
       setMessage("Takip kaydı detayı getirilemedi.");
     }
+  }
+
+  function handleCloseFollowUpDetail(): void {
+    setSelectedFollowUp(null);
+    setSelectedImageIndex(null);
+  }
+
+  function handleOpenImageSlider(index: number): void {
+    setSelectedImageIndex(index);
+  }
+
+  function handleCloseImageSlider(): void {
+    setSelectedImageIndex(null);
+  }
+
+  function handlePreviousImage(): void {
+    if (!selectedFollowUp || selectedImageIndex === null) {
+      return;
+    }
+
+    setSelectedImageIndex(
+      (selectedImageIndex - 1 + selectedFollowUp.images.length) %
+        selectedFollowUp.images.length,
+    );
+  }
+
+  function handleNextImage(): void {
+    if (!selectedFollowUp || selectedImageIndex === null) {
+      return;
+    }
+
+    setSelectedImageIndex(
+      (selectedImageIndex + 1) % selectedFollowUp.images.length,
+    );
   }
 
   async function handleOpenCustomerDetail(
@@ -259,7 +299,7 @@ export function FollowUpsPage({ permissions }: FollowUpsPageProps) {
               <button
                 className="customer-modal-close"
                 type="button"
-                onClick={() => setSelectedFollowUp(null)}
+                onClick={handleCloseFollowUpDetail}
               >
                 Kapat
               </button>
@@ -324,15 +364,67 @@ export function FollowUpsPage({ permissions }: FollowUpsPageProps) {
                 {selectedFollowUp.images.map((image, index) => (
                   <span key={image.uuid}>
                     Resim {index + 1}:{" "}
-                    <a href={image.url} target="_blank" rel="noreferrer">
+                    <button
+                      className="table-sort-button"
+                      type="button"
+                      onClick={() => handleOpenImageSlider(index)}
+                    >
                       Görüntüle
-                    </a>
+                    </button>
                   </span>
                 ))}
               </div>
             ) : (
               <p className="muted-text">Resim bulunamadı.</p>
             )}
+          </section>
+        </div>
+      ) : null}
+
+      {selectedFollowUp && selectedImageIndex !== null ? (
+        <div className="customer-modal-backdrop" role="presentation">
+          <section
+            className="customer-modal customer-modal-wide follow-up-image-modal"
+            role="dialog"
+            aria-modal="true"
+          >
+            <div className="customer-modal-header">
+              <h2>Takip Kaydı Resimleri</h2>
+              <button
+                className="customer-modal-close"
+                type="button"
+                onClick={handleCloseImageSlider}
+              >
+                Kapat
+              </button>
+            </div>
+
+            <div className="follow-up-image-slider">
+              <button
+                className="gray-button"
+                type="button"
+                disabled={selectedFollowUp.images.length <= 1}
+                onClick={handlePreviousImage}
+              >
+                Önceki
+              </button>
+              <img
+                src={backendAssetUrl(selectedFollowUp.images[selectedImageIndex])}
+                alt={`Takip kaydı resmi ${selectedImageIndex + 1}`}
+              />
+              <button
+                className="gray-button"
+                type="button"
+                disabled={selectedFollowUp.images.length <= 1}
+                onClick={handleNextImage}
+              >
+                Sonraki
+              </button>
+            </div>
+
+            <p className="muted-text follow-up-image-counter">
+              {selectedImageIndex + 1} / {selectedFollowUp.images.length}
+            </p>
           </section>
         </div>
       ) : null}
@@ -624,6 +716,19 @@ function sortIndicator(
   }
 
   return sortOrder === "asc" ? "↑" : "↓";
+}
+
+function backendAssetUrl(image: FollowUpImage): string {
+  const imageUrl = image.url.trim();
+  if (!imageUrl) {
+    return "";
+  }
+
+  if (/^https?:\/\//i.test(imageUrl)) {
+    return imageUrl;
+  }
+
+  return `${apiBaseUrl.replace(/\/$/, "")}/${imageUrl.replace(/^\//, "")}`;
 }
 
 function formatDate(value: string): string {

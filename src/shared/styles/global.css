@@ -825,6 +825,32 @@ select {
   width: min(100%, 720px);
 }
 
+.follow-up-image-modal {
+  width: min(100%, 920px);
+}
+
+.follow-up-image-slider {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  gap: 14px;
+  align-items: center;
+}
+
+.follow-up-image-slider img {
+  display: block;
+  max-width: 100%;
+  max-height: 70vh;
+  margin: 0 auto;
+  border-radius: 8px;
+  object-fit: contain;
+  background: #0f172a;
+}
+
+.follow-up-image-counter {
+  margin: 12px 0 0;
+  text-align: center;
+}
+
 .customer-modal-header {
   display: flex;
   gap: 12px;

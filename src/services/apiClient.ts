@@ -4,8 +4,10 @@ import { startApiLoading, stopApiLoading } from "@/services/apiLoading";
 
 const defaultApiBaseUrl = "http://localhost:8321";
 
+export const apiBaseUrl = import.meta.env.VITE_API_BASE_URL ?? defaultApiBaseUrl;
+
 export const apiClient = axios.create({
-  baseURL: import.meta.env.VITE_API_BASE_URL ?? defaultApiBaseUrl,
+  baseURL: apiBaseUrl,
   withCredentials: true,
   headers: {
     Accept: "application/json",
@@ -14,7 +16,7 @@ export const apiClient = axios.create({
 });
 
 const refreshClient = axios.create({
-  baseURL: import.meta.env.VITE_API_BASE_URL ?? defaultApiBaseUrl,
+  baseURL: apiBaseUrl,
   withCredentials: true,
   headers: {
     Accept: "application/json",
