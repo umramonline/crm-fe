@@ -826,7 +826,7 @@ select {
 }
 
 .follow-up-image-modal {
-  width: min(100%, 920px);
+  width: min(100%);
 }
 
 .follow-up-image-slider {
