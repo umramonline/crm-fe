@@ -3,12 +3,18 @@ import { useEffect, useState } from "react";
 
 import type { SessionData } from "@/features/auth/services/authApi";
 
-export type AppPage = "home" | "customers" | "tasks" | "permissions";
+export type AppPage =
+  | "home"
+  | "customers"
+  | "tasks"
+  | "followUps"
+  | "permissions";
 
 type AppLayoutProps = {
   activePage: AppPage;
   canViewCustomers: boolean;
   canViewTasks: boolean;
+  canViewFollowUps: boolean;
   canViewPermissions: boolean;
   children: ReactNode;
   session: SessionData;
@@ -20,6 +26,7 @@ export function AppLayout({
   activePage,
   canViewCustomers,
   canViewTasks,
+  canViewFollowUps,
   canViewPermissions,
   children,
   onLogout,
@@ -91,6 +98,21 @@ export function AppLayout({
             >
               <span aria-hidden="true">☑</span>
               Tüm Görevler
+            </button>
+          ) : null}
+
+          {canViewFollowUps ? (
+            <button
+              className={
+                activePage === "followUps"
+                  ? "panel-menu-item active"
+                  : "panel-menu-item"
+              }
+              type="button"
+              onClick={() => handleNavigate("followUps")}
+            >
+              <span aria-hidden="true">◎</span>
+              Tüm Takip Kayıtları
             </button>
           ) : null}
 
