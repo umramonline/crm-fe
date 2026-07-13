@@ -26,14 +26,20 @@ type FollowUpFilters = {
   nextVisitDate: string;
 };
 
-const emptyFilters: FollowUpFilters = {
-  title: "",
-  customer: "",
-  assignedUserFullName: "",
-  branchName: "",
-  visitDate: "",
-  nextVisitDate: "",
-};
+function createEmptyFilters(): FollowUpFilters {
+  return {
+    title: "",
+    customer: "",
+    assignedUserFullName: "",
+    branchName: "",
+    visitDate: "",
+    nextVisitDate: "",
+  };
+}
+
+function filtersAreEmpty(filters: FollowUpFilters): boolean {
+  return Object.values(filters).every((value) => value.trim() === "");
+}
 
 export function FollowUpsPage({ permissions }: FollowUpsPageProps) {
   const permissionNames = useMemo(
@@ -47,9 +53,9 @@ export function FollowUpsPage({ permissions }: FollowUpsPageProps) {
     permissionNames.has("customers.detail.backend");
 
   const [draftFilters, setDraftFilters] =
-    useState<FollowUpFilters>(emptyFilters);
+    useState<FollowUpFilters>(() => createEmptyFilters());
   const [appliedFilters, setAppliedFilters] =
-    useState<FollowUpFilters>(emptyFilters);
+    useState<FollowUpFilters>(() => createEmptyFilters());
   const [items, setItems] = useState<FollowUpListItem[]>([]);
   const [currentPage, setCurrentPage] = useState(1);
   const [lastPage, setLastPage] = useState(1);
@@ -132,11 +138,35 @@ export function FollowUpsPage({ permissions }: FollowUpsPageProps) {
   }
 
   function handleResetFilters(): void {
-    setDraftFilters(emptyFilters);
-    setAppliedFilters(emptyFilters);
-    setCurrentPage(1);
-    setSortBy("");
-    setSortOrder("desc");
+    const shouldClearDraftFilters = !filtersAreEmpty(draftFilters);
+    const shouldClearAppliedFilters = !filtersAreEmpty(appliedFilters);
+    const shouldResetPagination = currentPage !== 1;
+    const shouldResetSort = sortBy !== "" || sortOrder !== "desc";
+
+    if (!shouldClearDraftFilters && !shouldClearAppliedFilters && !shouldResetPagination && !shouldResetSort) {
+      return;
+    }
+
+    if (shouldClearDraftFilters) {
+      setDraftFilters(createEmptyFilters());
+    }
+
+    if (shouldClearAppliedFilters) {
+      setAppliedFilters(createEmptyFilters());
+    }
+
+    if (shouldResetPagination) {
+      setCurrentPage(1);
+    }
+
+    if (shouldResetSort) {
+      setSortBy("");
+      setSortOrder("desc");
+    }
+
+    if (message) {
+      setMessage("");
+    }
   }
 
   function handleSort(nextSortBy: FollowUpListQuery["sortBy"]): void {
@@ -353,7 +383,7 @@ export function FollowUpsPage({ permissions }: FollowUpsPageProps) {
         <div className="customer-filter-actions">
             <h1>Tüm Takip Kayıtları</h1>
             <button className="blue-button" type="submit">Ara</button>
-            <button className="gray-button" type="button">Temizle</button>
+            <button className="gray-button" type="button" onClick={handleResetFilters}>Temizle</button>
             <p className="muted-text">Toplam {total} takip kaydı listeleniyor.</p>
         </div>
 
