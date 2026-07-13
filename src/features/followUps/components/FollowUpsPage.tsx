@@ -7,6 +7,7 @@ import {
 } from "@/features/customers/services/customerApi";
 import {
   getFollowUp,
+  listAssignedFollowUps,
   listFollowUps,
   type FollowUpDetail,
   type FollowUpListItem,
@@ -47,6 +48,10 @@ export function FollowUpsPage({ permissions }: FollowUpsPageProps) {
     [permissions],
   );
   const canListFollowUps = permissionNames.has("follow_ups.list");
+  const canListAssignedFollowUps = permissionNames.has(
+    "follow_ups.assigned.list",
+  );
+  const canLoadFollowUps = canListFollowUps || canListAssignedFollowUps;
   const canViewFollowUpDetail = permissionNames.has("follow_ups.detail");
   const canViewCustomerDetail =
     permissionNames.has("customers.detail") ||
@@ -71,7 +76,7 @@ export function FollowUpsPage({ permissions }: FollowUpsPageProps) {
   const [isLoadingCustomerDetail, setIsLoadingCustomerDetail] = useState(false);
 
   useEffect(() => {
-    if (!canListFollowUps) {
+    if (!canLoadFollowUps) {
       setItems([]);
       setTotal(0);
       setLastPage(1);
@@ -85,7 +90,10 @@ export function FollowUpsPage({ permissions }: FollowUpsPageProps) {
       setMessage("");
 
       try {
-        const result = await listFollowUps({
+        const followUpListLoader = canListFollowUps
+          ? listFollowUps
+          : listAssignedFollowUps;
+        const result = await followUpListLoader({
           page: currentPage,
           perPage: 20,
           title: appliedFilters.title,
@@ -125,6 +133,7 @@ export function FollowUpsPage({ permissions }: FollowUpsPageProps) {
     };
   }, [
     appliedFilters,
+    canLoadFollowUps,
     canListFollowUps,
     currentPage,
     sortBy,
@@ -225,7 +234,7 @@ export function FollowUpsPage({ permissions }: FollowUpsPageProps) {
     }
   }
 
-  if (!canListFollowUps) {
+  if (!canLoadFollowUps) {
     return (
       <section className="panel-card permission-table-panel">
         <h1>Tüm Takip Kayıtları</h1>

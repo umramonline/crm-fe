@@ -74,8 +74,21 @@ type RawRecord = Record<string, unknown>;
 export async function listFollowUps(
   query: FollowUpListQuery = {},
 ): Promise<FollowUpListResult> {
+  return requestFollowUps("/api/v1/follow-ups", query);
+}
+
+export async function listAssignedFollowUps(
+  query: FollowUpListQuery = {},
+): Promise<FollowUpListResult> {
+  return requestFollowUps("/api/v1/follow-ups/assigned-to-me", query);
+}
+
+async function requestFollowUps(
+  path: string,
+  query: FollowUpListQuery,
+): Promise<FollowUpListResult> {
   const response = await apiClient.get<ApiEnvelope<RawRecord>>(
-    "/api/v1/follow-ups",
+    path,
     {
       params: {
         page: query.page,
