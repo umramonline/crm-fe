@@ -701,7 +701,7 @@ export function TasksPage({ permissions, roleId, userId }: TasksPageProps) {
             aria-modal="true"
           >
             <div className="customer-modal-header">
-              <h2>Müşteri Detayları</h2>
+              <h2>Görevin Müşteri Detayları</h2>
               <button
                 className="customer-modal-close"
                 type="button"
@@ -758,7 +758,7 @@ export function TasksPage({ permissions, roleId, userId }: TasksPageProps) {
                                 );
                               }}
                             >
-                              ✎
+                              📓
                             </button>
                           ) : null}
                           <button
