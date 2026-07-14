@@ -47,6 +47,9 @@ export type CreateTaskAssignmentPayload = {
 
 export type CreateFollowUpPayload = {
   tasksCustomerUuid: string;
+} & FollowUpFormPayload;
+
+export type FollowUpFormPayload = {
   visitDate: string;
   nextVisitDate: string;
   visitType: FollowUpVisitType;
@@ -61,6 +64,10 @@ export type CreateFollowUpPayload = {
     email: string;
   }[];
   images: File[];
+};
+
+export type CreateStandaloneFollowUpPayload = FollowUpFormPayload & {
+  customerId: number;
 };
 
 export type TaskCustomer = {
@@ -258,8 +265,21 @@ export async function createTaskAssignment(
 export async function createFollowUp(
   payload: CreateFollowUpPayload,
 ): Promise<void> {
-  const formData = new FormData();
+  const formData = followUpFormData(payload);
   formData.append("tasks_customer_uuid", payload.tasksCustomerUuid);
+  await postFollowUp("/api/v1/follow-ups", formData);
+}
+
+export async function createStandaloneFollowUp(
+  payload: CreateStandaloneFollowUpPayload,
+): Promise<void> {
+  const formData = followUpFormData(payload);
+  formData.append("customer_id", String(payload.customerId));
+  await postFollowUp("/api/v1/follow-ups/standalone", formData);
+}
+
+function followUpFormData(payload: FollowUpFormPayload): FormData {
+  const formData = new FormData();
   formData.append("visit_date", payload.visitDate);
   if (payload.nextVisitDate) {
     formData.append("next_visit_date", payload.nextVisitDate);
@@ -292,9 +312,13 @@ export async function createFollowUp(
     formData.append("images", image);
   });
 
+  return formData;
+}
+
+async function postFollowUp(path: string, formData: FormData): Promise<void> {
   try {
     await apiClient.post<ApiEnvelope<RawRecord>>(
-      "/api/v1/follow-ups",
+      path,
       formData,
       {
         headers: {

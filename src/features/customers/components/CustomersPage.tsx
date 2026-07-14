@@ -27,6 +27,7 @@ import {
   type TaskAssignableUser,
 } from "@/features/tasks/services/taskApi";
 import type { Permission } from "@/features/auth/services/authApi";
+import { StandaloneFollowUpModal } from "@/features/followUps/components/StandaloneFollowUpModal";
 
 const situationOptions = [
   "Aktif Müşteri",
@@ -179,6 +180,9 @@ export function CustomersPage({ permissions }: CustomersPageProps) {
   const canViewFullRegistration = permissionNames.has(
     "customers.full_registration.detail",
   );
+  const canCreateStandaloneFollowUp = permissionNames.has(
+    "follow_ups.create.standalone",
+  );
   const canCreateCustomers = permissionNames.has("customers.create");
   const canCreateTasks = permissionNames.has("tasks.create");
   const canListCities = permissionNames.has("customers.cities.list");
@@ -223,6 +227,8 @@ export function CustomersPage({ permissions }: CustomersPageProps) {
   );
   const [selectedCustomerDetail, setSelectedCustomerDetail] =
     useState<CustomerDetail | null>(null);
+  const [standaloneFollowUpCustomer, setStandaloneFollowUpCustomer] =
+    useState<Customer | null>(null);
   const [selectedTaskCustomers, setSelectedTaskCustomers] = useState<
     Map<number, Customer>
   >(() => new Map());
@@ -622,6 +628,16 @@ export function CustomersPage({ permissions }: CustomersPageProps) {
     setSelectedCustomerDetail(null);
   }
 
+  function handleOpenStandaloneFollowUp(customer: Customer): void {
+    setMessage("");
+    setStandaloneFollowUpCustomer(customer);
+  }
+
+  function handleStandaloneFollowUpCreated(): void {
+    setStandaloneFollowUpCustomer(null);
+    setMessage("Takip kaydı oluşturuldu.");
+  }
+
   async function handleCustomerSearchSubmit(
     event: FormEvent<HTMLFormElement>,
   ): Promise<void> {
@@ -954,6 +970,14 @@ export function CustomersPage({ permissions }: CustomersPageProps) {
       </div>
 
       {message ? <div className="panel-alert">{message}</div> : null}
+
+      {standaloneFollowUpCustomer ? (
+        <StandaloneFollowUpModal
+          customer={standaloneFollowUpCustomer}
+          onClose={() => setStandaloneFollowUpCustomer(null)}
+          onCreated={handleStandaloneFollowUpCreated}
+        />
+      ) : null}
 
       {isSearchModalOpen ? (
         <div className="customer-modal-backdrop" role="presentation">
@@ -1899,6 +1923,16 @@ export function CustomersPage({ permissions }: CustomersPageProps) {
                         onClick={() => navigateToFullRegistration(customer.id)}
                       >
                         ✎
+                      </button>
+                    ) : null}
+                    {isBackendDataSource && canCreateStandaloneFollowUp ? (
+                      <button
+                        className="customer-action-button task-follow-button"
+                        type="button"
+                        aria-label="Takip kaydı oluştur"
+                        onClick={() => handleOpenStandaloneFollowUp(customer)}
+                      >
+                        📓
                       </button>
                     ) : null}
                   </div>
