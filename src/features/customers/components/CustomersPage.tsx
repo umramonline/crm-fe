@@ -176,6 +176,9 @@ export function CustomersPage({ permissions }: CustomersPageProps) {
     permissionNames.has("customers.detail.umramonline");
   const canViewBackendCustomerDetail =
     canViewCustomerDetail || permissionNames.has("customers.detail.backend");
+  const canViewFullRegistration = permissionNames.has(
+    "customers.full_registration.detail",
+  );
   const canCreateCustomers = permissionNames.has("customers.create");
   const canCreateTasks = permissionNames.has("tasks.create");
   const canListCities = permissionNames.has("customers.cities.list");
@@ -1888,7 +1891,7 @@ export function CustomersPage({ permissions }: CustomersPageProps) {
                     >
                       ⓘ
                     </button>
-                    {isBackendDataSource ? (
+                    {isBackendDataSource && canViewFullRegistration ? (
                       <button
                         className="customer-action-button"
                         type="button"
