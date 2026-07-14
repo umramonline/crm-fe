@@ -68,6 +68,8 @@ export type CustomerValidationErrors = Record<string, string>;
 
 export type CustomerDataSource = "umramonline" | "backend";
 
+export type CustomerListScope = "all" | "my-branches";
+
 export type CreateCustomerPayload = {
   type: "bireysel" | "kurumsal";
   ad: string;
@@ -151,6 +153,7 @@ export type CustomerListQuery = {
   page?: number;
   perPage?: number;
   dataSource?: CustomerDataSource;
+  scope?: CustomerListScope;
   situation?: string;
   unvan?: string;
   cep?: string;
@@ -284,7 +287,7 @@ export async function getCustomer(
   dataSource: CustomerDataSource = "umramonline",
 ): Promise<CustomerDetail> {
   const response = await apiClient.get<ApiEnvelope<RawRecord>>(
-    `${customerListPath(dataSource)}/${id}`,
+    `${customerListBasePath(dataSource)}/${id}`,
   );
 
   return toCustomerDetail(response.data.data ?? {});
@@ -369,33 +372,46 @@ export async function fullRegistrationPhoneExists(
 export async function listCustomers(
   query: CustomerListQuery = {},
 ): Promise<CustomerListResult> {
-  const response = await apiClient.get<ApiEnvelope<RawRecord>>(customerListPath(query.dataSource), {
-    params: {
-      page: query.page,
-      per_page: query.perPage,
-      situation: query.situation || undefined,
-      unvan: query.unvan || undefined,
-      cep: query.cep || undefined,
-      ad: query.ad || undefined,
-      soyad: query.soyad || undefined,
-      branch_name: query.branchName || undefined,
-      zone_id: query.zoneId || undefined,
-      plus_card_no: query.plusCardNo || undefined,
-      source: query.source || undefined,
-      city: query.city || undefined,
-      town: query.town || undefined,
-      created_at: query.createdAt || undefined,
-      type: query.type || undefined,
-      sort_by: query.sortBy || undefined,
-      sort_order: query.sortOrder || undefined,
+  const response = await apiClient.get<ApiEnvelope<RawRecord>>(
+    customerListPath(query.dataSource, query.scope),
+    {
+      params: {
+        page: query.page,
+        per_page: query.perPage,
+        situation: query.situation || undefined,
+        unvan: query.unvan || undefined,
+        cep: query.cep || undefined,
+        ad: query.ad || undefined,
+        soyad: query.soyad || undefined,
+        branch_name: query.branchName || undefined,
+        zone_id: query.zoneId || undefined,
+        plus_card_no: query.plusCardNo || undefined,
+        source: query.source || undefined,
+        city: query.city || undefined,
+        town: query.town || undefined,
+        created_at: query.createdAt || undefined,
+        type: query.type || undefined,
+        sort_by: query.sortBy || undefined,
+        sort_order: query.sortOrder || undefined,
+      },
     },
-  });
+  );
 
   return normalizeCustomerListResult(response.data.data ?? {});
 }
 
-function customerListPath(dataSource: CustomerDataSource = "umramonline"): string {
-  return dataSource === "backend" ? "/api/v1/customers/backend" : "/api/v1/customers/umramonline";
+function customerListBasePath(dataSource: CustomerDataSource = "umramonline"): string {
+  return dataSource === "backend"
+    ? "/api/v1/customers/backend"
+    : "/api/v1/customers/umramonline";
+}
+
+function customerListPath(
+  dataSource: CustomerDataSource = "umramonline",
+  scope: CustomerListScope = "all",
+): string {
+  const basePath = customerListBasePath(dataSource);
+  return scope === "my-branches" ? `${basePath}/my-branches` : basePath;
 }
 
 function toCustomerDetail(record: RawRecord): CustomerDetail {

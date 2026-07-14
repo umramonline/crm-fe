@@ -154,11 +154,20 @@ export function CustomersPage({ permissions }: CustomersPageProps) {
     () => new Set(permissions.map((permission) => permission.name)),
     [permissions],
   );
-  const canListCustomers = permissionNames.has("customers.list");
+  const canListAllUmramonlineCustomers =
+    permissionNames.has("customers.list.umramonline");
+  const canListMyBranchesUmramonlineCustomers = permissionNames.has(
+    "customers.list.umramonline.my_branches",
+  );
   const canListUmramonlineCustomers =
-    canListCustomers || permissionNames.has("customers.list.umramonline");
+    canListAllUmramonlineCustomers || canListMyBranchesUmramonlineCustomers;
+  const canListAllBackendCustomers =
+    permissionNames.has("customers.list.backend");
+  const canListMyBranchesBackendCustomers = permissionNames.has(
+    "customers.list.backend.my_branches",
+  );
   const canListBackendCustomers =
-    canListCustomers || permissionNames.has("customers.list.backend");
+    canListAllBackendCustomers || canListMyBranchesBackendCustomers;
   const canListZones = permissionNames.has("customers.zones.list");
   const canSearchCustomers = permissionNames.has("customers.search");
   const canViewCustomerDetail = permissionNames.has("customers.detail");
@@ -232,6 +241,13 @@ export function CustomersPage({ permissions }: CustomersPageProps) {
   const canListSelectedSource = isBackendDataSource
     ? canListBackendCustomers
     : canListUmramonlineCustomers;
+  const customerListScope = isBackendDataSource
+    ? canListAllBackendCustomers
+      ? "all"
+      : "my-branches"
+    : canListAllUmramonlineCustomers
+      ? "all"
+      : "my-branches";
   const canViewSelectedSourceDetail = isBackendDataSource
     ? canViewBackendCustomerDetail
     : canViewUmramonlineCustomerDetail;
@@ -492,6 +508,7 @@ export function CustomersPage({ permissions }: CustomersPageProps) {
           page: currentPage,
           perPage: 20,
           dataSource: customerDataSource,
+          scope: customerListScope,
           situation: isBackendDataSource ? "" : appliedFilters.situation,
           unvan: appliedFilters.unvan,
           cep: appliedFilters.cep,
@@ -546,6 +563,7 @@ export function CustomersPage({ permissions }: CustomersPageProps) {
     canListSelectedSource,
     currentPage,
     customerDataSource,
+    customerListScope,
     isBackendDataSource,
     sortBy,
     sortOrder,
