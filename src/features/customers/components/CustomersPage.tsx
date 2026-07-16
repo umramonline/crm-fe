@@ -1,23 +1,19 @@
 import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
 
+import { CustomerEntryModal } from "@/features/customers/components/CustomerEntryModal";
+import { CustomerSearchModal } from "@/features/customers/components/CustomerSearchModal";
+import { customerEntryTexts, customerTextMaxLength } from "@/features/customers/constants/customerEntryTexts";
 import {
-  createCustomer,
   getCustomer,
   listBranches,
-  listCities,
   listCustomers,
-  listTowns,
   listZones,
-  searchCustomer,
   type Branch,
-  type City,
-  CustomerValidationError,
   type Customer,
   type CustomerDataSource,
   type CustomerDetail,
   type CustomerListQuery,
   type CustomerValidationErrors,
-  type Town,
   type Zone,
 } from "@/features/customers/services/customerApi";
 import {
@@ -40,30 +36,13 @@ const situationOptions = [
 const typeOptions = ["Kurumsal", "Bireysel"] as const;
 const taskPriorityOptions = ["high", "medium", "low"] as const;
 
-const entryText = {
-  button: "Müşteri Giriş",
-  searchTitle: "Önce müşteri ara",
-  searchPlaceholder: "Cep, telefon, T.C. no veya vergi no yazın",
-  searchRequired:
-    "Arama yapmak için cep, telefon, T.C. no veya vergi no yazın.",
-  searchFailed: "Müşteri araması yapılamadı.",
-  customerFound: "Müşteri kaydı bulundu. Edit formu sonraki aşamada açılacak.",
-  customerNotFound: "Müşteri bulunamadı. Yeni müşteri formunu doldurun.",
-  referenceFailed: "Form seçenekleri getirilemedi.",
-  citiesLoading: "Seçenekler yükleniyor...",
-  typeStepTitle: "Müşteri türü seçin",
-  formStepTitle: "Yeni müşteri bilgileri",
-  createSuccess: "Müşteri kaydedildi.",
-  createFailed: "Müşteri kaydı oluşturulamadı.",
+const pageText = {
   detailFailed: "Müşteri detayı getirilemedi.",
   detailTitle: "Müşteri Detayı",
   dataSourceLabel: "Müşteri kaynağı",
   taskAssignButton: "Görev Ata",
   taskAssignTitle: "Görev Ata",
 } as const;
-
-const turkeyMobilePhoneRegex = /^05[0-9]{9}$/;
-const customerTextMaxLength = 255;
 
 type CustomerFilters = {
   situation: string;
@@ -80,21 +59,7 @@ type CustomerFilters = {
   type: string;
 };
 
-type CustomerEntryType = "" | "bireysel" | "kurumsal";
 type TaskPriority = (typeof taskPriorityOptions)[number];
-
-type NewCustomerForm = {
-  ad: string;
-  soyad: string;
-  cep: string;
-  unvan: string;
-  yetkiliAdi: string;
-  telefon: string;
-  ilKodu: string;
-  ilceKodu: string;
-  mahalle: string;
-  branchId: string;
-};
 
 type TaskAssignForm = {
   title: string;
@@ -118,19 +83,6 @@ const emptyFilters: CustomerFilters = {
   town: "",
   createdAt: "",
   type: "",
-};
-
-const emptyNewCustomerForm: NewCustomerForm = {
-  ad: "",
-  soyad: "",
-  cep: "",
-  unvan: "",
-  yetkiliAdi: "",
-  telefon: "",
-  ilKodu: "",
-  ilceKodu: "",
-  mahalle: "",
-  branchId: "",
 };
 
 function createEmptyTaskAssignForm(
@@ -192,8 +144,6 @@ export function CustomersPage({ permissions }: CustomersPageProps) {
   const [zones, setZones] = useState<Zone[]>([]);
   const [customerDataSource, setCustomerDataSource] =
     useState<CustomerDataSource>("backend");
-  const [cities, setCities] = useState<City[]>([]);
-  const [towns, setTowns] = useState<Town[]>([]);
   const [branches, setBranches] = useState<Branch[]>([]);
   const [draftFilters, setDraftFilters] =
     useState<CustomerFilters>(emptyFilters);
@@ -208,23 +158,8 @@ export function CustomersPage({ permissions }: CustomersPageProps) {
   const [isLoading, setIsLoading] = useState(false);
   const [message, setMessage] = useState("");
   const [isSearchModalOpen, setIsSearchModalOpen] = useState(false);
-  const [searchQuery, setSearchQuery] = useState("");
-  const [isSearching, setIsSearching] = useState(false);
-  const [foundCustomer, setFoundCustomer] = useState<CustomerDetail | null>(
-    null,
-  );
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
-  const [createStep, setCreateStep] = useState<1 | 2>(1);
-  const [customerEntryType, setCustomerEntryType] =
-    useState<CustomerEntryType>("");
-  const [newCustomerForm, setNewCustomerForm] =
-    useState<NewCustomerForm>(emptyNewCustomerForm);
-  const [isReferenceLoading, setIsReferenceLoading] = useState(false);
   const [isBranchFilterLoading, setIsBranchFilterLoading] = useState(false);
-  const [isCreatingCustomer, setIsCreatingCustomer] = useState(false);
-  const [createErrors, setCreateErrors] = useState<CustomerValidationErrors>(
-    {},
-  );
   const [selectedCustomerDetail, setSelectedCustomerDetail] =
     useState<CustomerDetail | null>(null);
   const [standaloneFollowUpCustomer, setStandaloneFollowUpCustomer] =
@@ -434,74 +369,6 @@ export function CustomersPage({ permissions }: CustomersPageProps) {
   }, [canListBranches]);
 
   useEffect(() => {
-    if (!isCreateModalOpen || (!canListCities && !canListBranches)) {
-      return;
-    }
-
-    let isActive = true;
-
-    async function loadReferenceData(): Promise<void> {
-      setIsReferenceLoading(true);
-      setMessage("");
-
-      try {
-        const [nextCities, nextBranches] = await Promise.all([
-          canListCities ? listCities() : Promise.resolve<City[]>([]),
-          canListBranches ? listBranches() : Promise.resolve<Branch[]>([]),
-        ]);
-
-        if (isActive) {
-          setCities(nextCities);
-          setBranches(nextBranches);
-        }
-      } catch {
-        if (isActive) {
-          setMessage(entryText.referenceFailed);
-        }
-      } finally {
-        if (isActive) {
-          setIsReferenceLoading(false);
-        }
-      }
-    }
-
-    void loadReferenceData();
-
-    return () => {
-      isActive = false;
-    };
-  }, [canListBranches, canListCities, isCreateModalOpen]);
-
-  useEffect(() => {
-    if (!isCreateModalOpen || !newCustomerForm.ilKodu || !canListTowns) {
-      setTowns([]);
-      return;
-    }
-
-    let isActive = true;
-
-    async function loadTowns(): Promise<void> {
-      try {
-        const nextTowns = await listTowns(Number(newCustomerForm.ilKodu));
-        if (isActive) {
-          setTowns(nextTowns);
-        }
-      } catch {
-        if (isActive) {
-          setTowns([]);
-          setMessage(entryText.referenceFailed);
-        }
-      }
-    }
-
-    void loadTowns();
-
-    return () => {
-      isActive = false;
-    };
-  }, [canListTowns, isCreateModalOpen, newCustomerForm.ilKodu]);
-
-  useEffect(() => {
     if (!canListSelectedSource) {
       return;
     }
@@ -610,7 +477,7 @@ export function CustomersPage({ permissions }: CustomersPageProps) {
 
   async function handleOpenCustomerDetail(customerId: number): Promise<void> {
     if (!customerId) {
-      setMessage(entryText.detailFailed);
+      setMessage(pageText.detailFailed);
       return;
     }
 
@@ -620,7 +487,7 @@ export function CustomersPage({ permissions }: CustomersPageProps) {
       const customer = await getCustomer(customerId, customerDataSource);
       setSelectedCustomerDetail(customer);
     } catch {
-      setMessage(entryText.detailFailed);
+      setMessage(pageText.detailFailed);
     }
   }
 
@@ -638,75 +505,27 @@ export function CustomersPage({ permissions }: CustomersPageProps) {
     setMessage("Takip kaydı oluşturuldu.");
   }
 
-  async function handleCustomerSearchSubmit(
-    event: FormEvent<HTMLFormElement>,
-  ): Promise<void> {
-    event.preventDefault();
-
-    const normalizedQuery = searchQuery.trim();
-    if (!normalizedQuery) {
-      setMessage(entryText.searchRequired);
-      return;
-    }
-
-    setIsSearching(true);
-    setMessage("");
-    setFoundCustomer(null);
-
-    try {
-      const result = await searchCustomer(normalizedQuery);
-      if (result.found && result.customer) {
-        if (result.source === "backend") {
-          navigateToFullRegistration(result.customer.id);
-          return;
-        }
-
-        setFoundCustomer(result.customer);
-        setMessage(
-          `${entryText.customerFound} Kaynak: ${formatCustomerSource(result.source)}.`,
-        );
-        return;
-      }
-
-      setIsSearchModalOpen(false);
-      setIsCreateModalOpen(true);
-      setCreateStep(1);
-      setCustomerEntryType("");
-      setNewCustomerForm(emptyNewCustomerForm);
-      setMessage(entryText.customerNotFound);
-    } catch {
-      setMessage(entryText.searchFailed);
-    } finally {
-      setIsSearching(false);
-    }
-  }
-
   function handleOpenCustomerSearch(): void {
-    setSearchQuery("");
-    setFoundCustomer(null);
     setIsSearchModalOpen(true);
     setMessage("");
   }
 
   function handleCloseCustomerSearch(): void {
     setIsSearchModalOpen(false);
-    setFoundCustomer(null);
   }
 
-  function handleSelectCustomerEntryType(type: CustomerEntryType): void {
-    setCustomerEntryType(type);
-    setNewCustomerForm(emptyNewCustomerForm);
-    setCreateErrors({});
-    setCreateStep(2);
+  function handleCustomerNotFound(): void {
+    setIsCreateModalOpen(true);
   }
 
   function handleCloseCreateModal(): void {
     setIsCreateModalOpen(false);
-    setCreateStep(1);
-    setCustomerEntryType("");
-    setNewCustomerForm(emptyNewCustomerForm);
-    setCreateErrors({});
-    setTowns([]);
+  }
+
+  function handleCustomerCreated(): void {
+    setMessage(customerEntryTexts.createSuccess);
+    setCurrentPage(1);
+    setAppliedFilters((current) => ({ ...current }));
   }
 
   function handleTaskCustomerToggle(
@@ -858,75 +677,6 @@ export function CustomersPage({ permissions }: CustomersPageProps) {
     }
   }
 
-  function updateNewCustomerField(
-    field: keyof NewCustomerForm,
-    value: string,
-  ): void {
-    setNewCustomerForm((current) => ({
-      ...current,
-      [field]: value,
-      ...(field === "ilKodu" ? { ilceKodu: "" } : {}),
-    }));
-    setCreateErrors((current) => ({
-      ...current,
-      [formFieldToApiField(field)]: "",
-      ...(field === "ilKodu" ? { ilce_kodu: "" } : {}),
-    }));
-  }
-
-  async function handleCreateCustomerSubmit(
-    event: FormEvent<HTMLFormElement>,
-  ): Promise<void> {
-    event.preventDefault();
-
-    if (customerEntryType !== "bireysel" && customerEntryType !== "kurumsal") {
-      setCreateErrors({ type: "Müşteri türü seçiniz." });
-      return;
-    }
-
-    const validationErrors = validateNewCustomerForm(
-      customerEntryType,
-      newCustomerForm,
-    );
-    if (Object.keys(validationErrors).length > 0) {
-      setCreateErrors(validationErrors);
-      return;
-    }
-
-    setIsCreatingCustomer(true);
-    setCreateErrors({});
-    setMessage("");
-
-    try {
-      await createCustomer({
-        type: customerEntryType,
-        ad: newCustomerForm.ad.trim(),
-        soyad: newCustomerForm.soyad.trim(),
-        cep: newCustomerForm.cep.trim(),
-        unvan: newCustomerForm.unvan.trim(),
-        yetkiliAdi: newCustomerForm.yetkiliAdi.trim(),
-        telefon: newCustomerForm.telefon.trim(),
-        ilKodu: newCustomerForm.ilKodu,
-        ilceKodu: newCustomerForm.ilceKodu,
-        mahalle: newCustomerForm.mahalle.trim(),
-        branchId: Number(newCustomerForm.branchId),
-      });
-
-      handleCloseCreateModal();
-      setMessage(entryText.createSuccess);
-      setCurrentPage(1);
-      setAppliedFilters((current) => ({ ...current }));
-    } catch (error: unknown) {
-      if (error instanceof CustomerValidationError) {
-        setCreateErrors(error.errors);
-      } else {
-        setMessage(entryText.createFailed);
-      }
-    } finally {
-      setIsCreatingCustomer(false);
-    }
-  }
-
   function handleSort(
     column: "credit" | "created_at" | "vehicle_stock_count",
   ): void {
@@ -979,336 +729,24 @@ export function CustomersPage({ permissions }: CustomersPageProps) {
         />
       ) : null}
 
-      {isSearchModalOpen ? (
-        <div className="customer-modal-backdrop" role="presentation">
-          <section className="customer-modal" role="dialog" aria-modal="true">
-            <div className="customer-modal-header">
-              <h2>{entryText.searchTitle}</h2>
-              <button
-                className="customer-modal-close"
-                type="button"
-                onClick={handleCloseCustomerSearch}
-              >
-                Kapat
-              </button>
-            </div>
+      <CustomerSearchModal
+        isOpen={isSearchModalOpen}
+        onClose={handleCloseCustomerSearch}
+        onNotFound={handleCustomerNotFound}
+        onFoundBackend={navigateToFullRegistration}
+        onNotify={setMessage}
+      />
 
-            <form
-              className="panel-form"
-              onSubmit={(event) => void handleCustomerSearchSubmit(event)}
-            >
-              <label className="field-label">
-                Arama
-                <input
-                  className="panel-input"
-                  value={searchQuery}
-                  placeholder={entryText.searchPlaceholder}
-                  onChange={(event) => setSearchQuery(event.target.value)}
-                />
-              </label>
-
-              <div className="customer-modal-actions">
-                <button
-                  className="blue-button"
-                  type="submit"
-                  disabled={isSearching}
-                >
-                  {isSearching ? "Aranıyor..." : "Ara"}
-                </button>
-                <button
-                  className="gray-button"
-                  type="button"
-                  onClick={handleCloseCustomerSearch}
-                >
-                  Vazgeç
-                </button>
-              </div>
-            </form>
-
-            {foundCustomer ? (
-              <div className="customer-found-card">
-                <strong>{customerDisplayName(foundCustomer)}</strong>
-                <span>{foundCustomer.cep || foundCustomer.telefon || "-"}</span>
-                <span>
-                  {foundCustomer.tcNo || foundCustomer.vergiNo || "-"}
-                </span>
-              </div>
-            ) : null}
-          </section>
-        </div>
-      ) : null}
-
-      {isCreateModalOpen ? (
-        <div className="customer-modal-backdrop" role="presentation">
-          <section
-            className="customer-modal customer-modal-wide"
-            role="dialog"
-            aria-modal="true"
-          >
-            <div className="customer-modal-header">
-              <h2>
-                {createStep === 1
-                  ? entryText.typeStepTitle
-                  : entryText.formStepTitle}
-              </h2>
-              <button
-                className="customer-modal-close"
-                type="button"
-                onClick={handleCloseCreateModal}
-              >
-                Kapat
-              </button>
-            </div>
-
-            {createStep === 1 ? (
-              <div className="customer-entry-type-grid">
-                <button
-                  className="customer-entry-type-card"
-                  type="button"
-                  onClick={() => handleSelectCustomerEntryType("bireysel")}
-                >
-                  Bireysel
-                </button>
-                <button
-                  className="customer-entry-type-card"
-                  type="button"
-                  onClick={() => handleSelectCustomerEntryType("kurumsal")}
-                >
-                  Kurumsal
-                </button>
-              </div>
-            ) : (
-              <form
-                className="customer-entry-form"
-                onSubmit={(event) => void handleCreateCustomerSubmit(event)}
-              >
-                {customerEntryType === "bireysel" ? (
-                  <>
-                    <label className="field-label">
-                      Ad
-                      <input
-                        className="panel-input"
-                        maxLength={customerTextMaxLength}
-                        value={newCustomerForm.ad}
-                        onChange={(event) =>
-                          updateNewCustomerField("ad", event.target.value)
-                        }
-                      />
-                      {createErrors.ad ? (
-                        <span className="customer-field-error">
-                          {createErrors.ad}
-                        </span>
-                      ) : null}
-                    </label>
-                    <label className="field-label">
-                      Soyad
-                      <input
-                        className="panel-input"
-                        maxLength={customerTextMaxLength}
-                        value={newCustomerForm.soyad}
-                        onChange={(event) =>
-                          updateNewCustomerField("soyad", event.target.value)
-                        }
-                      />
-                      {createErrors.soyad ? (
-                        <span className="customer-field-error">
-                          {createErrors.soyad}
-                        </span>
-                      ) : null}
-                    </label>
-                    <label className="field-label">
-                      Cep
-                      <input
-                        className="panel-input"
-                        inputMode="numeric"
-                        pattern="05[0-9]{9}"
-                        maxLength={11}
-                        placeholder="05XXXXXXXXX"
-                        value={newCustomerForm.cep}
-                        onChange={(event) =>
-                          updateNewCustomerField("cep", event.target.value)
-                        }
-                      />
-                      {createErrors.cep ? (
-                        <span className="customer-field-error">
-                          {createErrors.cep}
-                        </span>
-                      ) : null}
-                    </label>
-                  </>
-                ) : (
-                  <>
-                    <label className="field-label">
-                      Ünvan
-                      <input
-                        className="panel-input"
-                        maxLength={customerTextMaxLength}
-                        value={newCustomerForm.unvan}
-                        onChange={(event) =>
-                          updateNewCustomerField("unvan", event.target.value)
-                        }
-                      />
-                      {createErrors.unvan ? (
-                        <span className="customer-field-error">
-                          {createErrors.unvan}
-                        </span>
-                      ) : null}
-                    </label>
-                    <label className="field-label">
-                      Yetkili Adı
-                      <input
-                        className="panel-input"
-                        maxLength={customerTextMaxLength}
-                        value={newCustomerForm.yetkiliAdi}
-                        onChange={(event) =>
-                          updateNewCustomerField(
-                            "yetkiliAdi",
-                            event.target.value,
-                          )
-                        }
-                      />
-                      {createErrors.yetkili_adi ? (
-                        <span className="customer-field-error">
-                          {createErrors.yetkili_adi}
-                        </span>
-                      ) : null}
-                    </label>
-                    <label className="field-label">
-                      Telefon
-                      <input
-                        className="panel-input"
-                        inputMode="numeric"
-                        pattern="05[0-9]{9}"
-                        maxLength={11}
-                        placeholder="05XXXXXXXXX"
-                        value={newCustomerForm.telefon}
-                        onChange={(event) =>
-                          updateNewCustomerField("telefon", event.target.value)
-                        }
-                      />
-                      {createErrors.telefon ? (
-                        <span className="customer-field-error">
-                          {createErrors.telefon}
-                        </span>
-                      ) : null}
-                    </label>
-                  </>
-                )}
-
-                <label className="field-label">
-                  İl
-                  <select
-                    className="panel-input"
-                    value={newCustomerForm.ilKodu}
-                    onChange={(event) =>
-                      updateNewCustomerField("ilKodu", event.target.value)
-                    }
-                    disabled={isReferenceLoading || !canListCities}
-                  >
-                    <option value="">
-                      {isReferenceLoading ? entryText.citiesLoading : "Seçiniz"}
-                    </option>
-                    {cities.map((city) => (
-                      <option key={city.id} value={city.id}>
-                        {city.title}
-                      </option>
-                    ))}
-                  </select>
-                  {createErrors.il_kodu ? (
-                    <span className="customer-field-error">
-                      {createErrors.il_kodu}
-                    </span>
-                  ) : null}
-                </label>
-
-                <label className="field-label">
-                  İlçe
-                  <select
-                    className="panel-input"
-                    value={newCustomerForm.ilceKodu}
-                    onChange={(event) =>
-                      updateNewCustomerField("ilceKodu", event.target.value)
-                    }
-                    disabled={!newCustomerForm.ilKodu || !canListTowns}
-                  >
-                    <option value="">Seçiniz</option>
-                    {towns.map((town) => (
-                      <option key={town.id} value={town.id}>
-                        {town.title}
-                      </option>
-                    ))}
-                  </select>
-                  {createErrors.ilce_kodu ? (
-                    <span className="customer-field-error">
-                      {createErrors.ilce_kodu}
-                    </span>
-                  ) : null}
-                </label>
-
-                <label className="field-label">
-                  Mahalle
-                  <input
-                    className="panel-input"
-                    maxLength={customerTextMaxLength}
-                    value={newCustomerForm.mahalle}
-                    onChange={(event) =>
-                      updateNewCustomerField("mahalle", event.target.value)
-                    }
-                  />
-                  {createErrors.mahalle ? (
-                    <span className="customer-field-error">
-                      {createErrors.mahalle}
-                    </span>
-                  ) : null}
-                </label>
-
-                <label className="field-label">
-                  Bayi
-                  <select
-                    className="panel-input"
-                    value={newCustomerForm.branchId}
-                    onChange={(event) =>
-                      updateNewCustomerField("branchId", event.target.value)
-                    }
-                    disabled={isReferenceLoading || !canListBranches}
-                  >
-                    <option value="">
-                      {isReferenceLoading ? entryText.citiesLoading : "Seçiniz"}
-                    </option>
-                    {branches.map((branch) => (
-                      <option key={branch.id} value={branch.id}>
-                        {branch.name}
-                      </option>
-                    ))}
-                  </select>
-                  {createErrors.branch_id ? (
-                    <span className="customer-field-error">
-                      {createErrors.branch_id}
-                    </span>
-                  ) : null}
-                </label>
-
-                <div className="customer-modal-actions">
-                  <button
-                    className="gray-button"
-                    type="button"
-                    onClick={() => setCreateStep(1)}
-                  >
-                    Geri
-                  </button>
-                  <button
-                    className="blue-button"
-                    type="submit"
-                    disabled={!canCreateCustomers || isCreatingCustomer}
-                  >
-                    {isCreatingCustomer ? "Kaydediliyor..." : "Kaydet"}
-                  </button>
-                </div>
-              </form>
-            )}
-          </section>
-        </div>
-      ) : null}
+      <CustomerEntryModal
+        isOpen={isCreateModalOpen}
+        onClose={handleCloseCreateModal}
+        onCreated={handleCustomerCreated}
+        onError={setMessage}
+        canCreateCustomers={canCreateCustomers}
+        canListCities={canListCities}
+        canListTowns={canListTowns}
+        canListBranches={canListBranches}
+      />
 
       {selectedCustomerDetail ? (
         <div className="customer-modal-backdrop" role="presentation">
@@ -1318,7 +756,7 @@ export function CustomersPage({ permissions }: CustomersPageProps) {
             aria-modal="true"
           >
             <div className="customer-modal-header">
-              <h2>{entryText.detailTitle}</h2>
+              <h2>{pageText.detailTitle}</h2>
               <button
                 className="customer-modal-close"
                 type="button"
@@ -1370,7 +808,7 @@ export function CustomersPage({ permissions }: CustomersPageProps) {
             aria-modal="true"
           >
             <div className="customer-modal-header">
-              <h2>{entryText.taskAssignTitle}</h2>
+              <h2>{pageText.taskAssignTitle}</h2>
               <button
                 className="customer-modal-close"
                 type="button"
@@ -1551,7 +989,7 @@ export function CustomersPage({ permissions }: CustomersPageProps) {
             className="customer-source-select-label"
             style={{ marginBottom: "12px" }}
           >
-            {entryText.dataSourceLabel}
+            {pageText.dataSourceLabel}
             <select
               className="panel-input"
               value={customerDataSource}
@@ -1583,7 +1021,7 @@ export function CustomersPage({ permissions }: CustomersPageProps) {
                 !canSelectTaskCustomers || selectedTaskCustomerCount === 0
               }
             >
-              {entryText.taskAssignButton} ({selectedTaskCustomerCount})
+              {pageText.taskAssignButton} ({selectedTaskCustomerCount})
             </button>
           ) : null}
           <button
@@ -1592,7 +1030,7 @@ export function CustomersPage({ permissions }: CustomersPageProps) {
             onClick={handleOpenCustomerSearch}
             disabled={!canSearchCustomers}
           >
-            {entryText.button}
+            {customerEntryTexts.button}
           </button>
           <button className="blue-button" type="submit">
             Filtrele
@@ -2051,28 +1489,6 @@ function formatCustomerType(value: string): string {
   return value;
 }
 
-function formatCustomerSource(value: string): string {
-  if (value === "backend") {
-    return "Backend";
-  }
-
-  if (value === "umramonline") {
-    return "Umramonline";
-  }
-
-  return "-";
-}
-
-function customerDisplayName(customer: CustomerDetail): string {
-  const corporateName = customer.unvan.trim();
-  if (corporateName) {
-    return corporateName;
-  }
-
-  const individualName = `${customer.ad} ${customer.soyad}`.trim();
-  return individualName || "-";
-}
-
 function customerDisplayNameFromList(customer: Customer): string {
   const corporateName = customer.unvan.trim();
   if (corporateName) {
@@ -2141,42 +1557,6 @@ function validateTaskAssignForm(
   return errors;
 }
 
-function validateNewCustomerForm(
-  customerType: Exclude<CustomerEntryType, "">,
-  form: NewCustomerForm,
-): CustomerValidationErrors {
-  const errors: CustomerValidationErrors = {};
-
-  if (customerType === "bireysel") {
-    requireField(errors, "ad", form.ad, "Ad zorunludur.");
-    validateMaxLength(errors, "ad", form.ad, "Ad");
-    requireField(errors, "soyad", form.soyad, "Soyad zorunludur.");
-    validateMaxLength(errors, "soyad", form.soyad, "Soyad");
-    validateMobilePhone(errors, "cep", form.cep);
-  } else {
-    requireField(errors, "unvan", form.unvan, "Ünvan zorunludur.");
-    validateMaxLength(errors, "unvan", form.unvan, "Ünvan");
-    requireField(
-      errors,
-      "yetkili_adi",
-      form.yetkiliAdi,
-      "Yetkili adı zorunludur.",
-    );
-    validateMaxLength(errors, "yetkili_adi", form.yetkiliAdi, "Yetkili adı");
-    validateMobilePhone(errors, "telefon", form.telefon);
-  }
-
-  requireField(errors, "il_kodu", form.ilKodu, "İl zorunludur.");
-  validateMaxLength(errors, "il_kodu", form.ilKodu, "İl");
-  requireField(errors, "ilce_kodu", form.ilceKodu, "İlçe zorunludur.");
-  validateMaxLength(errors, "ilce_kodu", form.ilceKodu, "İlçe");
-  requireField(errors, "mahalle", form.mahalle, "Mahalle zorunludur.");
-  validateMaxLength(errors, "mahalle", form.mahalle, "Mahalle");
-  requireField(errors, "branch_id", form.branchId, "Bayi zorunludur.");
-
-  return errors;
-}
-
 function requireField(
   errors: CustomerValidationErrors,
   field: string,
@@ -2185,16 +1565,6 @@ function requireField(
 ): void {
   if (!value.trim()) {
     errors[field] = message;
-  }
-}
-
-function validateMobilePhone(
-  errors: CustomerValidationErrors,
-  field: string,
-  value: string,
-): void {
-  if (!turkeyMobilePhoneRegex.test(value.trim())) {
-    errors[field] = "Telefon 05XXXXXXXXX formatında, toplam 11 hane olmalıdır.";
   }
 }
 
@@ -2208,23 +1578,6 @@ function validateMaxLength(
     errors[field] =
       `${label} en fazla ${customerTextMaxLength} karakter olabilir.`;
   }
-}
-
-function formFieldToApiField(field: keyof NewCustomerForm): string {
-  const fieldMap: Record<keyof NewCustomerForm, string> = {
-    ad: "ad",
-    soyad: "soyad",
-    cep: "cep",
-    unvan: "unvan",
-    yetkiliAdi: "yetkili_adi",
-    telefon: "telefon",
-    ilKodu: "il_kodu",
-    ilceKodu: "ilce_kodu",
-    mahalle: "mahalle",
-    branchId: "branch_id",
-  };
-
-  return fieldMap[field];
 }
 
 function taskAssignFieldToApiField(field: keyof TaskAssignForm): string {
