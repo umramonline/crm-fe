@@ -5,6 +5,7 @@ import { LoginPage } from "@/features/auth/components/LoginPage";
 import { CustomerFullRegistrationPage } from "@/features/customers/components/CustomerFullRegistrationPage";
 import { CustomersPage } from "@/features/customers/components/CustomersPage";
 import { FollowUpsPage } from "@/features/followUps/components/FollowUpsPage";
+import { IettsPage } from "@/features/ietts/components/IettsPage";
 import { TasksPage } from "@/features/tasks/components/TasksPage";
 import {
   getSession,
@@ -122,6 +123,9 @@ export function App() {
     const canViewFollowUps = session.permissions.some(
       (permission) => permission.name === "follow_ups.menu",
     );
+    const canViewIetts = session.permissions.some(
+      (permission) => permission.name === "ietts.menu",
+    );
     const canViewPermissions = session.permissions.some(
       (permission) => permission.name === "authorization.menu",
     );
@@ -130,6 +134,7 @@ export function App() {
       canViewCustomers,
       canViewTasks,
       canViewFollowUps,
+      canViewIetts,
       canViewPermissions,
     );
     const fullRegistrationCustomerId = customerFullRegistrationId(path);
@@ -142,6 +147,7 @@ export function App() {
           canViewCustomers={canViewCustomers}
           canViewTasks={canViewTasks}
           canViewFollowUps={canViewFollowUps}
+          canViewIetts={canViewIetts}
           canViewPermissions={canViewPermissions}
           session={session}
           onLogout={() => void handleLogout()}
@@ -162,6 +168,8 @@ export function App() {
             />
           ) : activePage === "followUps" ? (
             <FollowUpsPage permissions={session.permissions} />
+          ) : activePage === "ietts" ? (
+            <IettsPage permissions={session.permissions} />
           ) : activePage === "permissions" ? (
             <AuthorizationPage permissions={session.permissions} />
           ) : (
@@ -185,6 +193,7 @@ function pageFromPath(
   canViewCustomers: boolean,
   canViewTasks: boolean,
   canViewFollowUps: boolean,
+  canViewIetts: boolean,
   canViewPermissions: boolean,
 ): AppPage {
   if (path.startsWith("/customers/full-registration/") && canViewCustomers) {
@@ -201,6 +210,10 @@ function pageFromPath(
 
   if (path === "/follow-ups" && canViewFollowUps) {
     return "followUps";
+  }
+
+  if (path === "/ietts" && canViewIetts) {
+    return "ietts";
   }
 
   if (path === "/permissions" && canViewPermissions) {
@@ -231,6 +244,10 @@ function pathFromPage(page: AppPage): string {
 
   if (page === "followUps") {
     return "/follow-ups";
+  }
+
+  if (page === "ietts") {
+    return "/ietts";
   }
 
   return page === "permissions" ? "/permissions" : "/home";

@@ -1046,7 +1046,7 @@ export function FollowUpsPage({ permissions }: FollowUpsPageProps) {
       <form className="customer-filter-form" onSubmit={handleFilterSubmit}>
         <div className="customer-filter-actions">
             <h1>Tüm Takip Kayıtları</h1>
-            <button className="blue-button" type="submit">Ara</button>
+            <button className="blue-button" type="submit">Filtrele</button>
             <button className="gray-button" type="button" onClick={handleResetFilters}>Temizle</button>
             <p className="muted-text">Toplam {total} takip kaydı listeleniyor.</p>
         </div>

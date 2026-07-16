@@ -8,6 +8,7 @@ export type AppPage =
   | "customers"
   | "tasks"
   | "followUps"
+  | "ietts"
   | "permissions";
 
 type AppLayoutProps = {
@@ -15,6 +16,7 @@ type AppLayoutProps = {
   canViewCustomers: boolean;
   canViewTasks: boolean;
   canViewFollowUps: boolean;
+  canViewIetts: boolean;
   canViewPermissions: boolean;
   children: ReactNode;
   session: SessionData;
@@ -27,6 +29,7 @@ export function AppLayout({
   canViewCustomers,
   canViewTasks,
   canViewFollowUps,
+  canViewIetts,
   canViewPermissions,
   children,
   onLogout,
@@ -113,6 +116,21 @@ export function AppLayout({
             >
               <span aria-hidden="true">◎</span>
               Tüm Takip Kayıtları
+            </button>
+          ) : null}
+
+          {canViewIetts ? (
+            <button
+              className={
+                activePage === "ietts"
+                  ? "panel-menu-item active"
+                  : "panel-menu-item"
+              }
+              type="button"
+              onClick={() => handleNavigate("ietts")}
+            >
+              <span aria-hidden="true">📄</span>
+              IETTS
             </button>
           ) : null}
 

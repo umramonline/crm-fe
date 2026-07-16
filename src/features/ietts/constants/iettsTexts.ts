@@ -1,0 +1,25 @@
+export const iettsTexts = {
+  pageTitle: "IETTS Kayıtları",
+  searchButton: "Filtrele",
+  clearButton: "Temizle",
+  totalLabel: (total: number) => `Toplam ${total} kayıt listeleniyor.`,
+  loadFailed: "IETTS kayıtları getirilemedi.",
+  noPermission: "Bu sayfayı görüntüleme yetkiniz bulunmuyor.",
+  noRecords: "Kayıt bulunamadı.",
+  loading: "IETTS kayıtları yükleniyor.",
+  previousPage: "Önceki",
+  nextPage: "Sonraki",
+  pageLabel: (currentPage: number, lastPage: number) =>
+    `Sayfa ${currentPage} / ${lastPage}`,
+  columns: {
+    documentNumber: "Belge No",
+    companyName: "İşletme Ünvanı",
+    businessName: "İşletme Adı",
+    businessAddress: "İşletme Adresi",
+    documentIssueDate: "Belge Veriliş Tarihi",
+    documentStatus: "Belge Durumu",
+    city: "İl",
+    district: "İlçe",
+    createdAt: "Oluşturma",
+  },
+} as const;
