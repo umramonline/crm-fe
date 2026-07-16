@@ -11,7 +11,16 @@ export const iettsTexts = {
   nextPage: "Sonraki",
   pageLabel: (currentPage: number, lastPage: number) =>
     `Sayfa ${currentPage} / ${lastPage}`,
+  convertToCustomer: "Müşteriye Dönüştür",
+  convertConfirmTitle: "Müşteriye Dönüştür",
+  convertConfirmMessage:
+    "Bu IETTS kaydı müşteriye çevrildikten sonra sayfa Müşteri Tam Kayıt formuna yönlendirilecektir.",
+  cancel: "İptal",
+  continue: "Devam Et",
+  convertFailed: "IETTS kaydı müşteriye dönüştürülemedi.",
+  converting: "Dönüştürülüyor...",
   columns: {
+    actions: "İşlemler",
     documentNumber: "Belge No",
     companyName: "İşletme Ünvanı",
     businessName: "İşletme Adı",

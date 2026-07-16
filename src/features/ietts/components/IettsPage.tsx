@@ -1,6 +1,7 @@
 import { FormEvent, useEffect, useMemo, useState } from "react";
 
 import type { Permission } from "@/features/auth/services/authApi";
+import { ConvertIettsToCustomerModal } from "@/features/ietts/components/ConvertIettsToCustomerModal";
 import { iettsTexts } from "@/features/ietts/constants/iettsTexts";
 import {
   listIettsRecords,
@@ -48,6 +49,7 @@ export function IettsPage({ permissions }: IettsPageProps) {
     [permissions],
   );
   const canListIetts = permissionNames.has("ietts.list");
+  const canConvertToCustomer = permissionNames.has("ietts.convert_to_customer");
 
   const [draftFilters, setDraftFilters] =
     useState<IettsFilters>(createEmptyFilters);
@@ -61,6 +63,7 @@ export function IettsPage({ permissions }: IettsPageProps) {
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc");
   const [isLoading, setIsLoading] = useState(false);
   const [message, setMessage] = useState("");
+  const [convertTargetUuid, setConvertTargetUuid] = useState<string | null>(null);
 
   useEffect(() => {
     if (!canListIetts) {
@@ -217,6 +220,9 @@ export function IettsPage({ permissions }: IettsPageProps) {
           <table className="permission-table customer-table">
             <thead>
               <tr>
+                {canConvertToCustomer ? (
+                  <th>{iettsTexts.columns.actions}</th>
+                ) : null}
                 <th>{iettsTexts.columns.documentNumber}</th>
                 <th>{iettsTexts.columns.companyName}</th>
                 <th>{iettsTexts.columns.businessName}</th>
@@ -246,6 +252,7 @@ export function IettsPage({ permissions }: IettsPageProps) {
                 </th>
               </tr>
               <tr className="customer-filter-row">
+                {canConvertToCustomer ? <th /> : null}
                 <th>
                   <input
                     className="panel-input"
@@ -342,6 +349,22 @@ export function IettsPage({ permissions }: IettsPageProps) {
               {items.length > 0 ? (
                 items.map((record, index) => (
                   <tr key={record.uuid || `${record.documentNumber}-${index}`}>
+                    {canConvertToCustomer ? (
+                      <td>
+                        <div className="customer-action-group">
+                          <button
+                            className="customer-action-button"
+                            type="button"
+                            aria-label={iettsTexts.convertToCustomer}
+                            title={iettsTexts.convertToCustomer}
+                            disabled={!record.uuid}
+                            onClick={() => setConvertTargetUuid(record.uuid)}
+                          >
+                            ⇢
+                          </button>
+                        </div>
+                      </td>
+                    ) : null}
                     <td>{record.documentNumber || "-"}</td>
                     <td>{record.companyName || "-"}</td>
                     <td>{record.businessName || "-"}</td>
@@ -355,7 +378,7 @@ export function IettsPage({ permissions }: IettsPageProps) {
                 ))
               ) : (
                 <tr>
-                  <td colSpan={9}>
+                  <td colSpan={canConvertToCustomer ? 10 : 9}>
                     {isLoading ? iettsTexts.loading : iettsTexts.noRecords}
                   </td>
                 </tr>
@@ -388,6 +411,14 @@ export function IettsPage({ permissions }: IettsPageProps) {
           {iettsTexts.nextPage}
         </button>
       </div>
+
+      {convertTargetUuid ? (
+        <ConvertIettsToCustomerModal
+          recordUuid={convertTargetUuid}
+          onClose={() => setConvertTargetUuid(null)}
+          onError={(errorMessage) => setMessage(errorMessage)}
+        />
+      ) : null}
     </section>
   );
 }

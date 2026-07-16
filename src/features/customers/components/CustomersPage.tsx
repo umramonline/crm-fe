@@ -23,6 +23,7 @@ import {
   type TaskAssignableUser,
 } from "@/features/tasks/services/taskApi";
 import type { Permission } from "@/features/auth/services/authApi";
+import { navigateToFullRegistration } from "@/shared/utils/navigation";
 import { StandaloneFollowUpModal } from "@/features/followUps/components/StandaloneFollowUpModal";
 
 const situationOptions = [
@@ -1428,15 +1429,6 @@ export function CustomersPage({ permissions }: CustomersPageProps) {
       </div>
     </section>
   );
-}
-
-function navigateToFullRegistration(customerId: number): void {
-  window.history.pushState(
-    null,
-    "",
-    `/customers/full-registration/${customerId}`,
-  );
-  window.dispatchEvent(new PopStateEvent("popstate"));
 }
 
 function formatCredit(value: number): string {

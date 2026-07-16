@@ -75,6 +75,15 @@ export async function listIettsRecords(
   return normalizeIettsListResult(response.data.data ?? {});
 }
 
+export async function convertIettsToCustomer(uuid: string): Promise<number> {
+  const response = await apiClient.post<ApiEnvelope<RawRecord>>(
+    `/api/v1/ietts/${uuid}/convert-to-customer`,
+  );
+
+  const data = response.data.data ?? {};
+  return numberValue(data.customer_id);
+}
+
 function normalizeIettsListResult(data: RawRecord): IettsListResult {
   const pagination = (data.pagination as RawRecord | undefined) ?? {};
 
