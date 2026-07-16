@@ -11,6 +11,7 @@ export type IettsRecord = {
   city: string;
   district: string;
   createdAt: string;
+  customerId: number | null;
 };
 
 export type IettsPagination = {
@@ -114,6 +115,7 @@ function toIettsRecord(record: RawRecord): IettsRecord {
     city: stringValue(record.city),
     district: stringValue(record.district),
     createdAt: stringValue(record.created_at),
+    customerId: nullableNumberValue(record.customer_id),
   };
 }
 

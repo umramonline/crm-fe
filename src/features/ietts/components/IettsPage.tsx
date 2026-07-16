@@ -351,18 +351,20 @@ export function IettsPage({ permissions }: IettsPageProps) {
                   <tr key={record.uuid || `${record.documentNumber}-${index}`}>
                     {canConvertToCustomer ? (
                       <td>
-                        <div className="customer-action-group">
-                          <button
-                            className="customer-action-button"
-                            type="button"
-                            aria-label={iettsTexts.convertToCustomer}
-                            title={iettsTexts.convertToCustomer}
-                            disabled={!record.uuid}
-                            onClick={() => setConvertTargetUuid(record.uuid)}
-                          >
-                            ⇢
-                          </button>
-                        </div>
+                        {!record.customerId ? (
+                          <div className="customer-action-group">
+                            <button
+                              className="customer-action-button"
+                              type="button"
+                              aria-label={iettsTexts.convertToCustomer}
+                              title={iettsTexts.convertToCustomer}
+                              disabled={!record.uuid}
+                              onClick={() => setConvertTargetUuid(record.uuid)}
+                            >
+                              ⇢
+                            </button>
+                          </div>
+                        ) : null}
                       </td>
                     ) : null}
                     <td>{record.documentNumber || "-"}</td>
