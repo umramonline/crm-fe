@@ -5,7 +5,7 @@ export const authTexts = {
   phoneSubmittingLabel: "Gönderiliyor...",
   forgotPasswordLabel: "Şifremi Unuttum",
   phoneInvalidMessage: "Telefon numarası 05XXXXXXXXX formatında olmalıdır.",
-  otpRequestFailedMessage: "OTP kodu gönderilemedi. Lütfen tekrar deneyin.",
+  otpRequestFailedMessage: "Telefon numarası geçersiz.",
   otpInstruction: "Telefon numaranıza gönderilen 6 haneli kodu girin:",
   otpPlaceholder: "000000",
   remainingTimeLabel: "Kalan süre",
