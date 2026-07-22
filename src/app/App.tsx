@@ -4,6 +4,7 @@ import { AuthorizationPage } from "@/features/authorization/components/Authoriza
 import { LoginPage } from "@/features/auth/components/LoginPage";
 import { CustomerFullRegistrationPage } from "@/features/customers/components/CustomerFullRegistrationPage";
 import { CustomersPage } from "@/features/customers/components/CustomersPage";
+import { DashboardPage } from "@/features/dashboard/components/DashboardPage";
 import { FollowUpsPage } from "@/features/followUps/components/FollowUpsPage";
 import { IettsPage } from "@/features/ietts/components/IettsPage";
 import { TasksPage } from "@/features/tasks/components/TasksPage";
@@ -114,6 +115,9 @@ export function App() {
       return <GlobalLoadingOverlay />;
     }
 
+    const canViewDashboard = session.permissions.some(
+      (permission) => permission.name === "dashboard.menu",
+    );
     const canViewCustomers = session.permissions.some(
       (permission) => permission.name === "customers.menu",
     );
@@ -131,6 +135,7 @@ export function App() {
     );
     const activePage = pageFromPath(
       path,
+      canViewDashboard,
       canViewCustomers,
       canViewTasks,
       canViewFollowUps,
@@ -144,6 +149,7 @@ export function App() {
         <GlobalLoadingOverlay />
         <AppLayout
           activePage={activePage}
+          canViewDashboard={canViewDashboard}
           canViewCustomers={canViewCustomers}
           canViewTasks={canViewTasks}
           canViewFollowUps={canViewFollowUps}
@@ -158,6 +164,8 @@ export function App() {
               customerId={fullRegistrationCustomerId}
               onBack={() => navigateTo("/customers")}
             />
+          ) : activePage === "dashboard" ? (
+            <DashboardPage permissions={session.permissions} />
           ) : activePage === "customers" ? (
             <CustomersPage permissions={session.permissions} />
           ) : activePage === "tasks" ? (
@@ -190,6 +198,7 @@ export function App() {
 
 function pageFromPath(
   path: string,
+  canViewDashboard: boolean,
   canViewCustomers: boolean,
   canViewTasks: boolean,
   canViewFollowUps: boolean,
@@ -198,6 +207,10 @@ function pageFromPath(
 ): AppPage {
   if (path.startsWith("/customers/full-registration/") && canViewCustomers) {
     return "customers";
+  }
+
+  if (path === "/dashboard" && canViewDashboard) {
+    return "dashboard";
   }
 
   if (path === "/customers" && canViewCustomers) {
@@ -234,6 +247,10 @@ function customerFullRegistrationId(path: string): number | null {
 }
 
 function pathFromPage(page: AppPage): string {
+  if (page === "dashboard") {
+    return "/dashboard";
+  }
+
   if (page === "customers") {
     return "/customers";
   }

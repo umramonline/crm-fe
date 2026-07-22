@@ -5,6 +5,7 @@ import type { SessionData } from "@/features/auth/services/authApi";
 
 export type AppPage =
   | "home"
+  | "dashboard"
   | "customers"
   | "tasks"
   | "followUps"
@@ -13,6 +14,7 @@ export type AppPage =
 
 type AppLayoutProps = {
   activePage: AppPage;
+  canViewDashboard: boolean;
   canViewCustomers: boolean;
   canViewTasks: boolean;
   canViewFollowUps: boolean;
@@ -26,6 +28,7 @@ type AppLayoutProps = {
 
 export function AppLayout({
   activePage,
+  canViewDashboard,
   canViewCustomers,
   canViewTasks,
   canViewFollowUps,
@@ -73,6 +76,21 @@ export function AppLayout({
             <span aria-hidden="true">◉</span>
             Anasayfa
           </button>
+
+          {canViewDashboard ? (
+            <button
+              className={
+                activePage === "dashboard"
+                  ? "panel-menu-item active"
+                  : "panel-menu-item"
+              }
+              type="button"
+              onClick={() => handleNavigate("dashboard")}
+            >
+              <span aria-hidden="true">▦</span>
+              Dashboard
+            </button>
+          ) : null}
 
           {canViewCustomers ? (
             <button
