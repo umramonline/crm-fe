@@ -2,6 +2,7 @@ import { apiClient } from "@/services/apiClient";
 
 export type Customer = {
   id: number;
+  uoId: number;
   situation: string;
   unvan: string;
   cep: string;
@@ -12,7 +13,7 @@ export type Customer = {
   zoneName: string;
   plusCardNo: string;
   credit: number;
-  source: string;
+  point: number;
   city: string;
   town: string;
   createdAt: string;
@@ -67,8 +68,6 @@ export type CustomerSearchResult = {
 export type CustomerValidationErrors = Record<string, string>;
 
 export type CustomerDataSource = "umramonline" | "backend";
-
-export type CustomerListScope = "all" | "my-branches";
 
 export type CreateCustomerPayload = {
   type: "bireysel" | "kurumsal";
@@ -152,22 +151,19 @@ export type CustomerListResult = {
 export type CustomerListQuery = {
   page?: number;
   perPage?: number;
-  dataSource?: CustomerDataSource;
-  scope?: CustomerListScope;
   situation?: string;
   unvan?: string;
   cep?: string;
   ad?: string;
   soyad?: string;
   branchName?: string;
-  zoneId?: number;
+  zoneName?: string;
   plusCardNo?: string;
-  source?: string;
   city?: string;
   town?: string;
   createdAt?: string;
   type?: string;
-  sortBy?: "credit" | "created_at" | "vehicle_stock_count" | "";
+  sortBy?: "credit" | "point" | "created_at" | "vehicle_stock_count" | "";
   sortOrder?: "asc" | "desc";
 };
 
@@ -284,10 +280,10 @@ export async function createCustomer(payload: CreateCustomerPayload): Promise<Cu
 
 export async function getCustomer(
   id: number,
-  dataSource: CustomerDataSource = "umramonline",
+  dataSource: CustomerDataSource = "backend",
 ): Promise<CustomerDetail> {
   const response = await apiClient.get<ApiEnvelope<RawRecord>>(
-    `${customerListBasePath(dataSource)}/${id}`,
+    `${customerDetailBasePath(dataSource)}/${id}`,
   );
 
   return toCustomerDetail(response.data.data ?? {});
@@ -373,7 +369,7 @@ export async function listCustomers(
   query: CustomerListQuery = {},
 ): Promise<CustomerListResult> {
   const response = await apiClient.get<ApiEnvelope<RawRecord>>(
-    customerListPath(query.dataSource, query.scope),
+    "/api/v1/customers",
     {
       params: {
         page: query.page,
@@ -384,9 +380,8 @@ export async function listCustomers(
         ad: query.ad || undefined,
         soyad: query.soyad || undefined,
         branch_name: query.branchName || undefined,
-        zone_id: query.zoneId || undefined,
+        zone_name: query.zoneName || undefined,
         plus_card_no: query.plusCardNo || undefined,
-        source: query.source || undefined,
         city: query.city || undefined,
         town: query.town || undefined,
         created_at: query.createdAt || undefined,
@@ -400,18 +395,10 @@ export async function listCustomers(
   return normalizeCustomerListResult(response.data.data ?? {});
 }
 
-function customerListBasePath(dataSource: CustomerDataSource = "umramonline"): string {
-  return dataSource === "backend"
-    ? "/api/v1/customers/backend"
-    : "/api/v1/customers/umramonline";
-}
-
-function customerListPath(
-  dataSource: CustomerDataSource = "umramonline",
-  scope: CustomerListScope = "all",
-): string {
-  const basePath = customerListBasePath(dataSource);
-  return scope === "my-branches" ? `${basePath}/my-branches` : basePath;
+function customerDetailBasePath(dataSource: CustomerDataSource = "backend"): string {
+  return dataSource === "umramonline"
+    ? "/api/v1/customers/umramonline"
+    : "/api/v1/customers/backend";
 }
 
 function toCustomerDetail(record: RawRecord): CustomerDetail {
@@ -479,6 +466,7 @@ function normalizeCustomerListResult(data: RawRecord): CustomerListResult {
 function toCustomer(record: RawRecord): Customer {
   return {
     id: numberValue(record.id),
+    uoId: numberValue(record.uo_id),
     situation: stringValue(record.situation),
     unvan: stringValue(record.unvan),
     cep: stringValue(record.cep),
@@ -489,7 +477,7 @@ function toCustomer(record: RawRecord): Customer {
     zoneName: stringValue(record.zone_name),
     plusCardNo: stringValue(record.plus_card_no),
     credit: numberValue(record.credit),
-    source: stringValue(record.source),
+    point: numberValue(record.point),
     city: stringValue(record.city),
     town: stringValue(record.town),
     createdAt: stringValue(record.created_at),
