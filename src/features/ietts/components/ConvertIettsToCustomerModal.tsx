@@ -4,6 +4,7 @@ import { useState } from "react";
 import { iettsTexts } from "@/features/ietts/constants/iettsTexts";
 import { convertIettsToCustomer } from "@/features/ietts/services/iettsApi";
 import { ControlledModal } from "@/shared/components/ControlledModal";
+import { readApiErrorMessage } from "@/shared/utils/apiErrorMessage";
 import { navigateToFullRegistration } from "@/shared/utils/navigation";
 
 type ConvertIettsToCustomerModalProps = {
@@ -32,8 +33,8 @@ export function ConvertIettsToCustomerModal({
 
       onClose();
       navigateToFullRegistration(customerId);
-    } catch {
-      onError(iettsTexts.convertFailed);
+    } catch (error) {
+      onError(readApiErrorMessage(error, iettsTexts.convertFailed));
       onClose();
     } finally {
       setIsConverting(false);

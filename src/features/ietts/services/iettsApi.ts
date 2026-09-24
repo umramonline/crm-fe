@@ -40,7 +40,17 @@ export type IettsListQuery = {
   city?: string;
   district?: string;
   createdAt?: string;
-  sortBy?: "document_issue_date" | "created_at" | "";
+  sortBy?:
+    | "document_number"
+    | "company_name"
+    | "business_name"
+    | "business_address"
+    | "document_issue_date"
+    | "document_status"
+    | "city"
+    | "district"
+    | "created_at"
+    | "";
   sortOrder?: "asc" | "desc";
 };
 

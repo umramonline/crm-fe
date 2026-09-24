@@ -122,7 +122,16 @@ export type TaskListQuery = {
   dueDate?: string;
   priority?: TaskPriority | "";
   createdByUserFullName?: string;
-  sortBy?: "visit_date" | "due_date" | "";
+  sortBy?:
+    | "title"
+    | "customer_count"
+    | "assigned_user_full_name"
+    | "branch_name"
+    | "visit_date"
+    | "due_date"
+    | "priority"
+    | "created_by_user_full_name"
+    | "";
   sortOrder?: "asc" | "desc";
 };
 

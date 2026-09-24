@@ -1,4 +1,4 @@
-import { FormEvent, useEffect, useMemo, useState } from "react";
+import { FormEvent, useCallback, useMemo, useRef, useState } from "react";
 
 import type { Permission } from "@/features/auth/services/authApi";
 import {
@@ -17,23 +17,19 @@ import {
   type FollowUpVisitType,
   type TaskCustomer,
   type TaskListItem,
-  type TaskListQuery,
   type TaskPriority,
   type TaskStatus,
 } from "@/features/tasks/services/taskApi";
+import {
+  TasksDataTable,
+  type TasksDataTableHandle,
+  type TasksListMeta,
+} from "@/features/tasks/components/TasksDataTable";
 import { ContentHeader } from "@/shared/components/ContentHeader";
 import { ControlledModal } from "@/shared/components/ControlledModal";
-import {
-  ListPagination,
-  ListTableToolbar,
-  TableActionGroup,
-  TableFilterInput,
-  TableFilterSelect,
-  TableIconButton,
-} from "@/shared/components";
+import { ListTableToolbar, TableActionGroup, TableIconButton } from "@/shared/components";
 import { formFieldProps } from "@/shared/utils/formFieldProps";
 
-const priorityOptions: TaskPriority[] = ["high", "medium", "low"];
 const unrestrictedTaskRoleIds = new Set([30, 60, 63]);
 const followUpVisitTypes: FollowUpVisitType[] = ["Yerinde Ziyaret"];
 const followUpAgreementFailureReasons: FollowUpAgreementFailureReason[] = [
@@ -64,16 +60,6 @@ const followUpImageTypes = new Set([
   "image/webp",
 ]);
 const followUpMaxImageTotalSize = 5 * 1024 * 1024;
-
-type TaskFilters = {
-  title: string;
-  assignedUserFullName: string;
-  branchName: string;
-  visitDate: string;
-  dueDate: string;
-  priority: TaskPriority | "";
-  createdByUserFullName: string;
-};
 
 type TasksPageProps = {
   permissions: Permission[];
@@ -116,14 +102,10 @@ type FollowUpCompanyInfo = {
   point: string;
 };
 
-const emptyFilters: TaskFilters = {
-  title: "",
-  assignedUserFullName: "",
-  branchName: "",
-  visitDate: "",
-  dueDate: "",
-  priority: "",
-  createdByUserFullName: "",
+const emptyListMeta: TasksListMeta = {
+  total: 0,
+  currentPage: 1,
+  lastPage: 1,
 };
 
 const emptyFollowUpCompanyInfo: FollowUpCompanyInfo = {
@@ -171,17 +153,23 @@ export function TasksPage({ permissions, roleId, userId }: TasksPageProps) {
   const canViewTaskDetail = permissionNames.has("tasks.detail");
   const canCancelTasks = permissionNames.has("tasks.cancel");
 
-  const [draftFilters, setDraftFilters] = useState<TaskFilters>(emptyFilters);
-  const [appliedFilters, setAppliedFilters] =
-    useState<TaskFilters>(emptyFilters);
-  const [items, setItems] = useState<TaskListItem[]>([]);
-  const [currentPage, setCurrentPage] = useState(1);
-  const [lastPage, setLastPage] = useState(1);
-  const [total, setTotal] = useState(0);
-  const [sortBy, setSortBy] = useState<TaskListQuery["sortBy"]>("");
-  const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc");
-  const [isLoading, setIsLoading] = useState(false);
+  const tableRef = useRef<TasksDataTableHandle>(null);
+  const [listMeta, setListMeta] = useState<TasksListMeta>(emptyListMeta);
+  const [isTableLoading, setIsTableLoading] = useState(false);
   const [message, setMessage] = useState("");
+
+  const taskListLoader = useMemo(
+    () => (shouldListOnlyAssignedTasks ? listAssignedTasks : listTasks),
+    [shouldListOnlyAssignedTasks],
+  );
+
+  const handleTableError = useCallback((errorMessage: string) => {
+    setMessage(errorMessage);
+  }, []);
+
+  const handleLoadMeta = useCallback((meta: TasksListMeta) => {
+    setListMeta(meta);
+  }, []);
   const [selectedTask, setSelectedTask] = useState<TaskListItem | null>(null);
   const [selectedCustomerTask, setSelectedCustomerTask] =
     useState<TaskListItem | null>(null);
@@ -203,109 +191,15 @@ export function TasksPage({ permissions, roleId, userId }: TasksPageProps) {
   const [cancellingTaskCustomerUuid, setCancellingTaskCustomerUuid] =
     useState("");
 
-  useEffect(() => {
-    if (!canListTasks) {
-      setItems([]);
-      setTotal(0);
-      setLastPage(1);
-      return;
-    }
-
-    let isActive = true;
-
-    async function loadTasks(): Promise<void> {
-      setIsLoading(true);
-      setMessage("");
-
-      try {
-        const taskListLoader = shouldListOnlyAssignedTasks
-          ? listAssignedTasks
-          : listTasks;
-        const result = await taskListLoader({
-          page: currentPage,
-          perPage: 20,
-          title: appliedFilters.title,
-          assignedUserFullName: appliedFilters.assignedUserFullName,
-          branchName: appliedFilters.branchName,
-          visitDate: appliedFilters.visitDate,
-          dueDate: appliedFilters.dueDate,
-          priority: appliedFilters.priority,
-          createdByUserFullName: appliedFilters.createdByUserFullName,
-          sortBy,
-          sortOrder,
-        });
-
-        if (isActive) {
-          setItems(result.items);
-          setCurrentPage(result.pagination.currentPage || 1);
-          setLastPage(result.pagination.lastPage || 1);
-          setTotal(result.pagination.total);
-        }
-      } catch {
-        if (isActive) {
-          setItems([]);
-          setTotal(0);
-          setLastPage(1);
-          setMessage("Görev listesi getirilemedi.");
-        }
-      } finally {
-        if (isActive) {
-          setIsLoading(false);
-        }
-      }
-    }
-
-    void loadTasks();
-
-    return () => {
-      isActive = false;
-    };
-  }, [
-    appliedFilters,
-    canListTasks,
-    currentPage,
-    shouldListOnlyAssignedTasks,
-    sortBy,
-    sortOrder,
-  ]);
-
   function handleFilterSubmit(event: FormEvent<HTMLFormElement>): void {
     event.preventDefault();
-    setAppliedFilters(draftFilters);
-    setCurrentPage(1);
+    setMessage("");
+    tableRef.current?.applyFilters();
   }
 
   function handleResetFilters(): void {
-    setDraftFilters(emptyFilters);
-    setAppliedFilters(emptyFilters);
-    setSortBy("");
-    setSortOrder("desc");
-    setCurrentPage(1);
-  }
-
-  function updateDraftFilter<K extends keyof TaskFilters>(
-    field: K,
-    value: TaskFilters[K],
-  ): void {
-    setDraftFilters((current) => ({
-      ...current,
-      [field]: value,
-    }));
-  }
-
-  function handleSort(nextSortBy: NonNullable<TaskListQuery["sortBy"]>): void {
-    if (!nextSortBy) {
-      return;
-    }
-
-    if (sortBy === nextSortBy) {
-      setSortOrder((current) => (current === "asc" ? "desc" : "asc"));
-    } else {
-      setSortBy(nextSortBy);
-      setSortOrder("asc");
-    }
-
-    setCurrentPage(1);
+    setMessage("");
+    tableRef.current?.clearFilters();
   }
 
   async function handleOpenTaskDetail(task: TaskListItem): Promise<void> {
@@ -534,13 +428,7 @@ export function TasksPage({ permissions, roleId, userId }: TasksPageProps) {
           ? updateTaskCustomerStatus(current)
           : current,
       );
-      setItems((currentItems) =>
-        currentItems.map((currentTask) =>
-          currentTask.uuid === selectedFollowRecord.task.uuid
-            ? updateTaskCustomerStatus(currentTask)
-            : currentTask,
-        ),
-      );
+      tableRef.current?.refresh();
       setSelectedFollowRecord(null);
       setFollowUpForm(createEmptyFollowUpForm());
       setFollowUpCompanyInfo(emptyFollowUpCompanyInfo);
@@ -607,13 +495,7 @@ export function TasksPage({ permissions, roleId, userId }: TasksPageProps) {
           ? updateTaskCustomerStatus(current)
           : current,
       );
-      setItems((currentItems) =>
-        currentItems.map((currentTask) =>
-          currentTask.uuid === task.uuid
-            ? updateTaskCustomerStatus(currentTask)
-            : currentTask,
-        ),
-      );
+      tableRef.current?.refresh();
       setMessage("Görev iptal edildi.");
     } catch {
       setMessage("Görev iptal edilemedi.");
@@ -1353,12 +1235,17 @@ export function TasksPage({ permissions, roleId, userId }: TasksPageProps) {
 
       <form className="customer-filter-form" onSubmit={handleFilterSubmit}>
         <ListTableToolbar>
-          <button className="btn btn-primary btn-sm" type="submit" disabled={isLoading}>
+          <button
+            className="btn btn-primary btn-sm"
+            type="submit"
+            disabled={isTableLoading}
+          >
             Filtrele
           </button>
           <button
             className="btn btn-secondary btn-sm"
             type="button"
+            disabled={isTableLoading}
             onClick={handleResetFilters}
           >
             Temizle
@@ -1372,190 +1259,27 @@ export function TasksPage({ permissions, roleId, userId }: TasksPageProps) {
         ) : null}
 
         <div className="card-body p-0">
-      <div className="table-responsive">
-        <table className="table table-striped table-hover table-sm mb-0 task-table">
-          <thead>
-            <tr>
-              <th className="table-actions-cell">İşlemler</th>
-              <th>Görev Başlığı</th>
-              <th>Müşteri Sayısı</th>
-              <th>Atanan Personel</th>
-              <th>Müşteri Bayisi</th>
-              <th>
-                <button
-                  className="btn btn-link btn-sm p-0 border-0 text-start"
-                  type="button"
-                  onClick={() => handleSort("visit_date")}
-                >
-                  Ziyaret Tarihi
-                  {sortBy === "visit_date"
-                    ? sortOrder === "asc"
-                      ? " ↑"
-                      : " ↓"
-                    : ""}
-                </button>
-              </th>
-              <th>
-                <button
-                  className="btn btn-link btn-sm p-0 border-0 text-start"
-                  type="button"
-                  onClick={() => handleSort("due_date")}
-                >
-                  Son Ziyaret Tarihi
-                  {sortBy === "due_date"
-                    ? sortOrder === "asc"
-                      ? " ↑"
-                      : " ↓"
-                    : ""}
-                </button>
-              </th>
-              <th>Öncelik</th>
-              <th>Oluşturan</th>
-            </tr>
-            <tr className="customer-filter-row">
-              <th />
-              <th>
-                <TableFilterInput
-                  page="tasks"
-                  field="title"
-                  label="Görev Başlığı"
-                  value={draftFilters.title}
-                  onChange={(event) =>
-                    updateDraftFilter("title", event.target.value)
-                  }
-                />
-              </th>
-              <th />
-              <th>
-                <TableFilterInput
-                  page="tasks"
-                  field="assignedUserFullName"
-                  label="Atanan Personel"
-                  value={draftFilters.assignedUserFullName}
-                  onChange={(event) =>
-                    updateDraftFilter(
-                      "assignedUserFullName",
-                      event.target.value,
-                    )
-                  }
-                />
-              </th>
-              <th>
-                <TableFilterInput
-                  page="tasks"
-                  field="branchName"
-                  label="Müşteri Bayisi"
-                  value={draftFilters.branchName}
-                  onChange={(event) =>
-                    updateDraftFilter("branchName", event.target.value)
-                  }
-                />
-              </th>
-              <th>
-                <TableFilterInput
-                  page="tasks"
-                  field="visitDate"
-                  label="Ziyaret Tarihi"
-                  value={draftFilters.visitDate}
-                  onChange={(event) =>
-                    updateDraftFilter("visitDate", event.target.value)
-                  }
-                />
-              </th>
-              <th>
-                <TableFilterInput
-                  page="tasks"
-                  field="dueDate"
-                  label="Son Ziyaret Tarihi"
-                  value={draftFilters.dueDate}
-                  onChange={(event) =>
-                    updateDraftFilter("dueDate", event.target.value)
-                  }
-                />
-              </th>
-              <th>
-                <TableFilterSelect
-                  page="tasks"
-                  field="priority"
-                  label="Öncelik"
-                  className="form-control form-control-sm"
-                  value={draftFilters.priority}
-                  onChange={(event) =>
-                    updateDraftFilter(
-                      "priority",
-                      event.target.value as TaskPriority | "",
-                    )
-                  }
-                >
-                  <option value="">Tümü</option>
-                  {priorityOptions.map((priority) => (
-                    <option key={priority} value={priority}>
-                      {formatTaskPriority(priority)}
-                    </option>
-                  ))}
-                </TableFilterSelect>
-              </th>
-              <th>
-                <TableFilterInput
-                  page="tasks"
-                  field="createdByUserFullName"
-                  label="Oluşturan"
-                  value={draftFilters.createdByUserFullName}
-                  onChange={(event) =>
-                    updateDraftFilter(
-                      "createdByUserFullName",
-                      event.target.value,
-                    )
-                  }
-                />
-              </th>
-            </tr>
-          </thead>
-          <tbody>
-            {items.length === 0 && !isLoading ? (
-              <tr>
-                <td colSpan={9}>Kayıt bulunamadı.</td>
-              </tr>
-            ) : null}
-
-            {items.map((task) => {
-              return (
-                <tr key={task.uuid}>
-                  <td className="table-actions-cell">
-                    <TableActionGroup label="Görev işlemleri">
-                      <TableIconButton
-                        action="viewDetail"
-                        label="Görev detayını görüntüle"
-                        variant="info"
-                        disabled={!canViewTaskDetail}
-                        onClick={() => void handleOpenTaskDetail(task)}
-                      />
-                    </TableActionGroup>
-                  </td>
-                  <td>{task.title || "Potansiyel Müşteri"}</td>
-                  <td>{task.customerCount}</td>
-                  <td>{task.assignedUserFullName || "-"}</td>
-                  <td>{task.branchName || "-"}</td>
-                  <td>{formatDate(task.visitDate)}</td>
-                  <td>{formatDate(task.dueDate)}</td>
-                  <td>{formatTaskPriority(task.priority)}</td>
-                  <td>{task.createdByUserFullName || "-"}</td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
-      </div>
+          <TasksDataTable
+            ref={tableRef}
+            listLoader={taskListLoader}
+            canViewTaskDetail={canViewTaskDetail}
+            onOpenTaskDetail={(task) => void handleOpenTaskDetail(task)}
+            onError={handleTableError}
+            onLoadMeta={handleLoadMeta}
+            onLoadingChange={setIsTableLoading}
+          />
         </div>
 
-        <div className="card-footer">
-          <ListPagination
-            currentPage={currentPage}
-            lastPage={lastPage}
-            total={total}
-            isLoading={isLoading}
-            onPageChange={setCurrentPage}
-          />
+        <div
+          className={`card-footer list-table-footer py-2${isTableLoading ? " list-table-footer--loading" : ""}`}
+        >
+          <span className="text-muted small list-table-footer-summary">
+            Toplam <strong>{listMeta.total}</strong> kayıt
+            <span className="mx-1" aria-hidden="true">
+              ·
+            </span>
+            Sayfa {listMeta.currentPage} / {Math.max(1, listMeta.lastPage)}
+          </span>
         </div>
       </form>
     </section>

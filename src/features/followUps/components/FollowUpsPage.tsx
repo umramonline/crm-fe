@@ -1,4 +1,4 @@
-import { FormEvent, MouseEvent, useEffect, useMemo, useState } from "react";
+import { FormEvent, useCallback, useMemo, useRef, useState } from "react";
 
 import type { Permission } from "@/features/auth/services/authApi";
 import {
@@ -13,33 +13,22 @@ import {
   type FollowUpDetail,
   type FollowUpImage,
   type FollowUpListItem,
-  type FollowUpListQuery,
   type FollowUpMeetPerson,
   type FollowUpUpdateInput,
 } from "@/features/followUps/services/followUpApi";
-import { apiBaseUrl } from "@/services/apiClient";
 import {
-  ListPagination,
-  ListTableToolbar,
-  TableActionGroup,
-  TableFilterInput,
-  TableIconButton,
-} from "@/shared/components";
+  FollowUpsDataTable,
+  type FollowUpsDataTableHandle,
+  type FollowUpsListMeta,
+} from "@/features/followUps/components/FollowUpsDataTable";
+import { apiBaseUrl } from "@/services/apiClient";
+import { ListTableToolbar } from "@/shared/components";
 import { ContentHeader } from "@/shared/components/ContentHeader";
 import { ControlledModal } from "@/shared/components/ControlledModal";
 import { formFieldProps } from "@/shared/utils/formFieldProps";
 
 type FollowUpsPageProps = {
   permissions: Permission[];
-};
-
-type FollowUpFilters = {
-  title: string;
-  customer: string;
-  assignedUserFullName: string;
-  branchName: string;
-  visitDate: string;
-  nextVisitDate: string;
 };
 
 type EditMeetPersonForm = FollowUpMeetPerson & {
@@ -88,16 +77,11 @@ const followUpMeetPersonTitles = [
 
 const followUpVisitTypes = ["Yerinde Ziyaret"];
 
-function createEmptyFilters(): FollowUpFilters {
-  return {
-    title: "",
-    customer: "",
-    assignedUserFullName: "",
-    branchName: "",
-    visitDate: "",
-    nextVisitDate: "",
-  };
-}
+const emptyListMeta: FollowUpsListMeta = {
+  total: 0,
+  currentPage: 1,
+  lastPage: 1,
+};
 
 function createEmptyMeetPerson(): EditMeetPersonForm {
   return {
@@ -109,10 +93,6 @@ function createEmptyMeetPerson(): EditMeetPersonForm {
     phone: "",
     email: "",
   };
-}
-
-function filtersAreEmpty(filters: FollowUpFilters): boolean {
-  return Object.values(filters).every((value) => value.trim() === "");
 }
 
 export function FollowUpsPage({ permissions }: FollowUpsPageProps) {
@@ -131,18 +111,23 @@ export function FollowUpsPage({ permissions }: FollowUpsPageProps) {
     permissionNames.has("customers.detail.backend");
   const canUpdateFollowUps = permissionNames.has("follow_ups.update");
 
-  const [draftFilters, setDraftFilters] =
-    useState<FollowUpFilters>(() => createEmptyFilters());
-  const [appliedFilters, setAppliedFilters] =
-    useState<FollowUpFilters>(() => createEmptyFilters());
-  const [items, setItems] = useState<FollowUpListItem[]>([]);
-  const [currentPage, setCurrentPage] = useState(1);
-  const [lastPage, setLastPage] = useState(1);
-  const [total, setTotal] = useState(0);
-  const [sortBy, setSortBy] = useState<FollowUpListQuery["sortBy"]>("");
-  const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc");
-  const [isLoading, setIsLoading] = useState(false);
+  const tableRef = useRef<FollowUpsDataTableHandle>(null);
+  const [listMeta, setListMeta] = useState<FollowUpsListMeta>(emptyListMeta);
+  const [isTableLoading, setIsTableLoading] = useState(false);
   const [message, setMessage] = useState("");
+
+  const followUpListLoader = useMemo(
+    () => (canListFollowUps ? listFollowUps : listAssignedFollowUps),
+    [canListFollowUps],
+  );
+
+  const handleTableError = useCallback((errorMessage: string) => {
+    setMessage(errorMessage);
+  }, []);
+
+  const handleLoadMeta = useCallback((meta: FollowUpsListMeta) => {
+    setListMeta(meta);
+  }, []);
   const [selectedFollowUp, setSelectedFollowUp] =
     useState<FollowUpDetail | null>(null);
   const [selectedImageIndex, setSelectedImageIndex] = useState<number | null>(
@@ -156,122 +141,15 @@ export function FollowUpsPage({ permissions }: FollowUpsPageProps) {
   const [isLoadingEditForm, setIsLoadingEditForm] = useState(false);
   const [isUpdatingFollowUp, setIsUpdatingFollowUp] = useState(false);
 
-  useEffect(() => {
-    if (!canLoadFollowUps) {
-      setItems([]);
-      setTotal(0);
-      setLastPage(1);
-      return;
-    }
-
-    let isActive = true;
-
-    async function loadFollowUps(): Promise<void> {
-      setIsLoading(true);
-      setMessage("");
-
-      try {
-        const followUpListLoader = canListFollowUps
-          ? listFollowUps
-          : listAssignedFollowUps;
-        const result = await followUpListLoader({
-          page: currentPage,
-          perPage: 20,
-          title: appliedFilters.title,
-          customer: appliedFilters.customer,
-          assignedUserFullName: appliedFilters.assignedUserFullName,
-          branchName: appliedFilters.branchName,
-          visitDate: appliedFilters.visitDate,
-          nextVisitDate: appliedFilters.nextVisitDate,
-          sortBy,
-          sortOrder,
-        });
-
-        if (isActive) {
-          setItems(result.items);
-          setCurrentPage(result.pagination.currentPage || 1);
-          setLastPage(result.pagination.lastPage || 1);
-          setTotal(result.pagination.total || 0);
-        }
-      } catch {
-        if (isActive) {
-          setItems([]);
-          setTotal(0);
-          setLastPage(1);
-          setMessage("Takip kayıtları getirilemedi.");
-        }
-      } finally {
-        if (isActive) {
-          setIsLoading(false);
-        }
-      }
-    }
-
-    void loadFollowUps();
-
-    return () => {
-      isActive = false;
-    };
-  }, [
-    appliedFilters,
-    canLoadFollowUps,
-    canListFollowUps,
-    currentPage,
-    sortBy,
-    sortOrder,
-  ]);
-
   function handleFilterSubmit(event: FormEvent<HTMLFormElement>): void {
     event.preventDefault();
-    setCurrentPage(1);
-    setAppliedFilters({ ...draftFilters });
+    setMessage("");
+    tableRef.current?.applyFilters();
   }
 
   function handleResetFilters(): void {
-    const shouldClearDraftFilters = !filtersAreEmpty(draftFilters);
-    const shouldClearAppliedFilters = !filtersAreEmpty(appliedFilters);
-    const shouldResetPagination = currentPage !== 1;
-    const shouldResetSort = sortBy !== "" || sortOrder !== "desc";
-
-    if (!shouldClearDraftFilters && !shouldClearAppliedFilters && !shouldResetPagination && !shouldResetSort) {
-      return;
-    }
-
-    if (shouldClearDraftFilters) {
-      setDraftFilters(createEmptyFilters());
-    }
-
-    if (shouldClearAppliedFilters) {
-      setAppliedFilters(createEmptyFilters());
-    }
-
-    if (shouldResetPagination) {
-      setCurrentPage(1);
-    }
-
-    if (shouldResetSort) {
-      setSortBy("");
-      setSortOrder("desc");
-    }
-
-    if (message) {
-      setMessage("");
-    }
-  }
-
-  function handleSort(nextSortBy: FollowUpListQuery["sortBy"]): void {
-    if (!nextSortBy) {
-      return;
-    }
-
-    setCurrentPage(1);
-    if (sortBy === nextSortBy) {
-      setSortOrder((current) => (current === "asc" ? "desc" : "asc"));
-      return;
-    }
-
-    setSortBy(nextSortBy);
-    setSortOrder("asc");
+    setMessage("");
+    tableRef.current?.clearFilters();
   }
 
   async function handleOpenFollowUpDetail(
@@ -293,11 +171,8 @@ export function FollowUpsPage({ permissions }: FollowUpsPageProps) {
   }
 
   async function handleOpenEditFollowUp(
-    event: MouseEvent<HTMLButtonElement>,
     followUp: FollowUpListItem,
   ): Promise<void> {
-    event.stopPropagation();
-
     if (!canUpdateFollowUps) {
       return;
     }
@@ -457,17 +332,7 @@ export function FollowUpsPage({ permissions }: FollowUpsPageProps) {
         })),
       } satisfies FollowUpUpdateInput);
 
-      setItems((current) =>
-        current.map((item) =>
-          item.uuid === updatedFollowUp.uuid
-            ? {
-                ...item,
-                nextVisitDate: updatedFollowUp.nextVisitDate,
-                agreementReached: updatedFollowUp.agreementReached,
-              }
-            : item,
-        ),
-      );
+      tableRef.current?.refresh();
       setSelectedFollowUp((current) =>
         current?.uuid === updatedFollowUp.uuid ? updatedFollowUp : current,
       );
@@ -515,12 +380,7 @@ export function FollowUpsPage({ permissions }: FollowUpsPageProps) {
     );
   }
 
-  async function handleOpenCustomerDetail(
-    event: MouseEvent<HTMLButtonElement>,
-    customerId: number,
-  ): Promise<void> {
-    event.stopPropagation();
-
+  async function handleOpenCustomerDetail(customerId: number): Promise<void> {
     if (!canViewCustomerDetail || !customerId) {
       return;
     }
@@ -1060,12 +920,17 @@ export function FollowUpsPage({ permissions }: FollowUpsPageProps) {
       ) : null}
       <form className="customer-filter-form" onSubmit={handleFilterSubmit}>
         <ListTableToolbar>
-          <button className="btn btn-primary btn-sm" type="submit">
+          <button
+            className="btn btn-primary btn-sm"
+            type="submit"
+            disabled={isTableLoading}
+          >
             Filtrele
           </button>
           <button
             className="btn btn-secondary btn-sm"
             type="button"
+            disabled={isTableLoading}
             onClick={handleResetFilters}
           >
             Temizle
@@ -1084,233 +949,38 @@ export function FollowUpsPage({ permissions }: FollowUpsPageProps) {
         ) : null}
 
         <div className="card-body p-0">
-        <div className="table-responsive">
-          <table className="table table-striped table-hover table-sm mb-0">
-            <thead>
-              <tr>
-                <th className="table-actions-cell">İşlemler</th>
-                <th>
-                  Görev Başlığı
-                </th>
-                <th>Müşteri</th>
-                <th>Atanan Personel</th>
-                <th>Müşteri Bayisi</th>
-                <th>
-                  <button
-                    className="btn btn-link btn-sm p-0 border-0 text-start"
-                    type="button"
-                    onClick={() => handleSort("visit_date")}
-                  >
-                    Ziyaret Tarihi {sortIndicator("visit_date", sortBy, sortOrder)}
-                  </button>
-                </th>
-                <th>
-                  <button
-                    className="btn btn-link btn-sm p-0 border-0 text-start"
-                    type="button"
-                    onClick={() => handleSort("next_visit_date")}
-                  >
-                    Sonraki Ziyaret Tarihi{" "}
-                    {sortIndicator("next_visit_date", sortBy, sortOrder)}
-                  </button>
-                </th>
-                <th>
-                  <button
-                    className="btn btn-link btn-sm p-0 border-0 text-start"
-                    type="button"
-                    onClick={() => handleSort("agreement_reached")}
-                  >
-                    Anlaşma Sağlandı mı?{" "}
-                    {sortIndicator("agreement_reached", sortBy, sortOrder)}
-                  </button>
-                </th>
-              </tr>
-              <tr className="customer-filter-row">
-                <th />
-                <th>
-                  <TableFilterInput
-                    page="follow-ups"
-                    field="title"
-                    label="Görev Başlığı"
-                    value={draftFilters.title}
-                    onChange={(event) =>
-                      setDraftFilters((current) => ({
-                        ...current,
-                        title: event.target.value,
-                      }))
-                    }
-                  />
-                </th>
-                <th>
-                  <TableFilterInput
-                    page="follow-ups"
-                    field="customer"
-                    label="Müşteri"
-                    value={draftFilters.customer}
-                    onChange={(event) =>
-                      setDraftFilters((current) => ({
-                        ...current,
-                        customer: event.target.value,
-                      }))
-                    }
-                  />
-                </th>
-                <th>
-                  <TableFilterInput
-                    page="follow-ups"
-                    field="assignedUserFullName"
-                    label="Atanan Personel"
-                    value={draftFilters.assignedUserFullName}
-                    onChange={(event) =>
-                      setDraftFilters((current) => ({
-                        ...current,
-                        assignedUserFullName: event.target.value,
-                      }))
-                    }
-                  />
-                </th>
-                <th>
-                  <TableFilterInput
-                    page="follow-ups"
-                    field="branchName"
-                    label="Müşteri Bayisi"
-                    value={draftFilters.branchName}
-                    onChange={(event) =>
-                      setDraftFilters((current) => ({
-                        ...current,
-                        branchName: event.target.value,
-                      }))
-                    }
-                  />
-                </th>
-                <th>
-                  <TableFilterInput
-                    page="follow-ups"
-                    field="visitDate"
-                    label="Ziyaret Tarihi"
-                    value={draftFilters.visitDate}
-                    onChange={(event) =>
-                      setDraftFilters((current) => ({
-                        ...current,
-                        visitDate: event.target.value,
-                      }))
-                    }
-                  />
-                </th>
-                <th>
-                  <TableFilterInput
-                    page="follow-ups"
-                    field="nextVisitDate"
-                    label="Sonraki Ziyaret Tarihi"
-                    value={draftFilters.nextVisitDate}
-                    onChange={(event) =>
-                      setDraftFilters((current) => ({
-                        ...current,
-                        nextVisitDate: event.target.value,
-                      }))
-                    }
-                  />
-                </th>
-                <th />
-              </tr>
-            </thead>
-            <tbody>
-              {items.length > 0 ? (
-                items.map((followUp) => (
-                  <tr
-                    key={followUp.uuid}
-                    role="button"
-                    tabIndex={0}
-                    onClick={() => void handleOpenFollowUpDetail(followUp)}
-                    onKeyDown={(event) => {
-                      if (event.key === "Enter") {
-                        void handleOpenFollowUpDetail(followUp);
-                      }
-                    }}
-                  >
-                    <td className="table-actions-cell">
-                      <TableActionGroup label="Takip kaydı işlemleri">
-                        <TableIconButton
-                          action="viewDetail"
-                          label="Takip kaydını görüntüle"
-                          variant="info"
-                          disabled={!canViewFollowUpDetail}
-                          onClick={(event) => {
-                            event.stopPropagation();
-                            void handleOpenFollowUpDetail(followUp);
-                          }}
-                        />
-                        <TableIconButton
-                          action="editRecord"
-                          label="Takip kaydını düzenle"
-                          variant="warning"
-                          disabled={!canUpdateFollowUps}
-                          onClick={(event) =>
-                            void handleOpenEditFollowUp(event, followUp)
-                          }
-                        />
-                      </TableActionGroup>
-                    </td>
-                    <td>{followUp.title || "-"}</td>
-                    <td>
-                      <button
-                        className="btn btn-link btn-sm p-0 border-0 text-start"
-                        type="button"
-                        disabled={!canViewCustomerDetail}
-                        onClick={(event) =>
-                          void handleOpenCustomerDetail(
-                            event,
-                            followUp.customerId,
-                          )
-                        }
-                      >
-                        {followUp.customerUnvan || "-"}
-                      </button>
-                    </td>
-                    <td>{followUp.assignedUserFullName || "-"}</td>
-                    <td>{followUp.branchName || "-"}</td>
-                    <td>{formatDate(followUp.visitDate)}</td>
-                    <td>{formatDate(followUp.nextVisitDate)}</td>
-                    <td>{formatAgreement(followUp.agreementReached)}</td>
-                  </tr>
-                ))
-              ) : (
-                <tr>
-                  <td colSpan={8}>
-                    {isLoading ? "Takip kayıtları yükleniyor..." : "Kayıt bulunamadı."}
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
-        </div>
+          <FollowUpsDataTable
+            ref={tableRef}
+            listLoader={followUpListLoader}
+            canViewFollowUpDetail={canViewFollowUpDetail}
+            canUpdateFollowUps={canUpdateFollowUps}
+            canViewCustomerDetail={canViewCustomerDetail}
+            onOpenFollowUpDetail={(followUp) => void handleOpenFollowUpDetail(followUp)}
+            onOpenEditFollowUp={(followUp) => void handleOpenEditFollowUp(followUp)}
+            onOpenCustomerDetail={(customerId) =>
+              void handleOpenCustomerDetail(customerId)
+            }
+            onError={handleTableError}
+            onLoadMeta={handleLoadMeta}
+            onLoadingChange={setIsTableLoading}
+          />
         </div>
 
-        <div className="card-footer">
-          <ListPagination
-            currentPage={currentPage}
-            lastPage={lastPage}
-            total={total}
-            isLoading={isLoading}
-            onPageChange={setCurrentPage}
-          />
+        <div
+          className={`card-footer list-table-footer py-2${isTableLoading ? " list-table-footer--loading" : ""}`}
+        >
+          <span className="text-muted small list-table-footer-summary">
+            Toplam <strong>{listMeta.total}</strong> kayıt
+            <span className="mx-1" aria-hidden="true">
+              ·
+            </span>
+            Sayfa {listMeta.currentPage} / {Math.max(1, listMeta.lastPage)}
+          </span>
         </div>
       </form>
     </section>
     </>
   );
-}
-
-function sortIndicator(
-  column: FollowUpListQuery["sortBy"],
-  sortBy: FollowUpListQuery["sortBy"],
-  sortOrder: "asc" | "desc",
-): string {
-  if (column !== sortBy) {
-    return "";
-  }
-
-  return sortOrder === "asc" ? "↑" : "↓";
 }
 
 function backendAssetUrl(image: FollowUpImage): string {

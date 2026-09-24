@@ -230,6 +230,70 @@ footer.app-footer .crm-footer-content::before {
   color: var(--bs-body-color);
 }
 
+.list-table-card .crm-tabulator .tabulator-footer .tabulator-paginator label {
+  color: var(--bs-body-color);
+  margin-bottom: 0;
+  margin-right: 0.35rem;
+}
+
+:root:not([data-bs-theme="dark"])
+  .list-table-card
+  .crm-tabulator
+  .tabulator-footer
+  .tabulator-page-size {
+  color: #212529;
+  background-color: #fff;
+  border: 1px solid #dee2e6;
+}
+
+[data-bs-theme="dark"]
+  .list-table-card
+  .crm-tabulator
+  .tabulator-footer
+  .tabulator-page-size {
+  color: var(--bs-body-color);
+  background-color: var(--bs-body-bg);
+  border-color: var(--bs-border-color);
+}
+
+.list-table-card .crm-tabulator .tabulator-header .tabulator-col .tabulator-header-filter input,
+.list-table-card .crm-tabulator .tabulator-header .tabulator-col .tabulator-header-filter select {
+  color: var(--bs-body-color);
+  background-color: var(--bs-body-bg);
+  border-color: var(--bs-border-color);
+}
+
+/* Sort arrow (headerSortClickElement: icon) — avoid filter row swallowing clicks */
+.list-table-card .crm-tabulator .tabulator-col-sorter {
+  position: relative;
+  z-index: 2;
+  cursor: pointer;
+}
+
+.list-table-card .crm-tabulator .tabulator-placeholder {
+  color: var(--bs-secondary-color);
+}
+
+[data-bs-theme="dark"] .list-table-card .crm-tabulator .tabulator-footer .tabulator-page:not(.active):not(.disabled):not([disabled]) {
+  color: var(--bs-body-color) !important;
+  background-color: var(--bs-body-bg) !important;
+  border-color: var(--bs-border-color) !important;
+}
+
+[data-bs-theme="dark"] .list-table-card .crm-tabulator .tabulator-footer .tabulator-page.active {
+  color: #fff !important;
+  background-color: var(--bs-primary) !important;
+  border-color: var(--bs-primary) !important;
+}
+
+[data-bs-theme="dark"] .list-table-card .crm-tabulator .tabulator-footer .tabulator-page.disabled,
+[data-bs-theme="dark"] .list-table-card .crm-tabulator .tabulator-footer .tabulator-page:disabled {
+  color: var(--bs-secondary-color) !important;
+  background-color: var(--bs-secondary-bg) !important;
+  border-color: var(--bs-border-color) !important;
+  opacity: 1 !important;
+}
+
 .customer-message {
   margin: 0;
 }

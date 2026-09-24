@@ -61,7 +61,8 @@ Bootstrap JS: `index.html` bundle.
 - Sayfa başlığı: `ContentHeader` → `@adminlte/react` `AppContent`
 - Dashboard widget: `SmallBox`, `Card`, `InfoBox`, `Alert`
 - Modal: `ControlledModal` (`Modal` + controlled Bootstrap JS)
-- Liste tabloları: `card list-table-card` → `ListTableToolbar` (header) → `card-body p-0` + `table-responsive` → `card-footer` + `ListPagination` (`@adminlte/react` `Pagination`)
+- Liste tabloları (varsayılan): `card list-table-card` → `ListTableToolbar` → `table-responsive` → `card-footer` + `ListPagination`
+- IETTS pilot: `IettsDataTable` (Tabulator remote, `paginationSizeSelector` footer’da) + toolbar + `card-footer` özet; `@adminlte/react` `Datatable` kullanma
 - Satır işlemleri: `TableActionGroup` + `TableIconButton` (`shared/constants/tableActionIcons.ts`)
 - Authorization gibi matris: `@adminlte/react` `Table`
 - Form: mümkünse `Input` / `Select`; liste filtreleri `TableFilterInput` / `TableFilterSelect` + `id`/`name`

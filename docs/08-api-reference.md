@@ -123,8 +123,10 @@ FE **çağırmaz:** `GET /customers/:id` (generic), `GET /customers/backend`, `G
 
 | Method | Path | Fonksiyon |
 |--------|------|-----------|
-| GET | `/api/v1/ietts` | `listIettsRecords` |
+| GET | `/api/v1/ietts` | `listIettsRecords` — query: filtreler, `sort_by` (whitelist), `sort_order`, `page`, `per_page` (max 100) |
 | POST | `/api/v1/ietts/:uuid/convert-to-customer` | `convertIettsToCustomer` |
+
+Hata gösterimi: `shared/utils/apiErrorMessage.ts` → envelope `message`.
 
 ---
 

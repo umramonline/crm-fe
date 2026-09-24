@@ -78,7 +78,15 @@ export type FollowUpListQuery = {
   branchName?: string;
   visitDate?: string;
   nextVisitDate?: string;
-  sortBy?: "visit_date" | "next_visit_date" | "agreement_reached" | "";
+  sortBy?:
+    | "title"
+    | "customer"
+    | "assigned_user_full_name"
+    | "branch_name"
+    | "visit_date"
+    | "next_visit_date"
+    | "agreement_reached"
+    | "";
   sortOrder?: "asc" | "desc";
 };
 
