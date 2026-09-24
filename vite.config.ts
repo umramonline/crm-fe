@@ -8,6 +8,9 @@ export default defineConfig({
   resolve: {
     alias: {
       '@': fileURLToPath(new URL('./src', import.meta.url)),
+      'next/navigation': fileURLToPath(
+        new URL('./src/shims/next-navigation.ts', import.meta.url),
+      ),
     },
   },
 });

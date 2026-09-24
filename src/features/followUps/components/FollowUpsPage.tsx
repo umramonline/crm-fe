@@ -18,6 +18,16 @@ import {
   type FollowUpUpdateInput,
 } from "@/features/followUps/services/followUpApi";
 import { apiBaseUrl } from "@/services/apiClient";
+import {
+  ListPagination,
+  ListTableToolbar,
+  TableActionGroup,
+  TableFilterInput,
+  TableIconButton,
+} from "@/shared/components";
+import { ContentHeader } from "@/shared/components/ContentHeader";
+import { ControlledModal } from "@/shared/components/ControlledModal";
+import { formFieldProps } from "@/shared/utils/formFieldProps";
 
 type FollowUpsPageProps = {
   permissions: Permission[];
@@ -531,41 +541,46 @@ export function FollowUpsPage({ permissions }: FollowUpsPageProps) {
 
   if (!canLoadFollowUps) {
     return (
-      <section className="panel-card permission-table-panel">
-        <h1>Tüm Takip Kayıtları</h1>
-        <p className="muted-text">
-          Takip kayıtları listesini görüntüleme yetkiniz yok.
-        </p>
-      </section>
+      <>
+        <ContentHeader
+          title="Tüm Takip Kayıtları"
+          breadcrumbs={[
+            { label: "Ana Sayfa", href: "/home" },
+            { label: "Tüm Takip Kayıtları", active: true },
+          ]}
+        />
+        <section className="card mb-3">
+          <div className="card-body">
+            <p className="text-muted small mb-0">
+              Takip kayıtları listesini görüntüleme yetkiniz yok.
+            </p>
+          </div>
+        </section>
+      </>
     );
   }
 
   return (
-    <section className="panel-card permission-table-panel">
+    <>
+      <ContentHeader
+        title="Tüm Takip Kayıtları"
+        breadcrumbs={[
+          { label: "Ana Sayfa", href: "/home" },
+          { label: "Tüm Takip Kayıtları", active: true },
+        ]}
+      />
+      <section className="card list-table-card mb-3">
       {isLoadingEditForm ? (
-        <p className="muted-text">Takip kaydı düzenleme bilgileri yükleniyor...</p>
+        <p className="text-muted small">Takip kaydı düzenleme bilgileri yükleniyor...</p>
       ) : null}
 
       {editForm ? (
-        <div className="customer-modal-backdrop" role="presentation">
-          <section
-            className="customer-modal customer-modal-wide"
-            role="dialog"
-            aria-modal="true"
-          >
-            <div className="customer-modal-header">
-              <h2>Takip Kaydı Düzenle</h2>
-              <button
-                className="customer-modal-close"
-                type="button"
-                disabled={isUpdatingFollowUp}
-                onClick={handleCloseEditFollowUp}
-              >
-                Kapat
-              </button>
-            </div>
-            <hr className="hr-line-grid" />
-
+        <ControlledModal
+          isOpen
+          onClose={handleCloseEditFollowUp}
+          title="Takip Kaydı Düzenle"
+          size="xl"
+        >
             <form className="customer-entry-form" onSubmit={handleEditSubmit}>
               <div className="customer-detail-grid task-assign-form-wide">
                 <span>Takip Başlığı</span>
@@ -578,7 +593,10 @@ export function FollowUpsPage({ permissions }: FollowUpsPageProps) {
               <label className="field-label">
                 Görüşme Tarihi
                 <input
-                  className="panel-input"
+                  {...formFieldProps("follow-ups-edit", "visitDate", {
+                    label: "Görüşme Tarihi",
+                  })}
+                  className="form-control form-control-sm"
                   type="date"
                   value={editForm.visitDate}
                   disabled
@@ -588,7 +606,10 @@ export function FollowUpsPage({ permissions }: FollowUpsPageProps) {
               <label className="field-label">
                 Bir Sonraki Ziyaret Tarihi
                 <input
-                  className="panel-input"
+                  {...formFieldProps("follow-ups-edit", "nextVisitDate", {
+                    label: "Bir Sonraki Ziyaret Tarihi",
+                  })}
+                  className="form-control form-control-sm"
                   type="date"
                   min={editForm.visitDate}
                   value={editForm.nextVisitDate}
@@ -605,7 +626,10 @@ export function FollowUpsPage({ permissions }: FollowUpsPageProps) {
               <label className="field-label">
                 Görüşme Türü*
                 <select
-                  className="panel-input"
+                  {...formFieldProps("follow-ups-edit", "visitType", {
+                    label: "Görüşme Türü",
+                  })}
+                  className="form-control form-control-sm"
                   value={editForm.visitType}
                   onChange={(event) =>
                     updateEditForm("visitType", event.target.value)
@@ -631,7 +655,7 @@ export function FollowUpsPage({ permissions }: FollowUpsPageProps) {
                     <div className="follow-up-meet-person-header">
                       <strong>Görüşülen Kişi {index + 1}</strong>
                       <button
-                        className="gray-button"
+                        className="btn btn-secondary btn-sm"
                         type="button"
                         disabled={editForm.meetPeople.length <= 1}
                         onClick={() => removeEditMeetPerson(person.formId)}
@@ -642,7 +666,11 @@ export function FollowUpsPage({ permissions }: FollowUpsPageProps) {
                     <label className="field-label">
                       Görevi*
                       <select
-                        className="panel-input"
+                        {...formFieldProps("follow-ups-edit", "title", {
+                          label: "Görevi",
+                          suffix: index,
+                        })}
+                        className="form-control form-control-sm"
                         value={person.title}
                         onChange={(event) =>
                           updateEditMeetPerson(person.formId, "title", event.target.value)
@@ -659,7 +687,11 @@ export function FollowUpsPage({ permissions }: FollowUpsPageProps) {
                     <label className="field-label">
                       Ad*
                       <input
-                        className="panel-input"
+                        {...formFieldProps("follow-ups-edit", "name", {
+                          label: "Ad",
+                          suffix: index,
+                        })}
+                        className="form-control form-control-sm"
                         value={person.name}
                         maxLength={50}
                         onChange={(event) =>
@@ -670,7 +702,11 @@ export function FollowUpsPage({ permissions }: FollowUpsPageProps) {
                     <label className="field-label">
                       Soyad*
                       <input
-                        className="panel-input"
+                        {...formFieldProps("follow-ups-edit", "surname", {
+                          label: "Soyad",
+                          suffix: index,
+                        })}
+                        className="form-control form-control-sm"
                         value={person.surname}
                         maxLength={50}
                         onChange={(event) =>
@@ -681,7 +717,11 @@ export function FollowUpsPage({ permissions }: FollowUpsPageProps) {
                     <label className="field-label">
                       Telefon*
                       <input
-                        className="panel-input"
+                        {...formFieldProps("follow-ups-edit", "phone", {
+                          label: "Telefon",
+                          suffix: index,
+                        })}
+                        className="form-control form-control-sm"
                         type="tel"
                         inputMode="tel"
                         placeholder="05XXXXXXXXX"
@@ -695,7 +735,11 @@ export function FollowUpsPage({ permissions }: FollowUpsPageProps) {
                     <label className="field-label">
                       Eposta
                       <input
-                        className="panel-input"
+                        {...formFieldProps("follow-ups-edit", "email", {
+                          label: "Eposta",
+                          suffix: index,
+                        })}
+                        className="form-control form-control-sm"
                         type="email"
                         value={person.email}
                         maxLength={100}
@@ -710,7 +754,7 @@ export function FollowUpsPage({ permissions }: FollowUpsPageProps) {
                   <span className="customer-field-error">{editErrors.meetPeople}</span>
                 ) : null}
                 <button
-                  className="blue-button follow-up-add-person-button"
+                  className="btn btn-primary btn-sm follow-up-add-person-button"
                   type="button"
                   onClick={addEditMeetPerson}
                 >
@@ -722,7 +766,10 @@ export function FollowUpsPage({ permissions }: FollowUpsPageProps) {
               <label className="field-label">
                 Anlaşma Sağlandı mı?
                 <select
-                  className="panel-input"
+                  {...formFieldProps("follow-ups-edit", "agreementReached", {
+                    label: "Anlaşma Sağlandı mı?",
+                  })}
+                  className="form-control form-control-sm"
                   value={editForm.agreementReached ? "true" : "false"}
                   onChange={(event) =>
                     updateEditForm("agreementReached", event.target.value === "true")
@@ -736,7 +783,10 @@ export function FollowUpsPage({ permissions }: FollowUpsPageProps) {
                 <label className="field-label">
                   Anlaşamama Sebebi*
                   <select
-                    className="panel-input"
+                    {...formFieldProps("follow-ups-edit", "agreementFailureReason", {
+                      label: "Anlaşamama Sebebi",
+                    })}
+                    className="form-control form-control-sm"
                     value={editForm.agreementFailureReason}
                     onChange={(event) =>
                       updateEditForm("agreementFailureReason", event.target.value)
@@ -759,7 +809,8 @@ export function FollowUpsPage({ permissions }: FollowUpsPageProps) {
               <label className="field-label task-assign-form-wide">
                 Not
                 <textarea
-                  className="panel-input"
+                  {...formFieldProps("follow-ups-edit", "note", { label: "Not" })}
+                  className="form-control form-control-sm"
                   value={editForm.note}
                   maxLength={150}
                   onChange={(event) => updateEditForm("note", event.target.value)}
@@ -776,7 +827,7 @@ export function FollowUpsPage({ permissions }: FollowUpsPageProps) {
                     <div key={image.uuid}>
                       <span>Mevcut Resim {index + 1}</span>
                       <button
-                        className="gray-button"
+                        className="btn btn-secondary btn-sm"
                         type="button"
                         onClick={() => removeExistingEditImage(image.uuid)}
                       >
@@ -789,6 +840,7 @@ export function FollowUpsPage({ permissions }: FollowUpsPageProps) {
               <label className="field-label task-assign-form-wide">
                 <span className="follow-up-upload-box">
                   <input
+                    {...formFieldProps("follow-ups-edit", "images", { label: "Resim" })}
                     className="follow-up-upload-input"
                     type="file"
                     accept="image/jpeg,image/png,image/gif,image/webp"
@@ -813,7 +865,7 @@ export function FollowUpsPage({ permissions }: FollowUpsPageProps) {
                       <span>{image.name}</span>
                       <span>{formatFileSize(image.size)}</span>
                       <button
-                        className="gray-button"
+                        className="btn btn-secondary btn-sm"
                         type="button"
                         onClick={() => removeNewEditImage(index)}
                       >
@@ -830,7 +882,7 @@ export function FollowUpsPage({ permissions }: FollowUpsPageProps) {
               ) : null}
               <div className="customer-modal-actions">
                 <button
-                  className="gray-button"
+                  className="btn btn-secondary btn-sm"
                   type="button"
                   disabled={isUpdatingFollowUp}
                   onClick={handleCloseEditFollowUp}
@@ -838,7 +890,7 @@ export function FollowUpsPage({ permissions }: FollowUpsPageProps) {
                   Vazgeç
                 </button>
                 <button
-                  className="blue-button"
+                  className="btn btn-primary btn-sm"
                   type="submit"
                   disabled={isUpdatingFollowUp}
                 >
@@ -846,28 +898,16 @@ export function FollowUpsPage({ permissions }: FollowUpsPageProps) {
                 </button>
               </div>
             </form>
-          </section>
-        </div>
+        </ControlledModal>
       ) : null}
 
       {selectedFollowUp ? (
-        <div className="customer-modal-backdrop" role="presentation">
-          <section
-            className="customer-modal customer-modal-wide"
-            role="dialog"
-            aria-modal="true"
-          >
-            <div className="customer-modal-header">
-              <h2>Takip Kaydı Detayı</h2>
-              <button
-                className="customer-modal-close"
-                type="button"
-                onClick={handleCloseFollowUpDetail}
-              >
-                Kapat
-              </button>
-            </div>
-
+        <ControlledModal
+          isOpen
+          onClose={handleCloseFollowUpDetail}
+          title="Takip Kaydı Detayı"
+          size="xl"
+        >
             <div className="customer-detail-grid">
               <span>Takip Başlığı</span>
               <strong>{selectedFollowUp.title || "-"}</strong>
@@ -892,8 +932,8 @@ export function FollowUpsPage({ permissions }: FollowUpsPageProps) {
             </div>
 
             <h3>Görüşülen Kişiler</h3>
-            <div className="permission-table-scroll">
-              <table className="permission-table customer-table">
+            <div className="table-responsive">
+              <table className="table table-striped table-hover table-sm mb-0">
                 <thead>
                   <tr>
                     <th>Ünvan</th>
@@ -928,7 +968,7 @@ export function FollowUpsPage({ permissions }: FollowUpsPageProps) {
                   <span key={image.uuid}>
                     Resim {index + 1}:{" "}
                     <button
-                      className="table-sort-button"
+                      className="btn btn-link btn-sm p-0 border-0 text-start"
                       type="button"
                       onClick={() => handleOpenImageSlider(index)}
                     >
@@ -938,33 +978,21 @@ export function FollowUpsPage({ permissions }: FollowUpsPageProps) {
                 ))}
               </div>
             ) : (
-              <p className="muted-text">Resim bulunamadı.</p>
+              <p className="text-muted small">Resim bulunamadı.</p>
             )}
-          </section>
-        </div>
+        </ControlledModal>
       ) : null}
 
       {selectedFollowUp && selectedImageIndex !== null ? (
-        <div className="customer-modal-backdrop" role="presentation">
-          <section
-            className="customer-modal customer-modal-wide follow-up-image-modal"
-            role="dialog"
-            aria-modal="true"
-          >
-            <div className="customer-modal-header">
-              <h2>Takip Kaydı Resimleri</h2>
+        <ControlledModal
+          isOpen
+          onClose={handleCloseImageSlider}
+          title="Takip Kaydı Resimleri"
+          size="xl"
+        >
+            <div className="follow-up-image-slider follow-up-image-modal">
               <button
-                className="customer-modal-close"
-                type="button"
-                onClick={handleCloseImageSlider}
-              >
-                Kapat
-              </button>
-            </div>
-
-            <div className="follow-up-image-slider">
-              <button
-                className="gray-button"
+                className="btn btn-secondary btn-sm"
                 type="button"
                 disabled={selectedFollowUp.images.length <= 1}
                 onClick={handlePreviousImage}
@@ -976,7 +1004,7 @@ export function FollowUpsPage({ permissions }: FollowUpsPageProps) {
                 alt={`Takip kaydı resmi ${selectedImageIndex + 1}`}
               />
               <button
-                className="gray-button"
+                className="btn btn-secondary btn-sm"
                 type="button"
                 disabled={selectedFollowUp.images.length <= 1}
                 onClick={handleNextImage}
@@ -988,28 +1016,16 @@ export function FollowUpsPage({ permissions }: FollowUpsPageProps) {
             <p className="muted-text follow-up-image-counter">
               {selectedImageIndex + 1} / {selectedFollowUp.images.length}
             </p>
-          </section>
-        </div>
+        </ControlledModal>
       ) : null}
 
       {selectedCustomerDetail ? (
-        <div className="customer-modal-backdrop" role="presentation">
-          <section
-            className="customer-modal customer-modal-wide"
-            role="dialog"
-            aria-modal="true"
-          >
-            <div className="customer-modal-header">
-              <h2>Müşteri Detayı</h2>
-              <button
-                className="customer-modal-close"
-                type="button"
-                onClick={() => setSelectedCustomerDetail(null)}
-              >
-                Kapat
-              </button>
-            </div>
-
+        <ControlledModal
+          isOpen
+          onClose={() => setSelectedCustomerDetail(null)}
+          title="Müşteri Detayı"
+          size="xl"
+        >
             <div className="customer-detail-grid">
               <span>ID</span>
               <strong>{selectedCustomerDetail.id || "-"}</strong>
@@ -1040,28 +1056,39 @@ export function FollowUpsPage({ permissions }: FollowUpsPageProps) {
               <span>Kayıt Tarihi</span>
               <strong>{formatDate(selectedCustomerDetail.createdAt)}</strong>
             </div>
-          </section>
-        </div>
+        </ControlledModal>
       ) : null}
       <form className="customer-filter-form" onSubmit={handleFilterSubmit}>
-        <div className="customer-filter-actions">
-            <h1>Tüm Takip Kayıtları</h1>
-            <button className="blue-button" type="submit">Filtrele</button>
-            <button className="gray-button" type="button" onClick={handleResetFilters}>Temizle</button>
-            <p className="muted-text">Toplam {total} takip kaydı listeleniyor.</p>
-        </div>
+        <ListTableToolbar>
+          <button className="btn btn-primary btn-sm" type="submit">
+            Filtrele
+          </button>
+          <button
+            className="btn btn-secondary btn-sm"
+            type="button"
+            onClick={handleResetFilters}
+          >
+            Temizle
+          </button>
+        </ListTableToolbar>
 
-        {message ? <p className="form-message">{message}</p> : null}
-        {isLoadingCustomerDetail ? (
-          <p className="muted-text">Müşteri detayı yükleniyor...</p>
+        {message || isLoadingCustomerDetail ? (
+          <div className="card-body pb-0">
+            {message ? (
+              <p className="alert alert-danger py-2 mb-2 customer-message">{message}</p>
+            ) : null}
+            {isLoadingCustomerDetail ? (
+              <p className="text-muted small mb-0">Müşteri detayı yükleniyor...</p>
+            ) : null}
+          </div>
         ) : null}
 
-      
-        <div className="permission-table-scroll">
-          <table className="permission-table customer-table">
+        <div className="card-body p-0">
+        <div className="table-responsive">
+          <table className="table table-striped table-hover table-sm mb-0">
             <thead>
               <tr>
-                <th>İşlemler</th>
+                <th className="table-actions-cell">İşlemler</th>
                 <th>
                   Görev Başlığı
                 </th>
@@ -1070,7 +1097,7 @@ export function FollowUpsPage({ permissions }: FollowUpsPageProps) {
                 <th>Müşteri Bayisi</th>
                 <th>
                   <button
-                    className="table-sort-button"
+                    className="btn btn-link btn-sm p-0 border-0 text-start"
                     type="button"
                     onClick={() => handleSort("visit_date")}
                   >
@@ -1079,7 +1106,7 @@ export function FollowUpsPage({ permissions }: FollowUpsPageProps) {
                 </th>
                 <th>
                   <button
-                    className="table-sort-button"
+                    className="btn btn-link btn-sm p-0 border-0 text-start"
                     type="button"
                     onClick={() => handleSort("next_visit_date")}
                   >
@@ -1089,7 +1116,7 @@ export function FollowUpsPage({ permissions }: FollowUpsPageProps) {
                 </th>
                 <th>
                   <button
-                    className="table-sort-button"
+                    className="btn btn-link btn-sm p-0 border-0 text-start"
                     type="button"
                     onClick={() => handleSort("agreement_reached")}
                   >
@@ -1101,9 +1128,10 @@ export function FollowUpsPage({ permissions }: FollowUpsPageProps) {
               <tr className="customer-filter-row">
                 <th />
                 <th>
-                  <input
-                    className="panel-input"
-                    type="text"
+                  <TableFilterInput
+                    page="follow-ups"
+                    field="title"
+                    label="Görev Başlığı"
                     value={draftFilters.title}
                     onChange={(event) =>
                       setDraftFilters((current) => ({
@@ -1114,9 +1142,10 @@ export function FollowUpsPage({ permissions }: FollowUpsPageProps) {
                   />
                 </th>
                 <th>
-                  <input
-                    className="panel-input"
-                    type="text"
+                  <TableFilterInput
+                    page="follow-ups"
+                    field="customer"
+                    label="Müşteri"
                     value={draftFilters.customer}
                     onChange={(event) =>
                       setDraftFilters((current) => ({
@@ -1127,9 +1156,10 @@ export function FollowUpsPage({ permissions }: FollowUpsPageProps) {
                   />
                 </th>
                 <th>
-                  <input
-                    className="panel-input"
-                    type="text"
+                  <TableFilterInput
+                    page="follow-ups"
+                    field="assignedUserFullName"
+                    label="Atanan Personel"
                     value={draftFilters.assignedUserFullName}
                     onChange={(event) =>
                       setDraftFilters((current) => ({
@@ -1140,9 +1170,10 @@ export function FollowUpsPage({ permissions }: FollowUpsPageProps) {
                   />
                 </th>
                 <th>
-                  <input
-                    className="panel-input"
-                    type="text"
+                  <TableFilterInput
+                    page="follow-ups"
+                    field="branchName"
+                    label="Müşteri Bayisi"
                     value={draftFilters.branchName}
                     onChange={(event) =>
                       setDraftFilters((current) => ({
@@ -1153,9 +1184,10 @@ export function FollowUpsPage({ permissions }: FollowUpsPageProps) {
                   />
                 </th>
                 <th>
-                  <input
-                    className="panel-input"
-                    type="text"
+                  <TableFilterInput
+                    page="follow-ups"
+                    field="visitDate"
+                    label="Ziyaret Tarihi"
                     value={draftFilters.visitDate}
                     onChange={(event) =>
                       setDraftFilters((current) => ({
@@ -1166,9 +1198,10 @@ export function FollowUpsPage({ permissions }: FollowUpsPageProps) {
                   />
                 </th>
                 <th>
-                  <input
-                    className="panel-input"
-                    type="text"
+                  <TableFilterInput
+                    page="follow-ups"
+                    field="nextVisitDate"
+                    label="Sonraki Ziyaret Tarihi"
                     value={draftFilters.nextVisitDate}
                     onChange={(event) =>
                       setDraftFilters((current) => ({
@@ -1195,33 +1228,33 @@ export function FollowUpsPage({ permissions }: FollowUpsPageProps) {
                       }
                     }}
                   >
-                    <td>
-                      <button
-                        className="customer-action-button"
-                        type="button"
-                        disabled={!canViewFollowUpDetail}
-                        onClick={(event) => {
-                          event.stopPropagation();
-                          void handleOpenFollowUpDetail(followUp);
-                        }}
-                        aria-label="Takip kaydını görüntüle"
-                      >
-                        ⓘ
-                      </button>
-                      <button
-                        className="customer-action-button"
-                        type="button"
-                        disabled={!canUpdateFollowUps}
-                        onClick={(event) => void handleOpenEditFollowUp(event, followUp)}
-                        aria-label="Takip kaydını düzenle"
-                      >
-                        ✎
-                      </button>
+                    <td className="table-actions-cell">
+                      <TableActionGroup label="Takip kaydı işlemleri">
+                        <TableIconButton
+                          action="viewDetail"
+                          label="Takip kaydını görüntüle"
+                          variant="info"
+                          disabled={!canViewFollowUpDetail}
+                          onClick={(event) => {
+                            event.stopPropagation();
+                            void handleOpenFollowUpDetail(followUp);
+                          }}
+                        />
+                        <TableIconButton
+                          action="editRecord"
+                          label="Takip kaydını düzenle"
+                          variant="warning"
+                          disabled={!canUpdateFollowUps}
+                          onClick={(event) =>
+                            void handleOpenEditFollowUp(event, followUp)
+                          }
+                        />
+                      </TableActionGroup>
                     </td>
                     <td>{followUp.title || "-"}</td>
                     <td>
                       <button
-                        className="table-sort-button"
+                        className="btn btn-link btn-sm p-0 border-0 text-start"
                         type="button"
                         disabled={!canViewCustomerDetail}
                         onClick={(event) =>
@@ -1251,30 +1284,20 @@ export function FollowUpsPage({ permissions }: FollowUpsPageProps) {
             </tbody>
           </table>
         </div>
-      </form>
+        </div>
 
-      <div className="customer-pagination">
-        <button
-          className="gray-button"
-          type="button"
-          disabled={currentPage <= 1 || isLoading}
-          onClick={() => setCurrentPage((page) => Math.max(1, page - 1))}
-        >
-          Önceki
-        </button>
-        <span className="muted-text">
-          Sayfa {currentPage} / {lastPage}
-        </span>
-        <button
-          className="gray-button"
-          type="button"
-          disabled={currentPage >= lastPage || isLoading}
-          onClick={() => setCurrentPage((page) => Math.min(lastPage, page + 1))}
-        >
-          Sonraki
-        </button>
-      </div>
+        <div className="card-footer">
+          <ListPagination
+            currentPage={currentPage}
+            lastPage={lastPage}
+            total={total}
+            isLoading={isLoading}
+            onPageChange={setCurrentPage}
+          />
+        </div>
+      </form>
     </section>
+    </>
   );
 }
 

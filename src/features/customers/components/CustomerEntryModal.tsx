@@ -1,4 +1,8 @@
+import { Button } from "@adminlte/react";
 import { FormEvent, useEffect, useState } from "react";
+
+import { ControlledModal } from "@/shared/components/ControlledModal";
+import { formFieldProps } from "@/shared/utils/formFieldProps";
 
 import {
   customerEntryTexts,
@@ -215,27 +219,16 @@ export function CustomerEntryModal({
   }
 
   return (
-    <div className="customer-modal-backdrop" role="presentation">
-      <section
-        className="customer-modal customer-modal-wide"
-        role="dialog"
-        aria-modal="true"
-      >
-        <div className="customer-modal-header">
-          <h2>
-            {createStep === 1
-              ? customerEntryTexts.typeStepTitle
-              : customerEntryTexts.formStepTitle}
-          </h2>
-          <button
-            className="customer-modal-close"
-            type="button"
-            onClick={onClose}
-          >
-            Kapat
-          </button>
-        </div>
-
+    <ControlledModal
+      isOpen={isOpen}
+      onClose={onClose}
+      title={
+        createStep === 1
+          ? customerEntryTexts.typeStepTitle
+          : customerEntryTexts.formStepTitle
+      }
+      size="xl"
+    >
         {createStep === 1 ? (
           <div className="customer-entry-type-grid">
             <button
@@ -263,7 +256,8 @@ export function CustomerEntryModal({
                 <label className="field-label">
                   Ad
                   <input
-                    className="panel-input"
+                    {...formFieldProps("customer-entry", "ad", { label: "Ad" })}
+                    className="form-control form-control-sm"
                     maxLength={customerTextMaxLength}
                     value={newCustomerForm.ad}
                     onChange={(event) =>
@@ -277,7 +271,8 @@ export function CustomerEntryModal({
                 <label className="field-label">
                   Soyad
                   <input
-                    className="panel-input"
+                    {...formFieldProps("customer-entry", "soyad", { label: "Soyad" })}
+                    className="form-control form-control-sm"
                     maxLength={customerTextMaxLength}
                     value={newCustomerForm.soyad}
                     onChange={(event) =>
@@ -293,7 +288,8 @@ export function CustomerEntryModal({
                 <label className="field-label">
                   Cep
                   <input
-                    className="panel-input"
+                    {...formFieldProps("customer-entry", "cep", { label: "Cep" })}
+                    className="form-control form-control-sm"
                     inputMode="numeric"
                     pattern="05[0-9]{9}"
                     maxLength={11}
@@ -313,7 +309,8 @@ export function CustomerEntryModal({
                 <label className="field-label">
                   Ünvan
                   <input
-                    className="panel-input"
+                    {...formFieldProps("customer-entry", "unvan", { label: "Ünvan" })}
+                    className="form-control form-control-sm"
                     maxLength={customerTextMaxLength}
                     value={newCustomerForm.unvan}
                     onChange={(event) =>
@@ -329,7 +326,10 @@ export function CustomerEntryModal({
                 <label className="field-label">
                   Yetkili Adı
                   <input
-                    className="panel-input"
+                    {...formFieldProps("customer-entry", "yetkiliAdi", {
+                      label: "Yetkili Adı",
+                    })}
+                    className="form-control form-control-sm"
                     maxLength={customerTextMaxLength}
                     value={newCustomerForm.yetkiliAdi}
                     onChange={(event) =>
@@ -345,7 +345,8 @@ export function CustomerEntryModal({
                 <label className="field-label">
                   Telefon
                   <input
-                    className="panel-input"
+                    {...formFieldProps("customer-entry", "telefon", { label: "Telefon" })}
+                    className="form-control form-control-sm"
                     inputMode="numeric"
                     pattern="05[0-9]{9}"
                     maxLength={11}
@@ -367,7 +368,8 @@ export function CustomerEntryModal({
             <label className="field-label">
               İl
               <select
-                className="panel-input"
+                {...formFieldProps("customer-entry", "ilKodu", { label: "İl" })}
+                className="form-control form-control-sm"
                 value={newCustomerForm.ilKodu}
                 onChange={(event) =>
                   updateNewCustomerField("ilKodu", event.target.value)
@@ -395,7 +397,8 @@ export function CustomerEntryModal({
             <label className="field-label">
               İlçe
               <select
-                className="panel-input"
+                {...formFieldProps("customer-entry", "ilceKodu", { label: "İlçe" })}
+                className="form-control form-control-sm"
                 value={newCustomerForm.ilceKodu}
                 onChange={(event) =>
                   updateNewCustomerField("ilceKodu", event.target.value)
@@ -419,7 +422,8 @@ export function CustomerEntryModal({
             <label className="field-label">
               Mahalle
               <input
-                className="panel-input"
+                {...formFieldProps("customer-entry", "mahalle", { label: "Mahalle" })}
+                className="form-control form-control-sm"
                 maxLength={customerTextMaxLength}
                 value={newCustomerForm.mahalle}
                 onChange={(event) =>
@@ -436,7 +440,8 @@ export function CustomerEntryModal({
             <label className="field-label">
               Bayi
               <select
-                className="panel-input"
+                {...formFieldProps("customer-entry", "branchId", { label: "Bayi" })}
+                className="form-control form-control-sm"
                 value={newCustomerForm.branchId}
                 onChange={(event) =>
                   updateNewCustomerField("branchId", event.target.value)
@@ -461,25 +466,21 @@ export function CustomerEntryModal({
               ) : null}
             </label>
 
-            <div className="customer-modal-actions">
-              <button
-                className="gray-button"
-                type="button"
-                onClick={() => setCreateStep(1)}
-              >
+            <div className="d-flex justify-content-end gap-2 mt-3">
+              <Button theme="secondary" size="sm" type="button" onClick={() => setCreateStep(1)}>
                 Geri
-              </button>
-              <button
-                className="blue-button"
+              </Button>
+              <Button
+                theme="primary"
+                size="sm"
                 type="submit"
                 disabled={!canCreateCustomers || isCreatingCustomer}
               >
                 {isCreatingCustomer ? "Kaydediliyor..." : "Kaydet"}
-              </button>
+              </Button>
             </div>
           </form>
         )}
-      </section>
-    </div>
+    </ControlledModal>
   );
 }

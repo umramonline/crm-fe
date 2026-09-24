@@ -1,3 +1,4 @@
+import { Button, Input } from "@adminlte/react";
 import { FormEvent, useEffect, useState } from "react";
 
 import { customerEntryTexts } from "@/features/customers/constants/customerEntryTexts";
@@ -5,6 +6,7 @@ import {
   searchCustomer,
   type CustomerDetail,
 } from "@/features/customers/services/customerApi";
+import { ControlledModal } from "@/shared/components/ControlledModal";
 
 type CustomerSearchModalProps = {
   isOpen: boolean;
@@ -75,49 +77,47 @@ export function CustomerSearchModal({
   }
 
   return (
-    <div className="customer-modal-backdrop" role="presentation">
-      <section className="customer-modal" role="dialog" aria-modal="true">
-        <div className="customer-modal-header">
-          <h2>{customerEntryTexts.searchTitle}</h2>
-          <button
-            className="customer-modal-close"
-            type="button"
-            onClick={onClose}
+    <ControlledModal
+      isOpen={isOpen}
+      onClose={onClose}
+      title={customerEntryTexts.searchTitle}
+      size="lg"
+      footer={
+        <>
+          <Button theme="secondary" size="sm" type="button" onClick={onClose}>
+            Vazgeç
+          </Button>
+          <Button
+            theme="primary"
+            size="sm"
+            type="submit"
+            form="customer-search-form"
+            disabled={isSearching}
           >
-            Kapat
-          </button>
+            {isSearching ? "Aranıyor..." : "Ara"}
+          </Button>
+        </>
+      }
+    >
+      <form id="customer-search-form" onSubmit={(event) => void handleSubmit(event)}>
+        <Input
+          id="customer-search-query"
+          name="customer-search-query"
+          label="Arama"
+          value={searchQuery}
+          placeholder={customerEntryTexts.searchPlaceholder}
+          onChange={(event) => setSearchQuery(event.target.value)}
+        />
+      </form>
+
+      {foundCustomer ? (
+        <div className="customer-found-card mt-3">
+          <strong>{customerDisplayName(foundCustomer)}</strong>
+          <span>{foundCustomer.cep || foundCustomer.telefon || "-"}</span>
+          <span>{foundCustomer.tcNo || foundCustomer.vergiNo || "-"}</span>
         </div>
-
-        <form className="panel-form" onSubmit={(event) => void handleSubmit(event)}>
-          <label className="field-label">
-            Arama
-            <input
-              className="panel-input"
-              value={searchQuery}
-              placeholder={customerEntryTexts.searchPlaceholder}
-              onChange={(event) => setSearchQuery(event.target.value)}
-            />
-          </label>
-
-          <div className="customer-modal-actions">
-            <button className="blue-button" type="submit" disabled={isSearching}>
-              {isSearching ? "Aranıyor..." : "Ara"}
-            </button>
-            <button className="gray-button" type="button" onClick={onClose}>
-              Vazgeç
-            </button>
-          </div>
-        </form>
-
-        {foundCustomer ? (
-          <div className="customer-found-card">
-            <strong>{customerDisplayName(foundCustomer)}</strong>
-            <span>{foundCustomer.cep || foundCustomer.telefon || "-"}</span>
-            <span>{foundCustomer.tcNo || foundCustomer.vergiNo || "-"}</span>
-          </div>
-        ) : null}
-      </section>
-    </div>
+      ) : null}
+    </ControlledModal>
   );
 }
 

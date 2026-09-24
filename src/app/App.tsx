@@ -15,7 +15,8 @@ import {
   type SessionData,
 } from "@/features/auth/services/authApi";
 import { HelloPage } from "@/features/hello/components/HelloPage";
-import { AppLayout, type AppPage } from "@/shared/components/AppLayout";
+import { DashboardShell } from "@/shared/layout/DashboardShell";
+import { type AppPage, pathFromPage } from "@/shared/layout/types";
 import { GlobalLoadingOverlay } from "@/shared/components/GlobalLoadingOverlay";
 
 export function App() {
@@ -147,8 +148,7 @@ export function App() {
     return (
       <>
         <GlobalLoadingOverlay />
-        <AppLayout
-          activePage={activePage}
+        <DashboardShell
           canViewDashboard={canViewDashboard}
           canViewCustomers={canViewCustomers}
           canViewTasks={canViewTasks}
@@ -157,7 +157,6 @@ export function App() {
           canViewPermissions={canViewPermissions}
           session={session}
           onLogout={() => void handleLogout()}
-          onNavigate={(page) => navigateTo(pathFromPage(page))}
         >
           {fullRegistrationCustomerId && canViewCustomers ? (
             <CustomerFullRegistrationPage
@@ -183,7 +182,7 @@ export function App() {
           ) : (
             <HelloPage session={session} />
           )}
-        </AppLayout>
+        </DashboardShell>
       </>
     );
   }
@@ -246,26 +245,3 @@ function customerFullRegistrationId(path: string): number | null {
   return Number.isFinite(id) && id > 0 ? id : null;
 }
 
-function pathFromPage(page: AppPage): string {
-  if (page === "dashboard") {
-    return "/dashboard";
-  }
-
-  if (page === "customers") {
-    return "/customers";
-  }
-
-  if (page === "tasks") {
-    return "/tasks";
-  }
-
-  if (page === "followUps") {
-    return "/follow-ups";
-  }
-
-  if (page === "ietts") {
-    return "/ietts";
-  }
-
-  return page === "permissions" ? "/permissions" : "/home";
-}

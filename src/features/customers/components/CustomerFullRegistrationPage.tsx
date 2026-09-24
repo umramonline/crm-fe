@@ -1,5 +1,7 @@
 import { useEffect, useState } from "react";
 
+import { ContentHeader } from "@/shared/components/ContentHeader";
+import { formFieldProps } from "@/shared/utils/formFieldProps";
 import {
   completeFullRegistration,
   fullRegistrationPhoneExists,
@@ -289,13 +291,23 @@ export function CustomerFullRegistrationPage({
   }
 
   return (
-    <section className="panel-card permission-table-panel">
-      <div className="page-title">
-        <h1>Müşteri Tam Kayıt</h1>
-        <p>Backend müşteri kaydını dört aşamada tamamlayabilirsiniz.</p>
-      </div>
+    <>
+      <ContentHeader
+        title="Müşteri Tam Kayıt"
+        breadcrumbs={[
+          { label: "Ana Sayfa", href: "/home" },
+          { label: "Galeri Listesi", href: "/customers" },
+          { label: "Tam Kayıt", active: true },
+        ]}
+      />
 
-      {message ? <div className="panel-alert">{message}</div> : null}
+      <div className="card mb-3">
+        <div className="card-body">
+          <p className="text-muted">
+            Backend müşteri kaydını dört aşamada tamamlayabilirsiniz.
+          </p>
+
+          {message ? <div className="alert alert-info">{message}</div> : null}
 
       <form className="full-registration-form" onSubmit={(event) => event.preventDefault()}>
         <div className="full-registration-steps">
@@ -309,6 +321,7 @@ export function CustomerFullRegistrationPage({
         {step === 1 ? (
           <div className="customer-entry-form">
             <FormSelect
+              field="type"
               label="Müşteri Türü *"
               value={form.type}
               onChange={(value) => updateField("type", value)}
@@ -320,6 +333,7 @@ export function CustomerFullRegistrationPage({
               disabled={hasUoId}
             />
             <FormInput
+              field="cep"
               label="Cep *"
               value={form.cep}
               onChange={(value) => updateField("cep", value)}
@@ -328,17 +342,18 @@ export function CustomerFullRegistrationPage({
               maxLength={11}
               disabled={hasUoId}
             />
-            <FormInput label="Ad *" value={form.ad} onChange={(value) => updateField("ad", value)} error={errors.ad} disabled={hasUoId} />
-            <FormInput label="Soyad *" value={form.soyad} onChange={(value) => updateField("soyad", value)} error={errors.soyad} disabled={hasUoId} />
+            <FormInput field="ad" label="Ad *" value={form.ad} onChange={(value) => updateField("ad", value)} error={errors.ad} disabled={hasUoId} />
+            <FormInput field="soyad" label="Soyad *" value={form.soyad} onChange={(value) => updateField("soyad", value)} error={errors.soyad} disabled={hasUoId} />
             {form.type === "bireysel" ? (
               <>
-                <FormInput label="T.C. No" value={form.tcNo} onChange={(value) => updateField("tcNo", value)} error={errors.tc_no} disabled={hasUoId} />
-                <FormInput label="Doğum Tarihi" type="date" value={form.dogumTarihi} onChange={(value) => updateField("dogumTarihi", value)} error={errors.dogum_tarihi} disabled={hasUoId} />
+                <FormInput field="tcNo" label="T.C. No" value={form.tcNo} onChange={(value) => updateField("tcNo", value)} error={errors.tc_no} disabled={hasUoId} />
+                <FormInput field="dogumTarihi" label="Doğum Tarihi" type="date" value={form.dogumTarihi} onChange={(value) => updateField("dogumTarihi", value)} error={errors.dogum_tarihi} disabled={hasUoId} />
               </>
             ) : (
               <>
-                <FormInput label="Ünvan *" value={form.unvan} onChange={(value) => updateField("unvan", value)} error={errors.unvan} disabled={hasUoId} />
+                <FormInput field="unvan" label="Ünvan *" value={form.unvan} onChange={(value) => updateField("unvan", value)} error={errors.unvan} disabled={hasUoId} />
                 <FormSelect
+                  field="corporateSector"
                   label="Sektör *"
                   value={form.corporateSector}
                   onChange={(value) => updateField("corporateSector", value)}
@@ -353,6 +368,7 @@ export function CustomerFullRegistrationPage({
         {step === 2 ? (
           <div className="customer-entry-form">
             <FormSelect
+              field="branchId"
               label="Bayi *"
               value={form.branchId}
               onChange={(value) => updateField("branchId", value)}
@@ -360,15 +376,15 @@ export function CustomerFullRegistrationPage({
               error={errors.branch_id}
               disabled={hasUoId}
             />
-            <FormInput label="E-posta" value={form.eposta} onChange={(value) => updateField("eposta", value)} error={errors.eposta} disabled={hasUoId} />
-            <FormInput label="Website" value={form.website} onChange={(value) => updateField("website", value)} error={errors.website} />
-            <FormInput label="Google Map Link" value={form.googleMapLink} onChange={(value) => updateField("googleMapLink", value)} error={errors.google_map_link} />
-            <FormInput label="İlan Sitesi Linki" value={form.classifiedsWebsiteLink} onChange={(value) => updateField("classifiedsWebsiteLink", value)} error={errors.classifieds_website_link} />
-            <FormInput label="Araç Stok Adedi *" type="number" value={form.vehicleStockCount} onChange={(value) => updateField("vehicleStockCount", value)} error={errors.vehicle_stock_count} />
+            <FormInput field="eposta" label="E-posta" value={form.eposta} onChange={(value) => updateField("eposta", value)} error={errors.eposta} disabled={hasUoId} />
+            <FormInput field="website" label="Website" value={form.website} onChange={(value) => updateField("website", value)} error={errors.website} />
+            <FormInput field="googleMapLink" label="Google Map Link" value={form.googleMapLink} onChange={(value) => updateField("googleMapLink", value)} error={errors.google_map_link} />
+            <FormInput field="classifiedsWebsiteLink" label="İlan Sitesi Linki" value={form.classifiedsWebsiteLink} onChange={(value) => updateField("classifiedsWebsiteLink", value)} error={errors.classifieds_website_link} />
+            <FormInput field="vehicleStockCount" label="Araç Stok Adedi *" type="number" value={form.vehicleStockCount} onChange={(value) => updateField("vehicleStockCount", value)} error={errors.vehicle_stock_count} />
             {form.type === "kurumsal" ? (
               <>
-                <FormInput label="Vergi No *" value={form.vergiNo} onChange={(value) => updateField("vergiNo", value)} error={errors.vergi_no} disabled={hasUoId} />
-                <FormInput label="Vergi Dairesi *" value={form.vergiDairesi} onChange={(value) => updateField("vergiDairesi", value)} error={errors.vergi_dairesi} disabled={hasUoId} />
+                <FormInput field="vergiNo" label="Vergi No *" value={form.vergiNo} onChange={(value) => updateField("vergiNo", value)} error={errors.vergi_no} disabled={hasUoId} />
+                <FormInput field="vergiDairesi" label="Vergi Dairesi *" value={form.vergiDairesi} onChange={(value) => updateField("vergiDairesi", value)} error={errors.vergi_dairesi} disabled={hasUoId} />
               </>
             ) : null}
           </div>
@@ -376,15 +392,15 @@ export function CustomerFullRegistrationPage({
 
         {step === 3 ? (
           <div className="full-registration-list">
-            <button className="blue-button" type="button" onClick={addTelephone} disabled={hasUoId}>
+            <button className="btn btn-primary btn-sm" type="button" onClick={addTelephone} disabled={hasUoId}>
               Cep Telefonu Ekle
             </button>
-            {form.telephones.length === 0 ? <p className="muted-text">Ek cep telefonu yok.</p> : null}
+            {form.telephones.length === 0 ? <p className="text-muted small">Ek cep telefonu yok.</p> : null}
             {form.telephones.map((telephone, index) => (
               <div className="full-registration-phone-row" key={`${index}-${telephone.id ?? 0}`}>
-                <FormInput label="Cep telefonu başlığı" value={telephone.title} onChange={(value) => updateTelephone(index, "title", value)} disabled={hasUoId} />
-                <FormInput label="Cep telefonu" value={telephone.phoneNumber} onChange={(value) => updateTelephone(index, "phoneNumber", value)} isPhone disabled={hasUoId} />
-                <button className="gray-button" type="button" onClick={() => removeTelephone(index)} disabled={hasUoId}>
+                <FormInput field="telephoneTitle" suffix={index} label="Cep telefonu başlığı" value={telephone.title} onChange={(value) => updateTelephone(index, "title", value)} disabled={hasUoId} />
+                <FormInput field="telephonePhone" suffix={index} label="Cep telefonu" value={telephone.phoneNumber} onChange={(value) => updateTelephone(index, "phoneNumber", value)} isPhone disabled={hasUoId} />
+                <button className="btn btn-secondary btn-sm" type="button" onClick={() => removeTelephone(index)} disabled={hasUoId}>
                   Sil
                 </button>
               </div>
@@ -396,6 +412,7 @@ export function CustomerFullRegistrationPage({
         {step === 4 ? (
           <div className="customer-entry-form">
             <FormSelect
+              field="ilKodu"
               label="İl *"
               value={form.ilKodu}
               onChange={(value) => updateField("ilKodu", value)}
@@ -404,6 +421,7 @@ export function CustomerFullRegistrationPage({
               disabled={hasUoId}
             />
             <FormSelect
+              field="ilceKodu"
               label="İlçe"
               value={form.ilceKodu}
               onChange={(value) => updateField("ilceKodu", value)}
@@ -411,31 +429,34 @@ export function CustomerFullRegistrationPage({
               error={errors.ilce_kodu}
               disabled={hasUoId}
             />
-            <FormInput label="Mahalle" value={form.mahalle} onChange={(value) => updateField("mahalle", value)} error={errors.mahalle} disabled={hasUoId} />
-            <FormInput label="Adres Detayı *" value={form.addressDetail} onChange={(value) => updateField("addressDetail", value)} error={errors.address_detail} disabled={hasUoId} />
+            <FormInput field="mahalle" label="Mahalle" value={form.mahalle} onChange={(value) => updateField("mahalle", value)} error={errors.mahalle} disabled={hasUoId} />
+            <FormInput field="addressDetail" label="Adres Detayı *" value={form.addressDetail} onChange={(value) => updateField("addressDetail", value)} error={errors.address_detail} disabled={hasUoId} />
           </div>
         ) : null}
 
         <div className="customer-modal-actions">
-          <button className="gray-button" type="button" onClick={step === 1 ? onBack : handleBack}>
+          <button className="btn btn-secondary btn-sm" type="button" onClick={step === 1 ? onBack : handleBack}>
             {step === 1 ? "Listeye Dön" : "Geri"}
           </button>
           {step < 4 ? (
-            <button className="blue-button" type="button" onClick={() => void handleNext()}>
+            <button className="btn btn-primary btn-sm" type="button" onClick={() => void handleNext()}>
               Sonraki
             </button>
           ) : (
-            <button className="blue-button" type="button" onClick={() => void handleCompleteRegistration()}>
+            <button className="btn btn-primary btn-sm" type="button" onClick={() => void handleCompleteRegistration()}>
               Tam Kaydı Tamamla
             </button>
           )}
         </div>
       </form>
-    </section>
+        </div>
+      </div>
+    </>
   );
 }
 
 type FormInputProps = {
+  field: string;
   label: string;
   value: string;
   onChange: (value: string) => void;
@@ -444,9 +465,11 @@ type FormInputProps = {
   maxLength?: number;
   isPhone?: boolean;
   disabled?: boolean;
+  suffix?: string | number;
 };
 
 function FormInput({
+  field,
   label,
   value,
   onChange,
@@ -455,12 +478,16 @@ function FormInput({
   maxLength = customerTextMaxLength,
   isPhone = false,
   disabled = false,
+  suffix,
 }: FormInputProps) {
+  const fieldProps = formFieldProps("full-registration", field, { label, suffix });
+
   return (
-    <label className="field-label">
+    <label className="field-label" htmlFor={fieldProps.id}>
       {label}
       <input
-        className="panel-input"
+        {...fieldProps}
+        className="form-control form-control-sm"
         type={type}
         inputMode={isPhone ? "numeric" : undefined}
         pattern={isPhone ? "05[0-9]{9}" : undefined}
@@ -476,20 +503,34 @@ function FormInput({
 }
 
 type FormSelectProps = {
+  field: string;
   label: string;
   value: string;
   options: Array<{ value: string; label: string }>;
   onChange: (value: string) => void;
   error?: string;
   disabled?: boolean;
+  suffix?: string | number;
 };
 
-function FormSelect({ label, value, options, onChange, error, disabled = false }: FormSelectProps) {
+function FormSelect({
+  field,
+  label,
+  value,
+  options,
+  onChange,
+  error,
+  disabled = false,
+  suffix,
+}: FormSelectProps) {
+  const fieldProps = formFieldProps("full-registration", field, { label, suffix });
+
   return (
-    <label className="field-label">
+    <label className="field-label" htmlFor={fieldProps.id}>
       {label}
       <select
-        className="panel-input"
+        {...fieldProps}
+        className="form-control form-control-sm"
         value={value}
         onChange={(event) => onChange(event.target.value)}
         disabled={disabled}

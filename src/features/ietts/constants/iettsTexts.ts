@@ -7,10 +7,8 @@ export const iettsTexts = {
   noPermission: "Bu sayfayı görüntüleme yetkiniz bulunmuyor.",
   noRecords: "Kayıt bulunamadı.",
   loading: "IETTS kayıtları yükleniyor.",
-  previousPage: "Önceki",
-  nextPage: "Sonraki",
-  pageLabel: (currentPage: number, lastPage: number) =>
-    `Sayfa ${currentPage} / ${lastPage}`,
+  exportCsv: "Export CSV",
+  exportJson: "Export JSON",
   convertToCustomer: "Müşteriye Dönüştür",
   convertConfirmTitle: "Müşteriye Dönüştür",
   convertConfirmMessage:

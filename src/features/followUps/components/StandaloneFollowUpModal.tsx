@@ -1,5 +1,8 @@
 import { FormEvent, useEffect, useState } from "react";
 
+import { ControlledModal } from "@/shared/components/ControlledModal";
+import { formFieldProps } from "@/shared/utils/formFieldProps";
+
 import {
   getCustomer,
   type Customer,
@@ -212,25 +215,12 @@ export function StandaloneFollowUpModal({
   }
 
   return (
-    <div className="customer-modal-backdrop" role="presentation">
-      <section
-        className="customer-modal customer-modal-wide"
-        role="dialog"
-        aria-modal="true"
-      >
-        <div className="customer-modal-header">
-          <h2>Takip Kaydı</h2>
-          <button
-            className="customer-modal-close"
-            type="button"
-            disabled={isSubmitting}
-            onClick={onClose}
-          >
-            Kapat
-          </button>
-        </div>
-        <hr className="hr-line-grid" />
-
+    <ControlledModal
+      isOpen
+      onClose={onClose}
+      title="Takip Kaydı"
+      size="xl"
+    >
         <form className="customer-entry-form" onSubmit={handleSubmit}>
           <div className="customer-detail-grid task-assign-form-wide">
             <span>Görev</span>
@@ -243,7 +233,10 @@ export function StandaloneFollowUpModal({
           <label className="field-label">
             Görüşme Tarihi*
             <input
-              className="panel-input"
+              {...formFieldProps("follow-up-standalone", "visitDate", {
+                label: "Görüşme Tarihi",
+              })}
+              className="form-control form-control-sm"
               type="date"
               min={todayDate()}
               data-follow-up-error-field="visitDate"
@@ -255,7 +248,10 @@ export function StandaloneFollowUpModal({
           <label className="field-label">
             Bir Sonraki Ziyaret Tarihi
             <input
-              className="panel-input"
+              {...formFieldProps("follow-up-standalone", "nextVisitDate", {
+                label: "Bir Sonraki Ziyaret Tarihi",
+              })}
+              className="form-control form-control-sm"
               type="date"
               min={form.visitDate}
               data-follow-up-error-field="nextVisitDate"
@@ -267,7 +263,10 @@ export function StandaloneFollowUpModal({
           <label className="field-label">
             Görüşme Türü*
             <select
-              className="panel-input"
+              {...formFieldProps("follow-up-standalone", "visitType", {
+                label: "Görüşme Türü",
+              })}
+              className="form-control form-control-sm"
               data-follow-up-error-field="visitType"
               value={form.visitType}
               onChange={(event) =>
@@ -295,7 +294,7 @@ export function StandaloneFollowUpModal({
                 <div className="follow-up-meet-person-header">
                   <strong>Görüşülen Kişi {index + 1}</strong>
                   <button
-                    className="gray-button"
+                    className="btn btn-secondary btn-sm"
                     type="button"
                     disabled={form.meetPeople.length <= 1}
                     onClick={() => removePerson(person.id)}
@@ -306,7 +305,11 @@ export function StandaloneFollowUpModal({
                 <label className="field-label">
                   Görevi*
                   <select
-                    className="panel-input"
+                    {...formFieldProps("follow-up-standalone", "title", {
+                      label: "Görevi",
+                      suffix: index,
+                    })}
+                    className="form-control form-control-sm"
                     data-follow-up-error-field={personErrorKey(person.id, "title")}
                     value={person.title}
                     onChange={(event) => updatePerson(person.id, "title", event.target.value)}
@@ -324,6 +327,7 @@ export function StandaloneFollowUpModal({
                   label="Ad*"
                   field="name"
                   person={person}
+                  index={index}
                   errors={errors}
                   onChange={updatePerson}
                 />
@@ -331,6 +335,7 @@ export function StandaloneFollowUpModal({
                   label="Soyad*"
                   field="surname"
                   person={person}
+                  index={index}
                   errors={errors}
                   onChange={updatePerson}
                 />
@@ -338,6 +343,7 @@ export function StandaloneFollowUpModal({
                   label="Telefon*"
                   field="phone"
                   person={person}
+                  index={index}
                   errors={errors}
                   onChange={updatePerson}
                 />
@@ -345,6 +351,7 @@ export function StandaloneFollowUpModal({
                   label="Eposta"
                   field="email"
                   person={person}
+                  index={index}
                   errors={errors}
                   onChange={updatePerson}
                 />
@@ -352,7 +359,7 @@ export function StandaloneFollowUpModal({
             ))}
             {fieldError(errors, "meetPeople")}
             <button
-              className="blue-button follow-up-add-person-button"
+              className="btn btn-primary btn-sm follow-up-add-person-button"
               type="button"
               onClick={addPerson}
             >
@@ -399,7 +406,10 @@ export function StandaloneFollowUpModal({
           <label className="field-label">
             Anlaşma Sağlandı mı?
             <select
-              className="panel-input"
+              {...formFieldProps("follow-up-standalone", "agreementReached", {
+                label: "Anlaşma Sağlandı mı?",
+              })}
+              className="form-control form-control-sm"
               value={form.agreementReached ? "true" : "false"}
               onChange={(event) =>
                 updateForm("agreementReached", event.target.value === "true")
@@ -413,7 +423,10 @@ export function StandaloneFollowUpModal({
             <label className="field-label">
               Anlaşamama Sebebi*
               <select
-                className="panel-input"
+                {...formFieldProps("follow-up-standalone", "agreementFailureReason", {
+                  label: "Anlaşamama Sebebi",
+                })}
+                className="form-control form-control-sm"
                 data-follow-up-error-field="agreementFailureReason"
                 value={form.agreementFailureReason}
                 onChange={(event) =>
@@ -436,7 +449,8 @@ export function StandaloneFollowUpModal({
           <label className="field-label task-assign-form-wide">
             Not
             <textarea
-              className="panel-input"
+              {...formFieldProps("follow-up-standalone", "note", { label: "Not" })}
+              className="form-control form-control-sm"
               data-follow-up-error-field="note"
               maxLength={150}
               value={form.note}
@@ -449,6 +463,7 @@ export function StandaloneFollowUpModal({
           <label className="field-label task-assign-form-wide">
             <span className="follow-up-upload-box">
               <input
+                {...formFieldProps("follow-up-standalone", "images", { label: "Resim" })}
                 className="follow-up-upload-input"
                 type="file"
                 accept="image/jpeg,image/png,image/gif,image/webp"
@@ -483,20 +498,19 @@ export function StandaloneFollowUpModal({
 
           <div className="customer-modal-actions">
             <button
-              className="gray-button"
+              className="btn btn-secondary btn-sm"
               type="button"
               disabled={isSubmitting}
               onClick={onClose}
             >
               Vazgeç
             </button>
-            <button className="blue-button" type="submit" disabled={isSubmitting}>
+            <button className="btn btn-primary btn-sm" type="submit" disabled={isSubmitting}>
               {isSubmitting ? "Kaydediliyor..." : "Kaydet"}
             </button>
           </div>
         </form>
-      </section>
-    </div>
+    </ControlledModal>
   );
 }
 
@@ -504,6 +518,7 @@ type PersonInputProps = {
   label: string;
   field: "name" | "surname" | "phone" | "email";
   person: MeetPersonForm;
+  index: number;
   errors: FormErrors;
   onChange: (id: string, field: MeetPersonField, value: string) => void;
 };
@@ -512,6 +527,7 @@ function PersonInput({
   label,
   field,
   person,
+  index,
   errors,
   onChange,
 }: PersonInputProps) {
@@ -520,7 +536,11 @@ function PersonInput({
     <label className="field-label">
       {label}
       <input
-        className="panel-input"
+        {...formFieldProps("follow-up-standalone", field, {
+          label: label.replace("*", ""),
+          suffix: index,
+        })}
+        className="form-control form-control-sm"
         type={field === "email" ? "email" : field === "phone" ? "tel" : "text"}
         inputMode={field === "phone" ? "tel" : undefined}
         placeholder={field === "phone" ? "05XXXXXXXXX" : undefined}

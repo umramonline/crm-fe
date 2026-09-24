@@ -21,6 +21,17 @@ import {
   type TaskPriority,
   type TaskStatus,
 } from "@/features/tasks/services/taskApi";
+import { ContentHeader } from "@/shared/components/ContentHeader";
+import { ControlledModal } from "@/shared/components/ControlledModal";
+import {
+  ListPagination,
+  ListTableToolbar,
+  TableActionGroup,
+  TableFilterInput,
+  TableFilterSelect,
+  TableIconButton,
+} from "@/shared/components";
+import { formFieldProps } from "@/shared/utils/formFieldProps";
 
 const priorityOptions: TaskPriority[] = ["high", "medium", "low"];
 const unrestrictedTaskRoleIds = new Set([30, 60, 63]);
@@ -635,33 +646,42 @@ export function TasksPage({ permissions, roleId, userId }: TasksPageProps) {
 
   if (!canListTasks) {
     return (
-      <section className="panel-card permission-table-panel">
-        <h1>Tüm Görevler</h1>
-        <p className="muted-text">Görev listesini görüntüleme yetkiniz yok.</p>
-      </section>
+      <>
+        <ContentHeader
+          title="Tüm Görevler"
+          breadcrumbs={[
+            { label: "Ana Sayfa", href: "/home" },
+            { label: "Tüm Görevler", active: true },
+          ]}
+        />
+        <section className="card mb-3">
+          <div className="card-body">
+            <p className="text-muted small mb-0">
+              Görev listesini görüntüleme yetkiniz yok.
+            </p>
+          </div>
+        </section>
+      </>
     );
   }
 
   return (
-    <section className="panel-card permission-table-panel">
+    <>
+      <ContentHeader
+        title="Tüm Görevler"
+        breadcrumbs={[
+          { label: "Ana Sayfa", href: "/home" },
+          { label: "Tüm Görevler", active: true },
+        ]}
+      />
+      <section className="card list-table-card mb-3">
       {selectedTask ? (
-        <div className="customer-modal-backdrop" role="presentation">
-          <section
-            className="customer-modal customer-modal-wide"
-            role="dialog"
-            aria-modal="true"
-          >
-            <div className="customer-modal-header">
-              <h2>Görev Detayı</h2>
-              <button
-                className="customer-modal-close"
-                type="button"
-                onClick={() => setSelectedTask(null)}
-              >
-                Kapat
-              </button>
-            </div>
-
+        <ControlledModal
+          isOpen
+          onClose={() => setSelectedTask(null)}
+          title="Görev Detayı"
+          size="xl"
+        >
             <div className="customer-detail-grid">
               <span>Görev Başlığı</span>
               <strong>{selectedTask.title || "Potansiyel Müşteri"}</strong>
@@ -682,43 +702,31 @@ export function TasksPage({ permissions, roleId, userId }: TasksPageProps) {
               <span aria-hidden="true" />
             </div>
             <button
-              className="blue-button"
+              className="btn btn-primary btn-sm"
               type="button"
               disabled={selectedTask.customers.length === 0}
               onClick={() => handleOpenTaskCustomerDetails(selectedTask)}
             >
               Müşterilerin Detayı
             </button>
-          </section>
-        </div>
+        </ControlledModal>
       ) : null}
 
       {selectedCustomerTask ? (
-        <div className="customer-modal-backdrop" role="presentation">
-          <section
-            className="customer-modal customer-modal-wide"
-            role="dialog"
-            aria-modal="true"
-          >
-            <div className="customer-modal-header">
-              <h2>Görevin Müşteri Detayları</h2>
-              <button
-                className="customer-modal-close"
-                type="button"
-                onClick={handleCloseCustomerDetails}
-              >
-                Kapat
-              </button>
-            </div>
-
-            <div className="permission-table-scroll">
-              <table className="permission-table customer-table">
+        <ControlledModal
+          isOpen
+          onClose={handleCloseCustomerDetails}
+          title="Görevin Müşteri Detayları"
+          size="xl"
+        >
+            <div className="table-responsive">
+              <table className="table table-striped table-hover table-sm mb-0">
                 <thead>
                   <tr>
                     <th>ad soyad</th>
                     <th>unvan</th>
                     <th>durum</th>
-                    <th>İşlemler</th>
+                    <th className="table-actions-cell">İşlemler</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -739,17 +747,17 @@ export function TasksPage({ permissions, roleId, userId }: TasksPageProps) {
                       </td>
                       <td>{customer.unvan || "-"}</td>
                       <td>{formatTaskStatus(customer.status)}</td>
-                      <td>
-                        <div className="customer-action-group">
+                      <td className="table-actions-cell">
+                        <TableActionGroup label="Görev müşteri işlemleri">
                           {canTaskCustomerOpenFollowRecord(
                             selectedCustomerTask,
                             customer,
                             userId,
                           ) ? (
-                            <button
-                              className="customer-action-button task-follow-button"
-                              type="button"
-                              aria-label="Takip kaydı oluştur"
+                            <TableIconButton
+                              action="createFollowUp"
+                              label="Takip kaydı oluştur"
+                              variant="success"
                               onClick={(event) => {
                                 event.stopPropagation();
                                 void handleOpenFollowRecordModal(
@@ -757,13 +765,12 @@ export function TasksPage({ permissions, roleId, userId }: TasksPageProps) {
                                   customer,
                                 );
                               }}
-                            >
-                              📓
-                            </button>
+                            />
                           ) : null}
-                          <button
-                            className="customer-action-button task-cancel-button"
-                            type="button"
+                          <TableIconButton
+                            action="cancelRecord"
+                            label="Görev müşterisini iptal et"
+                            variant="danger"
                             disabled={
                               !canCancelTasks ||
                               !canTaskCustomerBeCancelled(customer) ||
@@ -776,37 +783,24 @@ export function TasksPage({ permissions, roleId, userId }: TasksPageProps) {
                                 customer,
                               );
                             }}
-                          >
-                            ⓧ
-                          </button>
-                        </div>
+                          />
+                        </TableActionGroup>
                       </td>
                     </tr>
                   ))}
                 </tbody>
               </table>
             </div>
-          </section>
-        </div>
+        </ControlledModal>
       ) : null}
 
       {selectedFollowRecord ? (
-        <div className="customer-modal-backdrop" role="presentation">
-          <section
-            className="customer-modal customer-modal-wide"
-            role="dialog"
-            aria-modal="true"
-          >
-            <div className="customer-modal-header">
-              <h2>Takip Kaydı</h2>
-              <button
-                className="customer-modal-close"
-                type="button"
-                onClick={handleCloseFollowRecordModal}
-              >
-                Kapat
-              </button>
-            </div>
+        <ControlledModal
+          isOpen
+          onClose={handleCloseFollowRecordModal}
+          title="Takip Kaydı"
+          size="xl"
+        >
             <hr className="hr-line-grid" />
 
             <form className="customer-entry-form" onSubmit={handleFollowUpSubmit}>
@@ -827,7 +821,10 @@ export function TasksPage({ permissions, roleId, userId }: TasksPageProps) {
               <label className="field-label">
                   Görüşme Tarihi*
                   <input
-                    className="panel-input"
+                    {...formFieldProps("tasks-follow-up", "visitDate", {
+                      label: "Görüşme Tarihi",
+                    })}
+                    className="form-control form-control-sm"
                     type="date"
                     data-follow-up-error-field="visitDate"
                     min={todayDateInputValue()}
@@ -845,7 +842,10 @@ export function TasksPage({ permissions, roleId, userId }: TasksPageProps) {
               <label className="field-label">
                   Bir Sonraki Ziyaret Tarihi
                   <input
-                    className="panel-input"
+                    {...formFieldProps("tasks-follow-up", "nextVisitDate", {
+                      label: "Bir Sonraki Ziyaret Tarihi",
+                    })}
+                    className="form-control form-control-sm"
                     type="date"
                     data-follow-up-error-field="nextVisitDate"
                     min={followUpForm.visitDate}
@@ -863,7 +863,10 @@ export function TasksPage({ permissions, roleId, userId }: TasksPageProps) {
               <label className="field-label">
                 Görüşme Türü*
                 <select
-                  className="panel-input"
+                  {...formFieldProps("tasks-follow-up", "visitType", {
+                    label: "Görüşme Türü",
+                  })}
+                  className="form-control form-control-sm"
                   data-follow-up-error-field="visitType"
                   value={followUpForm.visitType}
                   onChange={(event) =>
@@ -898,7 +901,7 @@ export function TasksPage({ permissions, roleId, userId }: TasksPageProps) {
                     <div className="follow-up-meet-person-header">
                       <strong>Görüşülen Kişi {index + 1}</strong>
                       <button
-                        className="gray-button"
+                        className="btn btn-secondary btn-sm"
                         type="button"
                         disabled={followUpForm.meetPeople.length <= 1}
                         onClick={() => removeFollowUpMeetPerson(person.id)}
@@ -909,7 +912,11 @@ export function TasksPage({ permissions, roleId, userId }: TasksPageProps) {
                     <label className="field-label">
                       Görevi*
                       <select
-                        className="panel-input"
+                        {...formFieldProps("tasks-follow-up", "meetPersonTitle", {
+                          label: "Görevi",
+                          suffix: person.id,
+                        })}
+                        className="form-control form-control-sm"
                         data-follow-up-error-field={followUpMeetPersonErrorKey(
                           person.id,
                           "title",
@@ -945,7 +952,11 @@ export function TasksPage({ permissions, roleId, userId }: TasksPageProps) {
                     <label className="field-label">
                       Ad*
                       <input
-                        className="panel-input"
+                        {...formFieldProps("tasks-follow-up", "meetPersonName", {
+                          label: "Ad",
+                          suffix: person.id,
+                        })}
+                        className="form-control form-control-sm"
                         data-follow-up-error-field={followUpMeetPersonErrorKey(
                           person.id,
                           "name",
@@ -975,7 +986,11 @@ export function TasksPage({ permissions, roleId, userId }: TasksPageProps) {
                     <label className="field-label">
                       Soyad*
                       <input
-                        className="panel-input"
+                        {...formFieldProps("tasks-follow-up", "meetPersonSurname", {
+                          label: "Soyad",
+                          suffix: person.id,
+                        })}
+                        className="form-control form-control-sm"
                         data-follow-up-error-field={followUpMeetPersonErrorKey(
                           person.id,
                           "surname",
@@ -1005,7 +1020,11 @@ export function TasksPage({ permissions, roleId, userId }: TasksPageProps) {
                     <label className="field-label">
                       Telefon*
                       <input
-                        className="panel-input"
+                        {...formFieldProps("tasks-follow-up", "meetPersonPhone", {
+                          label: "Telefon",
+                          suffix: person.id,
+                        })}
+                        className="form-control form-control-sm"
                         data-follow-up-error-field={followUpMeetPersonErrorKey(
                           person.id,
                           "phone",
@@ -1039,7 +1058,11 @@ export function TasksPage({ permissions, roleId, userId }: TasksPageProps) {
                     <label className="field-label">
                       Eposta
                       <input
-                        className="panel-input"
+                        {...formFieldProps("tasks-follow-up", "meetPersonEmail", {
+                          label: "Eposta",
+                          suffix: person.id,
+                        })}
+                        className="form-control form-control-sm"
                         type="email"
                         data-follow-up-error-field={followUpMeetPersonErrorKey(
                           person.id,
@@ -1075,7 +1098,7 @@ export function TasksPage({ permissions, roleId, userId }: TasksPageProps) {
                   </span>
                 ) : null}
                 <button
-                  className="blue-button follow-up-add-person-button"
+                  className="btn btn-primary btn-sm follow-up-add-person-button"
                   type="button"
                   onClick={addFollowUpMeetPerson}
                 >
@@ -1122,7 +1145,10 @@ export function TasksPage({ permissions, roleId, userId }: TasksPageProps) {
               <label className="field-label">
                 Anlaşma Sağlandı mı?
                 <select
-                  className="panel-input"
+                  {...formFieldProps("tasks-follow-up", "agreementReached", {
+                    label: "Anlaşma Sağlandı mı?",
+                  })}
+                  className="form-control form-control-sm"
                   value={followUpForm.agreementReached ? "true" : "false"}
                   onChange={(event) =>
                     updateFollowUpForm(
@@ -1139,7 +1165,10 @@ export function TasksPage({ permissions, roleId, userId }: TasksPageProps) {
                 <label className="field-label">
                   Anlaşamama Sebebi*
                   <select
-                    className="panel-input"
+                    {...formFieldProps("tasks-follow-up", "agreementFailureReason", {
+                      label: "Anlaşamama Sebebi",
+                    })}
+                    className="form-control form-control-sm"
                     data-follow-up-error-field="agreementFailureReason"
                     value={followUpForm.agreementFailureReason}
                     onChange={(event) =>
@@ -1167,7 +1196,10 @@ export function TasksPage({ permissions, roleId, userId }: TasksPageProps) {
               <label className="field-label task-assign-form-wide">
                 Not
                 <textarea
-                  className="panel-input"
+                  {...formFieldProps("tasks-follow-up", "note", {
+                    label: "Not",
+                  })}
+                  className="form-control form-control-sm"
                   data-follow-up-error-field="note"
                   value={followUpForm.note}
                   maxLength={150}
@@ -1186,6 +1218,9 @@ export function TasksPage({ permissions, roleId, userId }: TasksPageProps) {
               <label className="field-label task-assign-form-wide">
                 <span className="follow-up-upload-box">
                   <input
+                    {...formFieldProps("tasks-follow-up", "images", {
+                      label: "Resim",
+                    })}
                     className="follow-up-upload-input"
                     type="file"
                     data-follow-up-error-field="images"
@@ -1225,7 +1260,7 @@ export function TasksPage({ permissions, roleId, userId }: TasksPageProps) {
               ) : null}
               <div className="customer-modal-actions">
                 <button
-                  className="gray-button"
+                  className="btn btn-secondary btn-sm"
                   type="button"
                   disabled={isCreatingFollowUp}
                   onClick={handleCloseFollowRecordModal}
@@ -1233,7 +1268,7 @@ export function TasksPage({ permissions, roleId, userId }: TasksPageProps) {
                   Vazgeç
                 </button>
                 <button
-                  className="blue-button"
+                  className="btn btn-primary btn-sm"
                   type="submit"
                   disabled={isCreatingFollowUp}
                 >
@@ -1241,30 +1276,18 @@ export function TasksPage({ permissions, roleId, userId }: TasksPageProps) {
                 </button>
               </div>
             </form>
-          </section>
-        </div>
+        </ControlledModal>
       ) : null}
 
       {selectedCustomerDetail || isLoadingCustomerDetail ? (
-        <div className="customer-modal-backdrop" role="presentation">
-          <section
-            className="customer-modal customer-modal-wide"
-            role="dialog"
-            aria-modal="true"
-          >
-            <div className="customer-modal-header">
-              <h2>Müşteri Bilgileri</h2>
-              <button
-                className="customer-modal-close"
-                type="button"
-                onClick={handleCloseCustomerDetail}
-              >
-                Kapat
-              </button>
-            </div>
-
+        <ControlledModal
+          isOpen
+          onClose={handleCloseCustomerDetail}
+          title="Müşteri Bilgileri"
+          size="xl"
+        >
             {isLoadingCustomerDetail ? (
-              <p className="muted-text">Müşteri detayı yükleniyor...</p>
+              <p className="text-muted small">Müşteri detayı yükleniyor...</p>
             ) : selectedCustomerDetail ? (
               <div className="customer-detail-grid">
                 <span>Ünvan</span>
@@ -1325,43 +1348,42 @@ export function TasksPage({ permissions, roleId, userId }: TasksPageProps) {
                 </strong>
               </div>
             ) : null}
-          </section>
-        </div>
+        </ControlledModal>
       ) : null}
 
       <form className="customer-filter-form" onSubmit={handleFilterSubmit}>
-        <div className="customer-filter-actions">
-          <h1>Tüm Görevler</h1>
-          <button className="blue-button" type="submit" disabled={isLoading}>
+        <ListTableToolbar>
+          <button className="btn btn-primary btn-sm" type="submit" disabled={isLoading}>
             Filtrele
           </button>
           <button
-            className="gray-button"
+            className="btn btn-secondary btn-sm"
             type="button"
             onClick={handleResetFilters}
           >
             Temizle
           </button>
-          <span className="muted-text">
-            {isLoading ? "Yükleniyor..." : `Toplam ${total} kayıt`}
-          </span>
-        </div>
-      </form>
+        </ListTableToolbar>
 
-      {message ? <p className="customer-message">{message}</p> : null}
+        {message ? (
+          <div className="card-body pb-0">
+            <p className="alert alert-info py-2 mb-0 customer-message">{message}</p>
+          </div>
+        ) : null}
 
-      <div className="permission-table-scroll">
-        <table className="permission-table customer-table task-table">
+        <div className="card-body p-0">
+      <div className="table-responsive">
+        <table className="table table-striped table-hover table-sm mb-0 task-table">
           <thead>
             <tr>
-              <th>İşlemler</th>
+              <th className="table-actions-cell">İşlemler</th>
               <th>Görev Başlığı</th>
               <th>Müşteri Sayısı</th>
               <th>Atanan Personel</th>
               <th>Müşteri Bayisi</th>
               <th>
                 <button
-                  className="table-sort-button"
+                  className="btn btn-link btn-sm p-0 border-0 text-start"
                   type="button"
                   onClick={() => handleSort("visit_date")}
                 >
@@ -1375,7 +1397,7 @@ export function TasksPage({ permissions, roleId, userId }: TasksPageProps) {
               </th>
               <th>
                 <button
-                  className="table-sort-button"
+                  className="btn btn-link btn-sm p-0 border-0 text-start"
                   type="button"
                   onClick={() => handleSort("due_date")}
                 >
@@ -1393,8 +1415,10 @@ export function TasksPage({ permissions, roleId, userId }: TasksPageProps) {
             <tr className="customer-filter-row">
               <th />
               <th>
-                <input
-                  className="panel-input"
+                <TableFilterInput
+                  page="tasks"
+                  field="title"
+                  label="Görev Başlığı"
                   value={draftFilters.title}
                   onChange={(event) =>
                     updateDraftFilter("title", event.target.value)
@@ -1403,8 +1427,10 @@ export function TasksPage({ permissions, roleId, userId }: TasksPageProps) {
               </th>
               <th />
               <th>
-                <input
-                  className="panel-input"
+                <TableFilterInput
+                  page="tasks"
+                  field="assignedUserFullName"
+                  label="Atanan Personel"
                   value={draftFilters.assignedUserFullName}
                   onChange={(event) =>
                     updateDraftFilter(
@@ -1415,8 +1441,10 @@ export function TasksPage({ permissions, roleId, userId }: TasksPageProps) {
                 />
               </th>
               <th>
-                <input
-                  className="panel-input"
+                <TableFilterInput
+                  page="tasks"
+                  field="branchName"
+                  label="Müşteri Bayisi"
                   value={draftFilters.branchName}
                   onChange={(event) =>
                     updateDraftFilter("branchName", event.target.value)
@@ -1424,8 +1452,10 @@ export function TasksPage({ permissions, roleId, userId }: TasksPageProps) {
                 />
               </th>
               <th>
-                <input
-                  className="panel-input"
+                <TableFilterInput
+                  page="tasks"
+                  field="visitDate"
+                  label="Ziyaret Tarihi"
                   value={draftFilters.visitDate}
                   onChange={(event) =>
                     updateDraftFilter("visitDate", event.target.value)
@@ -1433,8 +1463,10 @@ export function TasksPage({ permissions, roleId, userId }: TasksPageProps) {
                 />
               </th>
               <th>
-                <input
-                  className="panel-input"
+                <TableFilterInput
+                  page="tasks"
+                  field="dueDate"
+                  label="Son Ziyaret Tarihi"
                   value={draftFilters.dueDate}
                   onChange={(event) =>
                     updateDraftFilter("dueDate", event.target.value)
@@ -1442,8 +1474,11 @@ export function TasksPage({ permissions, roleId, userId }: TasksPageProps) {
                 />
               </th>
               <th>
-                <select
-                  className="panel-input"
+                <TableFilterSelect
+                  page="tasks"
+                  field="priority"
+                  label="Öncelik"
+                  className="form-control form-control-sm"
                   value={draftFilters.priority}
                   onChange={(event) =>
                     updateDraftFilter(
@@ -1458,11 +1493,13 @@ export function TasksPage({ permissions, roleId, userId }: TasksPageProps) {
                       {formatTaskPriority(priority)}
                     </option>
                   ))}
-                </select>
+                </TableFilterSelect>
               </th>
               <th>
-                <input
-                  className="panel-input"
+                <TableFilterInput
+                  page="tasks"
+                  field="createdByUserFullName"
+                  label="Oluşturan"
                   value={draftFilters.createdByUserFullName}
                   onChange={(event) =>
                     updateDraftFilter(
@@ -1484,18 +1521,16 @@ export function TasksPage({ permissions, roleId, userId }: TasksPageProps) {
             {items.map((task) => {
               return (
                 <tr key={task.uuid}>
-                  <td>
-                    <div className="customer-action-group">
-                      <button
-                        className="customer-action-button"
-                        type="button"
-                        aria-label="Görev detayını görüntüle"
+                  <td className="table-actions-cell">
+                    <TableActionGroup label="Görev işlemleri">
+                      <TableIconButton
+                        action="viewDetail"
+                        label="Görev detayını görüntüle"
+                        variant="info"
                         disabled={!canViewTaskDetail}
                         onClick={() => void handleOpenTaskDetail(task)}
-                      >
-                        ⓘ
-                      </button>
-                    </div>
+                      />
+                    </TableActionGroup>
                   </td>
                   <td>{task.title || "Potansiyel Müşteri"}</td>
                   <td>{task.customerCount}</td>
@@ -1511,29 +1546,20 @@ export function TasksPage({ permissions, roleId, userId }: TasksPageProps) {
           </tbody>
         </table>
       </div>
+        </div>
 
-      <div className="customer-pagination">
-        <button
-          className="gray-button"
-          type="button"
-          disabled={currentPage <= 1 || isLoading}
-          onClick={() => setCurrentPage((page) => Math.max(page - 1, 1))}
-        >
-          Önceki
-        </button>
-        <span className="muted-text">
-          Sayfa {currentPage} / {lastPage}
-        </span>
-        <button
-          className="gray-button"
-          type="button"
-          disabled={currentPage >= lastPage || isLoading}
-          onClick={() => setCurrentPage((page) => Math.min(page + 1, lastPage))}
-        >
-          Sonraki
-        </button>
-      </div>
+        <div className="card-footer">
+          <ListPagination
+            currentPage={currentPage}
+            lastPage={lastPage}
+            total={total}
+            isLoading={isLoading}
+            onPageChange={setCurrentPage}
+          />
+        </div>
+      </form>
     </section>
+    </>
   );
 }
 

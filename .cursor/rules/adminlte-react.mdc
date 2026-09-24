@@ -1,0 +1,82 @@
+---
+description: crm-fe AdminLTE 4 — @adminlte/react resmi kılavuza göre UI kuralları
+globs: src/**/*.{tsx,ts,css}
+alwaysApply: false
+---
+
+# crm-fe AdminLTE (@adminlte/react)
+
+**Birincil kılavuz:** https://github.com/ColorlibHQ/adminlte-react  
+Canlı örnek (referans): https://adminlte.io/themes/next-react/
+
+Eski CRM ekranları bu kütüphanenin layout, bileşen ve class modeline taşınır; iş mantığı/API katmanına dokunulmaz.
+
+## Clean Architecture (crm-fe)
+
+- **Sunum:** `components/`, `shared/layout/`, `shared/components/`
+- **API:** `features/*/services/*Api.ts`
+- **Composition:** `app/App.tsx`, `main.tsx`
+- Genel: repo kökü `.cursor/rules/clean-architecture.mdc`
+
+## Dokunma
+
+- `src/features/*/services/*Api.ts`, `hooks/`
+- `src/app/App.tsx` routing (React Router ekleme)
+- Backend
+
+## Shell (@adminlte/react README)
+
+| Dosya | Rol |
+|-------|-----|
+| `DashboardShell.tsx` | `DashboardLayout` — `menuItems`, `linkComponent`, `user`, `footer` |
+| `SpaLink.tsx` | Vite SPA `LinkComponent` |
+| `menuItems.ts` | `MenuNode[]` — icon: `bi-house` ( **`bi` prefix yok** ) |
+| `CrmUserMenuManager.tsx` | User dropdown sign-out → CRM logout |
+| `next-navigation.ts` shim | Vite alias |
+
+`DashboardLayout` props (resmi): `sidebarTheme="dark"`, `colorModeToggle`, `fixedHeader`, `fixedSidebar`, `initialColorMode="auto"`.
+
+### Yapma
+
+- `.app-header` DOM replace / portal / visibility hack
+- `document.body` MutationObserver + DOM silme
+- Light/dark/auto içerik teması serbest; **sidebar her zaman koyu** (`crm-dark-sidebar`, `bodyClass="crm-light-layout"`)
+- Demo-only topbar widget’ları zorunlu değil; CRM ihtiyacı yoksa ekleme
+
+Footer/user-menu: demo öğeleri CSS ile gizle; çıkış `CrmUserMenuManager`.
+
+## CSS (`main.tsx` sırası)
+
+1. `bootstrap/dist/css/bootstrap.min.css`
+2. `admin-lte/dist/css/adminlte.min.css`
+3. `admin-lte/dist/css/adminlte-colors-v3.css` (README opt-in palette)
+4. `bootstrap-icons/font/bootstrap-icons.css`
+5. `@/shared/styles/global.css`
+
+Bootstrap JS: `index.html` bundle.
+
+## Bileşen tercihleri (README Components)
+
+- Auth: `AuthLayout`, `Input`, `Button`
+- Sayfa başlığı: `ContentHeader` → `@adminlte/react` `AppContent`
+- Dashboard widget: `SmallBox`, `Card`, `InfoBox`, `Alert`
+- Modal: `ControlledModal` (`Modal` + controlled Bootstrap JS)
+- Liste tabloları: `card list-table-card` → `ListTableToolbar` (header) → `card-body p-0` + `table-responsive` → `card-footer` + `ListPagination` (`@adminlte/react` `Pagination`)
+- Satır işlemleri: `TableActionGroup` + `TableIconButton` (`shared/constants/tableActionIcons.ts`)
+- Authorization gibi matris: `@adminlte/react` `Table`
+- Form: mümkünse `Input` / `Select`; liste filtreleri `TableFilterInput` / `TableFilterSelect` + `id`/`name`
+
+## CRM iş kuralları (sunum)
+
+- Müşteri satır renkleri: `customerRowClass.ts`
+- UMRAN footer: `footer` prop + `.crm-footer-content`
+
+## Bilinen kısıt
+
+- `AppContent` v0.6.x children render etmez — gövde `ContentHeader` altında sibling; boş slot `global.css` ile gizlenir
+
+## Doğrulama
+
+```bash
+cd crm-fe && npm run build && npm test
+```

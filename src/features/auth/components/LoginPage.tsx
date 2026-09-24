@@ -1,6 +1,5 @@
 import { AuthShell } from "@/features/auth/components/AuthShell";
 import { OtpVerificationForm } from "@/features/auth/components/OtpVerificationForm";
-import { PasswordLoginForm } from "@/features/auth/components/PasswordLoginForm";
 import { PhoneLoginForm } from "@/features/auth/components/PhoneLoginForm";
 import { useLoginFlow } from "@/features/auth/hooks/useLoginFlow";
 import type { SessionData } from "@/features/auth/services/authApi";
@@ -14,21 +13,19 @@ type LoginPageProps = {
 export function LoginPage({ onAuthenticated }: LoginPageProps) {
   const {
     currentStep,
-    goBackToPhone,
+    goBackToCredentials,
+    isCredentialsSubmitting,
     isOtpSubmitting,
-    isPasswordSubmitting,
-    isPhoneSubmitting,
+    submitCredentials,
     submitOtp,
-    submitPassword,
-    submitPhone,
   } = useLoginFlow({ onAuthenticated });
 
   return (
     <AuthShell>
-      {currentStep === "phone" ? (
+      {currentStep === "credentials" ? (
         <PhoneLoginForm
-          isSubmitting={isPhoneSubmitting}
-          onSubmit={submitPhone}
+          isSubmitting={isCredentialsSubmitting}
+          onSubmit={submitCredentials}
         />
       ) : null}
 
@@ -36,15 +33,8 @@ export function LoginPage({ onAuthenticated }: LoginPageProps) {
         <OtpVerificationForm
           isSubmitting={isOtpSubmitting}
           remainingTime={initialRemainingTime}
-          onBack={goBackToPhone}
+          onBack={goBackToCredentials}
           onSubmit={submitOtp}
-        />
-      ) : null}
-
-      {currentStep === "password" ? (
-        <PasswordLoginForm
-          isSubmitting={isPasswordSubmitting}
-          onSubmit={submitPassword}
         />
       ) : null}
     </AuthShell>

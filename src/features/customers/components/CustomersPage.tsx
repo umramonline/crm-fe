@@ -22,8 +22,20 @@ import {
   type TaskAssignableUser,
 } from "@/features/tasks/services/taskApi";
 import type { Permission } from "@/features/auth/services/authApi";
-import { navigateToFullRegistration } from "@/shared/utils/navigation";
+import { ContentHeader } from "@/shared/components/ContentHeader";
+import { ControlledModal } from "@/shared/components/ControlledModal";
+import {
+  ListPagination,
+  ListTableToolbar,
+  TableActionGroup,
+  TableFilterInput,
+  TableFilterSelect,
+  TableIconButton,
+} from "@/shared/components";
+import { formFieldProps } from "@/shared/utils/formFieldProps";
 import { StandaloneFollowUpModal } from "@/features/followUps/components/StandaloneFollowUpModal";
+import { customerRowClass } from "@/shared/utils/customerRowClass";
+import { navigateToFullRegistration } from "@/shared/utils/navigation";
 
 const situationOptions = [
   "Potansiyel Müşteri",
@@ -620,26 +632,26 @@ export function CustomersPage({ permissions }: CustomersPageProps) {
 
   if (!canListCustomers) {
     return (
-      <section className="panel-card">
-        <div className="page-title">
-          <h1>Galeri Listesi</h1>
-          <p>Bu sayfayı görüntüleme yetkiniz bulunmuyor.</p>
+      <div className="card">
+        <div className="card-body">
+          <ContentHeader title="Galeri Listesi" />
+          <p className="mb-0">Bu sayfayı görüntüleme yetkiniz bulunmuyor.</p>
         </div>
-      </section>
+      </div>
     );
   }
 
   return (
-    <section className="panel-card permission-table-panel">
-      <div className="page-title">
-        <h1>Galeri Listesi</h1>
-        <p>
-          Müşteri listesini filtreleyebilir, sıralayabilir ve
-          sayfalayabilirsiniz.
-        </p>
-      </div>
+    <>
+      <ContentHeader
+        title="Galeri Listesi"
+        breadcrumbs={[
+          { label: "Ana Sayfa", href: "/home" },
+          { label: "Galeri Listesi", active: true },
+        ]}
+      />
 
-      {message ? <div className="panel-alert">{message}</div> : null}
+      {message ? <div className="alert alert-info">{message}</div> : null}
 
       {standaloneFollowUpCustomer ? (
         <StandaloneFollowUpModal
@@ -669,23 +681,12 @@ export function CustomersPage({ permissions }: CustomersPageProps) {
       />
 
       {selectedCustomerDetail ? (
-        <div className="customer-modal-backdrop" role="presentation">
-          <section
-            className="customer-modal customer-modal-wide"
-            role="dialog"
-            aria-modal="true"
-          >
-            <div className="customer-modal-header">
-              <h2>{pageText.detailTitle}</h2>
-              <button
-                className="customer-modal-close"
-                type="button"
-                onClick={handleCloseCustomerDetail}
-              >
-                Kapat
-              </button>
-            </div>
-
+        <ControlledModal
+          isOpen
+          onClose={handleCloseCustomerDetail}
+          title={pageText.detailTitle}
+          size="xl"
+        >
             <div className="customer-detail-grid">
               <span>ID</span>
               <strong>{selectedCustomerDetail.id || "-"}</strong>
@@ -716,28 +717,16 @@ export function CustomersPage({ permissions }: CustomersPageProps) {
               <span>Kayıt Tarihi</span>
               <strong>{formatDate(selectedCustomerDetail.createdAt)}</strong>
             </div>
-          </section>
-        </div>
+        </ControlledModal>
       ) : null}
 
       {isTaskAssignModalOpen ? (
-        <div className="customer-modal-backdrop" role="presentation">
-          <section
-            className="customer-modal customer-modal-wide"
-            role="dialog"
-            aria-modal="true"
-          >
-            <div className="customer-modal-header">
-              <h2>{pageText.taskAssignTitle}</h2>
-              <button
-                className="customer-modal-close"
-                type="button"
-                onClick={handleCloseTaskAssignModal}
-              >
-                Kapat
-              </button>
-            </div>
-
+        <ControlledModal
+          isOpen={isTaskAssignModalOpen}
+          onClose={handleCloseTaskAssignModal}
+          title={pageText.taskAssignTitle}
+          size="xl"
+        >
             <div className="task-assign-summary">
               <span>Seçili müşteri sayısı</span>
               <strong>{selectedTaskCustomerCount}</strong>
@@ -752,7 +741,10 @@ export function CustomersPage({ permissions }: CustomersPageProps) {
               <label className="field-label">
                 Başlık
                 <input
-                  className="panel-input"
+                  {...formFieldProps("customers-task-assign", "title", {
+                    label: "Başlık",
+                  })}
+                  className="form-control form-control-sm"
                   maxLength={customerTextMaxLength}
                   value={taskAssignForm.title}
                   onChange={(event) =>
@@ -769,7 +761,10 @@ export function CustomersPage({ permissions }: CustomersPageProps) {
               <label className="field-label">
                 Açıklama
                 <input
-                  className="panel-input"
+                  {...formFieldProps("customers-task-assign", "description", {
+                    label: "Açıklama",
+                  })}
+                  className="form-control form-control-sm"
                   maxLength={customerTextMaxLength}
                   value={taskAssignForm.description}
                   onChange={(event) =>
@@ -786,7 +781,10 @@ export function CustomersPage({ permissions }: CustomersPageProps) {
               <label className="field-label">
                 Atanacak Kullanıcı
                 <select
-                  className="panel-input"
+                  {...formFieldProps("customers-task-assign", "assignedUserId", {
+                    label: "Atanacak Kullanıcı",
+                  })}
+                  className="form-control form-control-sm"
                   value={taskAssignForm.assignedUserId}
                   onChange={(event) =>
                     updateTaskAssignField("assignedUserId", event.target.value)
@@ -816,7 +814,10 @@ export function CustomersPage({ permissions }: CustomersPageProps) {
               <label className="field-label">
                 Ziyaret Tarihi
                 <input
-                  className="panel-input"
+                  {...formFieldProps("customers-task-assign", "visitDate", {
+                    label: "Ziyaret Tarihi",
+                  })}
+                  className="form-control form-control-sm"
                   type="date"
                   min={todayDateInputValue}
                   value={taskAssignForm.visitDate}
@@ -834,7 +835,10 @@ export function CustomersPage({ permissions }: CustomersPageProps) {
               <label className="field-label">
                 Bitiş Tarihi
                 <input
-                  className="panel-input"
+                  {...formFieldProps("customers-task-assign", "dueDate", {
+                    label: "Bitiş Tarihi",
+                  })}
+                  className="form-control form-control-sm"
                   type="date"
                   min={taskAssignForm.visitDate || undefined}
                   value={taskAssignForm.dueDate}
@@ -852,7 +856,10 @@ export function CustomersPage({ permissions }: CustomersPageProps) {
               <label className="field-label">
                 Öncelik
                 <select
-                  className="panel-input"
+                  {...formFieldProps("customers-task-assign", "priority", {
+                    label: "Öncelik",
+                  })}
+                  className="form-control form-control-sm"
                   value={taskAssignForm.priority}
                   onChange={(event) =>
                     updateTaskAssignField("priority", event.target.value)
@@ -884,14 +891,14 @@ export function CustomersPage({ permissions }: CustomersPageProps) {
 
               <div className="customer-modal-actions task-assign-form-wide">
                 <button
-                  className="gray-button"
+                  className="btn btn-secondary btn-sm"
                   type="button"
                   onClick={handleCloseTaskAssignModal}
                 >
                   Vazgeç
                 </button>
                 <button
-                  className="blue-button"
+                  className="btn btn-primary btn-sm"
                   type="submit"
                   disabled={!canCreateTasks || isCreatingTaskAssignment}
                 >
@@ -899,55 +906,54 @@ export function CustomersPage({ permissions }: CustomersPageProps) {
                 </button>
               </div>
             </form>
-          </section>
-        </div>
+        </ControlledModal>
       ) : null}
 
-      <form className="customer-filter-form" onSubmit={handleFilterSubmit}>
-        <div className="customer-filter-actions">
-          <button
-            className="blue-button"
-            type="button"
-            onClick={handleOpenTaskAssignModal}
-            disabled={
-              !canSelectTaskCustomers || selectedTaskCustomerCount === 0
-            }
-          >
-            {pageText.taskAssignButton} ({selectedTaskCustomerCount})
-          </button>
-          <button
-            className="blue-button"
-            type="button"
-            onClick={handleOpenCustomerSearch}
-            disabled={!canSearchCustomers}
-          >
-            {customerEntryTexts.button}
-          </button>
-          <button className="blue-button" type="submit">
-            Filtrele
-          </button>
-          <button
-            className="gray-button"
-            type="button"
-            onClick={handleResetFilters}
-          >
-            Temizle
-          </button>
-          <span className="muted-text">
-            {isLoading ? "Yükleniyor..." : `Toplam ${total} kayıt`}
-          </span>
-        </div>
-      </form>
+      <div className="card list-table-card mb-3">
+        <form className="customer-filter-form" onSubmit={handleFilterSubmit}>
+          <ListTableToolbar>
+            <button
+              className="btn btn-primary btn-sm"
+              type="button"
+              onClick={handleOpenTaskAssignModal}
+              disabled={
+                !canSelectTaskCustomers || selectedTaskCustomerCount === 0
+              }
+            >
+              {pageText.taskAssignButton} ({selectedTaskCustomerCount})
+            </button>
+            <button
+              className="btn btn-primary btn-sm"
+              type="button"
+              onClick={handleOpenCustomerSearch}
+              disabled={!canSearchCustomers}
+            >
+              {customerEntryTexts.button}
+            </button>
+            <button className="btn btn-primary btn-sm" type="submit">
+              Filtrele
+            </button>
+            <button
+              className="btn btn-secondary btn-sm"
+              type="button"
+              onClick={handleResetFilters}
+            >
+              Temizle
+            </button>
+          </ListTableToolbar>
 
-      <div className="permission-table-scroll">
-        <table className="permission-table customer-table">
+          <div className="card-body p-0">
+      <div className="table-responsive">
+        <table className="table table-striped table-hover table-sm mb-0">
           <thead>
             <tr>
               <th className="customer-selection-cell">
                 <input
                   ref={taskSelectionHeaderRef}
+                  {...formFieldProps("customers", "select-all", {
+                    label: "Listelenen müşterileri seç",
+                  })}
                   type="checkbox"
-                  aria-label="Listelenen müşterileri seç"
                   checked={areCurrentPageCustomersSelected}
                   disabled={!canSelectTaskCustomers || items.length === 0}
                   onChange={(event) =>
@@ -955,7 +961,7 @@ export function CustomersPage({ permissions }: CustomersPageProps) {
                   }
                 />
               </th>
-              <th>İşlemler</th>
+              <th className="table-actions-cell">İşlemler</th>
               <th>Durum</th>
               <th>Firma İsmi</th>
               <th>Yetkili Telefonu</th>
@@ -963,7 +969,7 @@ export function CustomersPage({ permissions }: CustomersPageProps) {
               <th>Yetkili Soyismi</th>
               <th>
                 <button
-                  className="table-sort-button"
+                  className="btn btn-link btn-sm p-0 border-0 text-start"
                   type="button"
                   onClick={() => handleSort("vehicle_stock_count")}
                 >
@@ -976,7 +982,7 @@ export function CustomersPage({ permissions }: CustomersPageProps) {
               <th>Plus Card No</th>
               <th>
                 <button
-                  className="table-sort-button"
+                  className="btn btn-link btn-sm p-0 border-0 text-start"
                   type="button"
                   onClick={() => handleSort("credit")}
                 >
@@ -986,7 +992,7 @@ export function CustomersPage({ permissions }: CustomersPageProps) {
               </th>
               <th>
                 <button
-                  className="table-sort-button"
+                  className="btn btn-link btn-sm p-0 border-0 text-start"
                   type="button"
                   onClick={() => handleSort("point")}
                 >
@@ -998,7 +1004,7 @@ export function CustomersPage({ permissions }: CustomersPageProps) {
               <th>İlçe</th>
               <th>
                 <button
-                  className="table-sort-button"
+                  className="btn btn-link btn-sm p-0 border-0 text-start"
                   type="button"
                   onClick={() => handleSort("created_at")}
                 >
@@ -1012,8 +1018,11 @@ export function CustomersPage({ permissions }: CustomersPageProps) {
               <th />
               <th />
               <th>
-                <select
-                  className="panel-input"
+                <TableFilterSelect
+                  page="customers"
+                  field="situation"
+                  label="Durum"
+                  className="form-control form-control-sm"
                   value={draftFilters.situation}
                   onChange={(event) =>
                     setDraftFilters((current) => ({
@@ -1028,11 +1037,13 @@ export function CustomersPage({ permissions }: CustomersPageProps) {
                       {option}
                     </option>
                   ))}
-                </select>
+                </TableFilterSelect>
               </th>
               <th>
-                <input
-                  className="panel-input"
+                <TableFilterInput
+                  page="customers"
+                  field="unvan"
+                  label="Ünvan"
                   value={draftFilters.unvan}
                   onChange={(event) =>
                     setDraftFilters((current) => ({
@@ -1043,8 +1054,10 @@ export function CustomersPage({ permissions }: CustomersPageProps) {
                 />
               </th>
               <th>
-                <input
-                  className="panel-input"
+                <TableFilterInput
+                  page="customers"
+                  field="cep"
+                  label="Cep"
                   value={draftFilters.cep}
                   onChange={(event) =>
                     setDraftFilters((current) => ({
@@ -1055,8 +1068,10 @@ export function CustomersPage({ permissions }: CustomersPageProps) {
                 />
               </th>
               <th>
-                <input
-                  className="panel-input"
+                <TableFilterInput
+                  page="customers"
+                  field="ad"
+                  label="Ad"
                   value={draftFilters.ad}
                   onChange={(event) =>
                     setDraftFilters((current) => ({
@@ -1067,8 +1082,10 @@ export function CustomersPage({ permissions }: CustomersPageProps) {
                 />
               </th>
               <th>
-                <input
-                  className="panel-input"
+                <TableFilterInput
+                  page="customers"
+                  field="soyad"
+                  label="Soyad"
                   value={draftFilters.soyad}
                   onChange={(event) =>
                     setDraftFilters((current) => ({
@@ -1080,8 +1097,11 @@ export function CustomersPage({ permissions }: CustomersPageProps) {
               </th>
               <th />
               <th>
-                <select
-                  className="panel-input"
+                <TableFilterSelect
+                  page="customers"
+                  field="branchName"
+                  label="Bayi"
+                  className="form-control form-control-sm"
                   value={draftFilters.branchName}
                   onChange={(event) =>
                     setDraftFilters((current) => ({
@@ -1101,11 +1121,14 @@ export function CustomersPage({ permissions }: CustomersPageProps) {
                       </option>
                     );
                   })}
-                </select>
+                </TableFilterSelect>
               </th>
               <th>
-                <select
-                  className="panel-input"
+                <TableFilterSelect
+                  page="customers"
+                  field="zoneName"
+                  label="Bölge"
+                  className="form-control form-control-sm"
                   value={draftFilters.zoneName}
                   onChange={(event) =>
                     setDraftFilters((current) => ({
@@ -1121,11 +1144,13 @@ export function CustomersPage({ permissions }: CustomersPageProps) {
                       {zone.name}
                     </option>
                   ))}
-                </select>
+                </TableFilterSelect>
               </th>
               <th>
-                <input
-                  className="panel-input"
+                <TableFilterInput
+                  page="customers"
+                  field="plusCardNo"
+                  label="PlusCard No"
                   value={draftFilters.plusCardNo}
                   onChange={(event) =>
                     setDraftFilters((current) => ({
@@ -1138,8 +1163,10 @@ export function CustomersPage({ permissions }: CustomersPageProps) {
               <th />
               <th />
               <th>
-                <input
-                  className="panel-input"
+                <TableFilterInput
+                  page="customers"
+                  field="city"
+                  label="İl"
                   value={draftFilters.city}
                   onChange={(event) =>
                     setDraftFilters((current) => ({
@@ -1150,8 +1177,10 @@ export function CustomersPage({ permissions }: CustomersPageProps) {
                 />
               </th>
               <th>
-                <input
-                  className="panel-input"
+                <TableFilterInput
+                  page="customers"
+                  field="town"
+                  label="İlçe"
                   value={draftFilters.town}
                   onChange={(event) =>
                     setDraftFilters((current) => ({
@@ -1162,8 +1191,10 @@ export function CustomersPage({ permissions }: CustomersPageProps) {
                 />
               </th>
               <th>
-                <input
-                  className="panel-input"
+                <TableFilterInput
+                  page="customers"
+                  field="createdAt"
+                  label="Oluşturulma Tarihi"
                   value={draftFilters.createdAt}
                   onChange={(event) =>
                     setDraftFilters((current) => ({
@@ -1174,8 +1205,11 @@ export function CustomersPage({ permissions }: CustomersPageProps) {
                 />
               </th>
               <th>
-                <select
-                  className="panel-input"
+                <TableFilterSelect
+                  page="customers"
+                  field="type"
+                  label="Müşteri Türü"
+                  className="form-control form-control-sm"
                   value={draftFilters.type}
                   onChange={(event) =>
                     setDraftFilters((current) => ({
@@ -1190,7 +1224,7 @@ export function CustomersPage({ permissions }: CustomersPageProps) {
                       {option}
                     </option>
                   ))}
-                </select>
+                </TableFilterSelect>
               </th>
             </tr>
           </thead>
@@ -1204,11 +1238,15 @@ export function CustomersPage({ permissions }: CustomersPageProps) {
             {items.map((customer, index) => (
               <tr
                 key={`${customer.id}-${customer.uoId}-${customer.plusCardNo}-${customer.cep}-${index}`}
+                className={customerRowClass(customer.situation)}
               >
                 <td className="customer-selection-cell">
                   <input
+                    {...formFieldProps("customers", "select-customer", {
+                      suffix: customer.id,
+                      label: `${customerDisplayNameFromList(customer)} müşterisini seç`,
+                    })}
                     type="checkbox"
-                    aria-label={`${customerDisplayNameFromList(customer)} müşterisini seç`}
                     checked={selectedTaskCustomers.has(customer.id)}
                     disabled={!canSelectTaskCustomers || !customer.id}
                     onChange={(event) =>
@@ -1216,38 +1254,32 @@ export function CustomersPage({ permissions }: CustomersPageProps) {
                     }
                   />
                 </td>
-                <td>
-                  <div className="customer-action-group">
-                    <button
-                      className="customer-action-button"
-                      type="button"
-                      aria-label="Müşteri detayını görüntüle"
+                <td className="table-actions-cell">
+                  <TableActionGroup label="Müşteri işlemleri">
+                    <TableIconButton
+                      action="viewDetail"
+                      label="Müşteri detayını görüntüle"
+                      variant="info"
                       disabled={!canViewCustomerDetail || !customer.id}
                       onClick={() => void handleOpenCustomerDetail(customer.id)}
-                    >
-                      ⓘ
-                    </button>
+                    />
                     {canViewFullRegistration && customer.id ? (
-                      <button
-                        className="customer-action-button"
-                        type="button"
-                        aria-label="Müşteri tam kaydını düzenle"
+                      <TableIconButton
+                        action="editRecord"
+                        label="Müşteri tam kaydını düzenle"
+                        variant="warning"
                         onClick={() => navigateToFullRegistration(customer.id)}
-                      >
-                        ✎
-                      </button>
+                      />
                     ) : null}
                     {canCreateStandaloneFollowUp && customer.id ? (
-                      <button
-                        className="customer-action-button task-follow-button"
-                        type="button"
-                        aria-label="Takip kaydı oluştur"
+                      <TableIconButton
+                        action="createFollowUp"
+                        label="Takip kaydı oluştur"
+                        variant="success"
                         onClick={() => handleOpenStandaloneFollowUp(customer)}
-                      >
-                        📓
-                      </button>
+                      />
                     ) : null}
-                  </div>
+                  </TableActionGroup>
                 </td>
                 <td>{customer.situation || "-"}</td>
                 <td>{customer.unvan || "-"}</td>
@@ -1269,29 +1301,20 @@ export function CustomersPage({ permissions }: CustomersPageProps) {
           </tbody>
         </table>
       </div>
+          </div>
 
-      <div className="customer-pagination">
-        <button
-          className="gray-button"
-          type="button"
-          disabled={currentPage <= 1 || isLoading}
-          onClick={() => setCurrentPage((page) => Math.max(page - 1, 1))}
-        >
-          Önceki
-        </button>
-        <span className="muted-text">
-          Sayfa {currentPage} / {lastPage}
-        </span>
-        <button
-          className="gray-button"
-          type="button"
-          disabled={currentPage >= lastPage || isLoading}
-          onClick={() => setCurrentPage((page) => Math.min(page + 1, lastPage))}
-        >
-          Sonraki
-        </button>
+          <div className="card-footer">
+            <ListPagination
+              currentPage={currentPage}
+              lastPage={lastPage}
+              total={total}
+              isLoading={isLoading}
+              onPageChange={setCurrentPage}
+            />
+          </div>
+        </form>
       </div>
-    </section>
+    </>
   );
 }
 

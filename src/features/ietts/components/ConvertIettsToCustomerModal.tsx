@@ -1,7 +1,9 @@
+import { Button } from "@adminlte/react";
 import { useState } from "react";
 
 import { iettsTexts } from "@/features/ietts/constants/iettsTexts";
 import { convertIettsToCustomer } from "@/features/ietts/services/iettsApi";
+import { ControlledModal } from "@/shared/components/ControlledModal";
 import { navigateToFullRegistration } from "@/shared/utils/navigation";
 
 type ConvertIettsToCustomerModalProps = {
@@ -39,41 +41,28 @@ export function ConvertIettsToCustomerModal({
   }
 
   return (
-    <div className="customer-modal-backdrop" role="presentation">
-      <section className="customer-modal" role="dialog" aria-modal="true">
-        <div className="customer-modal-header">
-          <h2>{iettsTexts.convertConfirmTitle}</h2>
-          <button
-            className="customer-modal-close"
-            type="button"
-            onClick={onClose}
-            disabled={isConverting}
-          >
-            Kapat
-          </button>
-        </div>
-
-        <p>{iettsTexts.convertConfirmMessage}</p>
-
-        <div className="customer-modal-actions">
-          <button
-            className="gray-button"
-            type="button"
-            onClick={onClose}
-            disabled={isConverting}
-          >
+    <ControlledModal
+      isOpen
+      onClose={onClose}
+      title={iettsTexts.convertConfirmTitle}
+      footer={
+        <>
+          <Button theme="secondary" size="sm" type="button" onClick={onClose} disabled={isConverting}>
             {iettsTexts.cancel}
-          </button>
-          <button
-            className="blue-button"
+          </Button>
+          <Button
+            theme="primary"
+            size="sm"
             type="button"
             onClick={() => void handleContinue()}
             disabled={isConverting}
           >
             {isConverting ? iettsTexts.converting : iettsTexts.continue}
-          </button>
-        </div>
-      </section>
-    </div>
+          </Button>
+        </>
+      }
+    >
+      <p className="mb-0">{iettsTexts.convertConfirmMessage}</p>
+    </ControlledModal>
   );
 }

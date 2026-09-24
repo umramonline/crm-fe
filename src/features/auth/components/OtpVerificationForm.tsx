@@ -1,7 +1,8 @@
-import { useState } from 'react';
-import type { FormEvent } from 'react';
+import { Button, Input } from "@adminlte/react";
+import { useState } from "react";
+import type { FormEvent } from "react";
 
-import { authTexts } from '@/features/auth/constants/authTexts';
+import { authTexts } from "@/features/auth/constants/authTexts";
 
 type OtpVerificationFormProps = {
   isSubmitting: boolean;
@@ -9,7 +10,7 @@ type OtpVerificationFormProps = {
   onBack: () => void;
   onSubmit: (
     otpCode: string,
-  ) => Promise<{ ok: true } | { ok: false; messageKey: 'otpInvalidMessage' | 'otpVerifyFailedMessage' }>;
+  ) => Promise<{ ok: true } | { ok: false; messageKey: "otpInvalidMessage" | "otpVerifyFailedMessage" }>;
 };
 
 export function OtpVerificationForm({
@@ -18,8 +19,8 @@ export function OtpVerificationForm({
   onBack,
   onSubmit,
 }: OtpVerificationFormProps) {
-  const [otpCode, setOtpCode] = useState('');
-  const [errorMessage, setErrorMessage] = useState('');
+  const [otpCode, setOtpCode] = useState("");
+  const [errorMessage, setErrorMessage] = useState("");
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>): Promise<void> {
     event.preventDefault();
@@ -31,49 +32,56 @@ export function OtpVerificationForm({
       return;
     }
 
-    setErrorMessage('');
+    setErrorMessage("");
   }
 
   return (
-    <form className="auth-form auth-form-wide" onSubmit={handleSubmit} noValidate>
-      <h1 className="auth-title">{authTexts.loginTitle}</h1>
+    <form onSubmit={handleSubmit} noValidate>
+      <p className="login-box-msg fw-semibold">{authTexts.loginTitle}</p>
 
-      <label className="auth-label" htmlFor="otp">
-        {authTexts.otpInstruction}
-      </label>
-      <div className="auth-input-wrapper">
-        <input
-          id="otp"
-          className="auth-input auth-otp-input"
-          inputMode="numeric"
-          maxLength={6}
-          name="otp"
-          pattern="[0-9]{6}"
-          placeholder={authTexts.otpPlaceholder}
-          type="text"
-          value={otpCode}
-          disabled={isSubmitting}
-          onChange={(event) => setOtpCode(event.target.value.replace(/\D/g, ''))}
-        />
-        <span className="auth-input-icon" aria-hidden="true">
-          &#128273;
-        </span>
-      </div>
+      <Input
+        id="otp"
+        label={authTexts.otpInstruction}
+        className="text-center fs-5 letter-spacing-wide mb-3"
+        inputMode="numeric"
+        maxLength={6}
+        name="otp"
+        pattern="[0-9]{6}"
+        placeholder={authTexts.otpPlaceholder}
+        type="text"
+        value={otpCode}
+        disabled={isSubmitting}
+        onChange={(event) => setOtpCode(event.target.value.replace(/\D/g, ""))}
+      />
 
-      <div className="auth-meta">
+      <div className="d-flex justify-content-between align-items-center mb-3 text-muted small">
         <span>{authTexts.remainingTimeLabel}</span>
         <strong>{remainingTime}</strong>
       </div>
 
-      {errorMessage ? <p className="auth-error">{errorMessage}</p> : null}
+      {errorMessage ? (
+        <div className="alert alert-danger py-2" role="alert">
+          {errorMessage}
+        </div>
+      ) : null}
 
-      <div className="auth-actions">
-        <button className="auth-secondary-button" type="button" disabled={isSubmitting} onClick={onBack}>
-          {authTexts.backLabel}
-        </button>
-        <button className="auth-primary-button" type="submit" disabled={isSubmitting}>
-          {isSubmitting ? authTexts.otpVerifyingLabel : authTexts.verifyLabel}
-        </button>
+      <div className="row g-2">
+        <div className="col-6">
+          <Button
+            className="w-100"
+            theme="secondary"
+            type="button"
+            disabled={isSubmitting}
+            onClick={onBack}
+          >
+            {authTexts.backLabel}
+          </Button>
+        </div>
+        <div className="col-6">
+          <Button className="w-100" theme="primary" type="submit" disabled={isSubmitting}>
+            {isSubmitting ? authTexts.otpVerifyingLabel : authTexts.verifyLabel}
+          </Button>
+        </div>
       </div>
     </form>
   );

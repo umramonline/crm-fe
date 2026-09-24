@@ -1,7 +1,7 @@
 export const authTexts = {
   loginTitle: "Giriş yapın",
   phonePlaceholder: "05XXXXXXXXX",
-  phoneSubmitLabel: "OTP Kodu Gönder",
+  phoneSubmitLabel: "Devam Et",
   phoneSubmittingLabel: "Gönderiliyor...",
   forgotPasswordLabel: "Şifremi Unuttum",
   phoneInvalidMessage: "Telefon numarası 05XXXXXXXXX formatında olmalıdır.",

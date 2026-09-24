@@ -1,3 +1,4 @@
+import { Table } from "@adminlte/react";
 import { FormEvent, useEffect, useMemo, useState } from "react";
 
 import {
@@ -19,6 +20,7 @@ import {
   type RolePermission,
 } from "@/features/authorization/services/authorizationApi";
 import type { Permission } from "@/features/auth/services/authApi";
+import { ContentHeader } from "@/shared/components/ContentHeader";
 
 const httpMethods: HttpMethod[] = [
   "GET",
@@ -337,247 +339,302 @@ export function AuthorizationPage({ permissions }: AuthorizationPageProps) {
   }
 
   return (
-    <section className="permission-page">
-      <div className="page-title">
-        <h1>İzin Yönetimi</h1>
-        <p>Modül, method ve rol izinlerini yönetin.</p>
-      </div>
+    <>
+      <ContentHeader
+        title="İzin Yönetimi"
+        breadcrumbs={[
+          { label: "Ana Sayfa", href: "/home" },
+          { label: "İzinler", active: true },
+        ]}
+      />
 
-      {message ? <div className="panel-alert">{message}</div> : null}
+      {message ? <div className="alert alert-info">{message}</div> : null}
 
       {isLoading ? (
-        <div className="panel-card">Yükleniyor...</div>
+        <div className="card mb-3">
+          <div className="card-body">Yükleniyor...</div>
+        </div>
       ) : !canViewModulesForm &&
         !canViewMethodsForm &&
         !canViewRolePermissionsForm ? (
-        <div className="panel-card">Bu sayfada görüntüleyebileceğiniz form yok.</div>
+        <div className="card mb-3">
+          <div className="card-body">Bu sayfada görüntüleyebileceğiniz form yok.</div>
+        </div>
       ) : (
         <div className="permission-layout">
           {canViewRolePermissionsForm ? (
-          <section className="panel-card permission-table-panel">
-            <div className="panel-card-title">
-              <h2>Rol İzinleri</h2>
+          <section className="card mb-3 method-panel">
+            <div className="card-header d-flex align-items-center justify-content-between gap-2">
+              <h3 className="card-title mb-0">Rol İzinleri</h3>
               {canUpdateRolePermissions ? (
-              <button className="blue-button" type="button" onClick={() => void savePermissions()}>
+              <button className="btn btn-primary btn-sm" type="button" onClick={() => void savePermissions()}>
                 Kaydet
               </button>
               ) : null}
             </div>
 
-            {canListRoles ? (
-              <>
-                <label className="panel-label" htmlFor="role-select">
-                  Rol
-                </label>
-                <select
-                  id="role-select"
-                  className="panel-input"
-                  value={selectedRoleId}
-                  onChange={(event) => setSelectedRoleId(Number(event.target.value))}
-                >
-                  {roles.map((role) => (
-                    <option key={role.id} value={role.id}>
-                      {role.name}
-                    </option>
-                  ))}
-                </select>
-              </>
-            ) : (
-              <p className="muted-text">Rol listesini görme yetkiniz yok.</p>
-            )}
+            <div className="card-body">
+              {canListRoles ? (
+                <div className="mb-3">
+                  <label className="form-label" htmlFor="role-select">
+                    Rol
+                  </label>
+                  <select
+                    id="role-select"
+                    name="roleId"
+                    className="form-select form-select-sm"
+                    value={selectedRoleId}
+                    onChange={(event) => setSelectedRoleId(Number(event.target.value))}
+                  >
+                    {roles.map((role) => (
+                      <option key={role.id} value={role.id}>
+                        {role.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              ) : (
+                <p className="text-muted small">Rol listesini görme yetkiniz yok.</p>
+              )}
 
-            {canListMethods && canListRolePermissions ? (
-              <div className="permission-table-scroll">
-              <table className="permission-table">
-                <thead>
-                  <tr>
-                    <th>İzin</th>
-                    <th>Method</th>
-                    <th>Path</th>
-                    <th>Aktif</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {methods.map((method) => (
-                    <tr key={method.id}>
-                      <td data-label="İzin">
-                        <strong>{method.name}</strong>
-                        <span>{method.description}</span>
-                      </td>
-                      <td data-label="Method">{method.method || "UI"}</td>
-                      <td data-label="Path">{method.path || "-"}</td>
-                      <td data-label="Aktif">
+              {canListMethods && canListRolePermissions ? (
+                <Table
+                  striped
+                  hover
+                  small
+                  responsive
+                  data={methods}
+                  rowKey={(method) => method.id}
+                  columns={[
+                    {
+                      key: "name",
+                      header: "İzin",
+                      render: (method) => (
+                        <div className="permission-name-cell">
+                          <strong className="d-block">{method.name}</strong>
+                          {method.description ? (
+                            <span className="text-muted small d-block mt-1">
+                              {method.description}
+                            </span>
+                          ) : null}
+                        </div>
+                      ),
+                    },
+                    {
+                      key: "method",
+                      header: "Method",
+                      className: "text-nowrap",
+                      render: (method) => method.method || "UI",
+                    },
+                    {
+                      key: "path",
+                      header: "Path",
+                      render: (method) => method.path || "-",
+                    },
+                    {
+                      key: "active",
+                      header: "Aktif",
+                      align: "center",
+                      className: "text-center",
+                      render: (method) => (
                         <input
+                          id={`permission-method-${method.id}`}
+                          name={`permission-method-${method.id}`}
+                          className="form-check-input m-0"
                           type="checkbox"
+                          aria-label={`${method.name} izni`}
                           disabled={!canUpdateRolePermissions}
                           checked={checkedIds.has(method.id)}
                           onChange={() => togglePermission(method.id)}
                         />
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-            ) : (
-              <p className="muted-text">
-                Rol izinleri tablosunu görüntülemek için gerekli listeleme
-                yetkileri bulunmuyor.
-              </p>
-            )}
+                      ),
+                    },
+                  ]}
+                />
+              ) : (
+                <p className="text-muted small mb-0">
+                  Rol izinleri tablosunu görüntülemek için gerekli listeleme
+                  yetkileri bulunmuyor.
+                </p>
+              )}
 
-            <small className="muted-text">
-              Seçili role ait kayıtlı izin: {rolePermissions.length}
-            </small>
+              <p className="text-muted small mb-0 mt-3">
+                Seçili role ait kayıtlı izin: {rolePermissions.length}
+              </p>
+            </div>
           </section>
           ) : null}
 
           {canViewModulesForm ? (
-          <section className="panel-card">
-            <div className="panel-card-title">
-              <h2>Modüller</h2>
+          <section className="card mb-3">
+            <div className="card-header">
+              <h3 className="card-title mb-0">Modüller</h3>
             </div>
 
-            {canCreateModules || canUpdateModules ? (
-            <form className="panel-form" onSubmit={(event) => void handleModuleSubmit(event)}>
-              <label className="panel-label" htmlFor="module-name">
-                Modül Adı
-              </label>
-              <input
-                id="module-name"
-                className="panel-input"
-                value={moduleForm.name}
-                onChange={(event) =>
-                  setModuleForm((current) => ({ ...current, name: event.target.value }))
-                }
-              />
-              <div className="button-row">
-                <button className="blue-button" type="submit">
-                  {moduleForm.id ? "Güncelle" : "Ekle"}
-                </button>
-                {moduleForm.id ? (
-                  <button
-                    className="gray-button"
-                    type="button"
-                    onClick={() => setModuleForm(emptyModuleForm)}
-                  >
-                    Vazgeç
-                  </button>
-                ) : null}
-              </div>
-            </form>
-            ) : null}
+            <div className="card-body">
+              {canCreateModules || canUpdateModules ? (
+              <form className="row g-3 mb-3" onSubmit={(event) => void handleModuleSubmit(event)}>
+                <div className="col-12">
+                  <label className="form-label" htmlFor="module-name">
+                    Modül Adı
+                  </label>
+                  <input
+                    id="module-name"
+                    name="moduleName"
+                    className="form-control form-control-sm"
+                    value={moduleForm.name}
+                    onChange={(event) =>
+                      setModuleForm((current) => ({ ...current, name: event.target.value }))
+                    }
+                  />
+                </div>
+                <div className="col-12">
+                  <div className="button-row">
+                    <button className="btn btn-primary btn-sm" type="submit">
+                      {moduleForm.id ? "Güncelle" : "Ekle"}
+                    </button>
+                    {moduleForm.id ? (
+                      <button
+                        className="btn btn-secondary btn-sm"
+                        type="button"
+                        onClick={() => setModuleForm(emptyModuleForm)}
+                      >
+                        Vazgeç
+                      </button>
+                    ) : null}
+                  </div>
+                </div>
+              </form>
+              ) : null}
 
-            {canListModules ? (
-            <div className="compact-list">
-              {modules.map((module) => (
-                <div
-                  className={
-                    module.id === selectedModuleId
-                      ? "compact-list-item active"
-                      : "compact-list-item"
-                  }
-                  key={module.id}
-                >
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setSelectedModuleId(module.id);
-                      setMethodForm((current) => ({
-                        ...current,
-                        moduleId: module.id,
-                      }));
-                    }}
+              {canListModules ? (
+              <div className="compact-list">
+                {modules.map((module) => (
+                  <div
+                    className={
+                      module.id === selectedModuleId
+                        ? "compact-list-item active"
+                        : "compact-list-item"
+                    }
+                    key={module.id}
                   >
-                    {module.name}
-                  </button>
-                  <span>
-                    {canUpdateModules ? (
                     <button
                       type="button"
-                      onClick={() => setModuleForm({ id: module.id, name: module.name })}
+                      onClick={() => {
+                        setSelectedModuleId(module.id);
+                        setMethodForm((current) => ({
+                          ...current,
+                          moduleId: module.id,
+                        }));
+                      }}
                     >
-                      Düzenle
+                      {module.name}
                     </button>
-                    ) : null}
-                    {canDeleteModules ? (
-                    <button type="button" onClick={() => void handleModuleDelete(module.id)}>
-                      Sil
-                    </button>
-                    ) : null}
-                  </span>
-                </div>
-              ))}
+                    <span className="compact-list-actions">
+                      {canUpdateModules ? (
+                      <button
+                        className="btn btn-link btn-sm"
+                        type="button"
+                        onClick={() => setModuleForm({ id: module.id, name: module.name })}
+                      >
+                        Düzenle
+                      </button>
+                      ) : null}
+                      {canDeleteModules ? (
+                      <button
+                        className="btn btn-link btn-sm text-danger"
+                        type="button"
+                        onClick={() => void handleModuleDelete(module.id)}
+                      >
+                        Sil
+                      </button>
+                      ) : null}
+                    </span>
+                  </div>
+                ))}
+              </div>
+              ) : (
+                <p className="text-muted small mb-0">Modül listesini görme yetkiniz yok.</p>
+              )}
             </div>
-            ) : (
-              <p className="muted-text">Modül listesini görme yetkiniz yok.</p>
-            )}
           </section>
           ) : null}
 
           {canViewMethodsForm ? (
-          <section className="panel-card method-panel">
-            <div className="panel-card-title">
-              <h2>Methodlar</h2>
+          <section className="card mb-3">
+            <div className="card-header">
+              <h3 className="card-title mb-0">Methodlar</h3>
             </div>
 
-            {canCreateMethods || canUpdateMethods ? (
-            <form className="panel-form" onSubmit={(event) => void handleMethodSubmit(event)}>
-              <label className="panel-label" htmlFor="method-module">
-                Modül
-              </label>
-              <select
-                id="method-module"
-                className="panel-input"
-                value={methodForm.moduleId}
-                onChange={(event) =>
-                  setMethodForm((current) => ({
-                    ...current,
-                    moduleId: Number(event.target.value),
-                  }))
-                }
-              >
-                {modules.map((module) => (
-                  <option key={module.id} value={module.id}>
-                    {module.name}
-                  </option>
-                ))}
-              </select>
+            <div className="card-body">
+              {canCreateMethods || canUpdateMethods ? (
+              <form className="row g-3 mb-3" onSubmit={(event) => void handleMethodSubmit(event)}>
+                <div className="col-md-6">
+                  <label className="form-label" htmlFor="method-module">
+                    Modül
+                  </label>
+                  <select
+                    id="method-module"
+                    name="methodModuleId"
+                    className="form-select form-select-sm"
+                    value={methodForm.moduleId}
+                    onChange={(event) =>
+                      setMethodForm((current) => ({
+                        ...current,
+                        moduleId: Number(event.target.value),
+                      }))
+                    }
+                  >
+                    {modules.map((module) => (
+                      <option key={module.id} value={module.id}>
+                        {module.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
 
-              <label className="panel-label" htmlFor="method-name">
-                İzin Adı
-              </label>
-              <input
-                id="method-name"
-                className="panel-input"
-                placeholder="modules.list"
-                value={methodForm.name}
-                onChange={(event) =>
-                  setMethodForm((current) => ({ ...current, name: event.target.value }))
-                }
-              />
+                <div className="col-md-6">
+                  <label className="form-label" htmlFor="method-name">
+                    İzin Adı
+                  </label>
+                  <input
+                    id="method-name"
+                    name="methodName"
+                    className="form-control form-control-sm"
+                    placeholder="modules.list"
+                    value={methodForm.name}
+                    onChange={(event) =>
+                      setMethodForm((current) => ({ ...current, name: event.target.value }))
+                    }
+                  />
+                </div>
 
-              <label className="panel-label" htmlFor="method-description">
-                Açıklama
-              </label>
-              <input
-                id="method-description"
-                className="panel-input"
-                value={methodForm.description}
-                onChange={(event) =>
-                  setMethodForm((current) => ({
-                    ...current,
-                    description: event.target.value,
-                  }))
-                }
-              />
+                <div className="col-12">
+                  <label className="form-label" htmlFor="method-description">
+                    Açıklama
+                  </label>
+                  <input
+                    id="method-description"
+                    name="methodDescription"
+                    className="form-control form-control-sm"
+                    value={methodForm.description}
+                    onChange={(event) =>
+                      setMethodForm((current) => ({
+                        ...current,
+                        description: event.target.value,
+                      }))
+                    }
+                  />
+                </div>
 
-              <div className="two-column-form">
-                <label className="panel-label" htmlFor="method-http">
-                  HTTP Method
+                <div className="col-md-6">
+                  <label className="form-label" htmlFor="method-http">
+                    HTTP Method
+                  </label>
                   <select
                     id="method-http"
-                    className="panel-input"
+                    name="methodHttp"
+                    className="form-select form-select-sm"
                     value={methodForm.method}
                     onChange={(event) =>
                       setMethodForm((current) => ({
@@ -593,13 +650,16 @@ export function AuthorizationPage({ permissions }: AuthorizationPageProps) {
                       </option>
                     ))}
                   </select>
-                </label>
+                </div>
 
-                <label className="panel-label" htmlFor="method-path">
-                  Path
+                <div className="col-md-6">
+                  <label className="form-label" htmlFor="method-path">
+                    Path
+                  </label>
                   <input
                     id="method-path"
-                    className="panel-input"
+                    name="methodPath"
+                    className="form-control form-control-sm"
                     value={methodForm.path}
                     onChange={(event) =>
                       setMethodForm((current) => ({
@@ -608,73 +668,82 @@ export function AuthorizationPage({ permissions }: AuthorizationPageProps) {
                       }))
                     }
                   />
-                </label>
-              </div>
-
-              <div className="button-row">
-                <button className="blue-button" type="submit">
-                  {methodForm.id ? "Güncelle" : "Ekle"}
-                </button>
-                {methodForm.id ? (
-                  <button
-                    className="gray-button"
-                    type="button"
-                    onClick={() =>
-                      setMethodForm({ ...emptyMethodForm, moduleId: selectedModuleId })
-                    }
-                  >
-                    Vazgeç
-                  </button>
-                ) : null}
-              </div>
-            </form>
-            ) : null}
-
-            {canListMethods ? (
-            <div className="method-list">
-              {filteredMethods.map((method) => (
-                <div className="method-item" key={method.id}>
-                  <div>
-                    <strong>{method.name}</strong>
-                    <span>{method.description || "Açıklama yok"}</span>
-                    <small>
-                      {method.method || "UI"} {method.path || "permission"}
-                    </small>
-                  </div>
-                  <span>
-                    {canUpdateMethods ? (
-                    <button
-                      type="button"
-                      onClick={() =>
-                        setMethodForm({
-                          id: method.id,
-                          moduleId: method.moduleId,
-                          name: method.name,
-                          description: method.description,
-                          method: method.method,
-                          path: method.path,
-                        })
-                      }
-                    >
-                      Düzenle
-                    </button>
-                    ) : null}
-                    {canDeleteMethods ? (
-                    <button type="button" onClick={() => void handleMethodDelete(method.id)}>
-                      Sil
-                    </button>
-                    ) : null}
-                  </span>
                 </div>
-              ))}
+
+                <div className="col-12">
+                  <div className="button-row">
+                    <button className="btn btn-primary btn-sm" type="submit">
+                      {methodForm.id ? "Güncelle" : "Ekle"}
+                    </button>
+                    {methodForm.id ? (
+                      <button
+                        className="btn btn-secondary btn-sm"
+                        type="button"
+                        onClick={() =>
+                          setMethodForm({ ...emptyMethodForm, moduleId: selectedModuleId })
+                        }
+                      >
+                        Vazgeç
+                      </button>
+                    ) : null}
+                  </div>
+                </div>
+              </form>
+              ) : null}
+
+              {canListMethods ? (
+              <div className="method-list">
+                {filteredMethods.map((method) => (
+                  <div className="method-item" key={method.id}>
+                    <div>
+                      <strong className="d-block">{method.name}</strong>
+                      <span className="text-muted small d-block mt-1">
+                        {method.description || "Açıklama yok"}
+                      </span>
+                      <small className="text-muted d-block mt-1">
+                        {method.method || "UI"} {method.path || "permission"}
+                      </small>
+                    </div>
+                    <span className="compact-list-actions">
+                      {canUpdateMethods ? (
+                      <button
+                        className="btn btn-link btn-sm"
+                        type="button"
+                        onClick={() =>
+                          setMethodForm({
+                            id: method.id,
+                            moduleId: method.moduleId,
+                            name: method.name,
+                            description: method.description,
+                            method: method.method,
+                            path: method.path,
+                          })
+                        }
+                      >
+                        Düzenle
+                      </button>
+                      ) : null}
+                      {canDeleteMethods ? (
+                      <button
+                        className="btn btn-link btn-sm text-danger"
+                        type="button"
+                        onClick={() => void handleMethodDelete(method.id)}
+                      >
+                        Sil
+                      </button>
+                      ) : null}
+                    </span>
+                  </div>
+                ))}
+              </div>
+              ) : (
+                <p className="text-muted small mb-0">Method listesini görme yetkiniz yok.</p>
+              )}
             </div>
-            ) : (
-              <p className="muted-text">Method listesini görme yetkiniz yok.</p>
-            )}
           </section>
           ) : null}
         </div>
       )}
-    </section>
+    </>
   );
 }

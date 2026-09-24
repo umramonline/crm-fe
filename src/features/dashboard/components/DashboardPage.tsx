@@ -1,3 +1,12 @@
+import {
+  Alert,
+  Button,
+  Card,
+  InfoBox,
+  Input,
+  SmallBox,
+  type BootstrapTheme,
+} from "@adminlte/react";
 import { FormEvent } from "react";
 
 import type { Permission } from "@/features/auth/services/authApi";
@@ -7,7 +16,7 @@ import {
 } from "@/features/dashboard/constants/dashboardTexts";
 import { useDashboardPage } from "@/features/dashboard/hooks/useDashboardPage";
 import type { DashboardStats } from "@/features/dashboard/services/dashboardApi";
-import type { DatePresetKey } from "@/features/dashboard/utils/dateRangePresets";
+import { ContentHeader } from "@/shared/components/ContentHeader";
 
 type DashboardPageProps = {
   permissions: Permission[];
@@ -15,22 +24,16 @@ type DashboardPageProps = {
 
 type ColorStatCard = {
   key: keyof typeof dashboardTexts.cards;
-  tone:
-    | "teal"
-    | "amber"
-    | "red"
-    | "purple"
-    | "blue"
-    | "green"
-    | "dark"
-    | "mint";
+  theme: BootstrapTheme | "teal" | "purple";
+  icon: string;
   value: number;
   formattedValue: string;
 };
 
 type TaskStatCard = {
   key: keyof typeof dashboardTexts.tasks;
-  tone: "pending" | "in-progress" | "completed" | "overdue";
+  theme: BootstrapTheme;
+  icon: string;
   value: number;
 };
 
@@ -62,9 +65,9 @@ export function DashboardPage({ permissions }: DashboardPageProps) {
 
   if (!canViewDashboard) {
     return (
-      <section className="panel-card permission-table-panel">
-        <p className="form-message">{dashboardTexts.noPermission}</p>
-      </section>
+      <Card title={dashboardTexts.pageTitle}>
+        <p className="mb-0">{dashboardTexts.noPermission}</p>
+      </Card>
     );
   }
 
@@ -77,113 +80,106 @@ export function DashboardPage({ permissions }: DashboardPageProps) {
   }
 
   return (
-    <section className="dashboard-page">
-      <div className="page-title">
-        <h1>{dashboardTexts.pageTitle}</h1>
-      </div>
+    <>
+      <ContentHeader
+        title={dashboardTexts.pageTitle}
+        breadcrumbs={[{ label: "Ana Sayfa", href: "/home" }]}
+      />
 
-      <form className="panel-card dashboard-filter-card" onSubmit={handleFilterSubmit}>
-        <div className="panel-card-title">
-          <h2>{dashboardTexts.filterTitle}</h2>
-        </div>
+      <form className="mb-3" onSubmit={handleFilterSubmit}>
+        <Card title={dashboardTexts.filterTitle}>
+          <div className="row g-3">
+            <div className="col-md-4">
+              <Input
+                id="dashboard-start-date"
+                name="dashboard-start-date"
+                label={dashboardTexts.startDateLabel}
+                type="date"
+                value={draftRange.startDate}
+                error={validationErrors.startDate}
+                onChange={(event) => updateDraftRange("startDate", event.target.value)}
+              />
+            </div>
 
-        <div className="dashboard-filter-grid">
-          <label className="field-label">
-            {dashboardTexts.startDateLabel}
-            <input
-              className="panel-input"
-              type="date"
-              value={draftRange.startDate}
-              onChange={(event) => updateDraftRange("startDate", event.target.value)}
-            />
-            {validationErrors.startDate ? (
-              <span className="customer-field-error">{validationErrors.startDate}</span>
-            ) : null}
-          </label>
+            <div className="col-md-4">
+              <Input
+                id="dashboard-end-date"
+                name="dashboard-end-date"
+                label={dashboardTexts.endDateLabel}
+                type="date"
+                min={draftRange.startDate || undefined}
+                value={draftRange.endDate}
+                error={validationErrors.endDate}
+                onChange={(event) => updateDraftRange("endDate", event.target.value)}
+              />
+            </div>
 
-          <label className="field-label">
-            {dashboardTexts.endDateLabel}
-            <input
-              className="panel-input"
-              type="date"
-              min={draftRange.startDate || undefined}
-              value={draftRange.endDate}
-              onChange={(event) => updateDraftRange("endDate", event.target.value)}
-            />
-            {validationErrors.endDate ? (
-              <span className="customer-field-error">{validationErrors.endDate}</span>
-            ) : null}
-          </label>
-        </div>
+            <div className="col-md-4 d-flex align-items-end gap-2">
+              <Button theme="primary" type="submit" disabled={isLoading}>
+                {dashboardTexts.filterButton}
+              </Button>
+              <Button theme="secondary" type="button" disabled={isLoading} onClick={resetFilters}>
+                {dashboardTexts.clearButton}
+              </Button>
+            </div>
+          </div>
 
-        <div className="dashboard-preset-row">
-          {dashboardPresetOrder.map((preset) => (
-            <button
-              key={preset}
-              className={
-                activePreset === preset
-                  ? "dashboard-preset-button active"
-                  : "dashboard-preset-button"
-              }
-              type="button"
-              onClick={() => selectPreset(preset)}
-            >
-              {dashboardTexts.presets[preset]}
-            </button>
-          ))}
-        </div>
-
-        <div className="dashboard-filter-actions">
-          <button className="blue-button" type="submit" disabled={isLoading}>
-            {dashboardTexts.filterButton}
-          </button>
-          <button
-            className="gray-button dashboard-clear-button"
-            type="button"
-            disabled={isLoading}
-            onClick={resetFilters}
-          >
-            {dashboardTexts.clearButton}
-          </button>
-        </div>
+          <div className="d-flex flex-wrap gap-2 mt-3">
+            {dashboardPresetOrder.map((preset) => (
+              <Button
+                key={preset}
+                size="sm"
+                theme={activePreset === preset ? "primary" : "secondary"}
+                outline={activePreset !== preset}
+                type="button"
+                onClick={() => selectPreset(preset)}
+              >
+                {dashboardTexts.presets[preset]}
+              </Button>
+            ))}
+          </div>
+        </Card>
       </form>
 
-      <div className="panel-alert dashboard-info-banner">
-        <strong>{dashboardTexts.infoTitle}</strong>
-        <p>
+      <Alert theme="info" title={dashboardTexts.infoTitle}>
+        <p className="mb-0 mt-1">
           {dashboardTexts.branchesLabel} {branchLabel}
         </p>
-        <p>{dashboardTexts.defaultRangeHint}</p>
-      </div>
+        <p className="mb-0">{dashboardTexts.defaultRangeHint}</p>
+      </Alert>
 
-      {errorMessage ? <p className="form-message">{errorMessage}</p> : null}
+      {errorMessage ? <Alert theme="danger">{errorMessage}</Alert> : null}
 
-      <div className="dashboard-color-stats-grid">
+      <div className="row">
         {colorCards.map((card) => (
-          <article
-            key={card.key}
-            className={`dashboard-color-card dashboard-color-card--${card.tone}`}
-          >
-            <strong>{card.formattedValue}</strong>
-            <span>{dashboardTexts.cards[card.key]}</span>
-          </article>
+          <div className="col-lg-3 col-md-4 col-sm-6 mb-3" key={card.key}>
+            <SmallBox
+              title={card.formattedValue}
+              text={dashboardTexts.cards[card.key]}
+              theme={card.theme as BootstrapTheme}
+              icon={
+                <div className="icon">
+                  <i className={`bi ${card.icon}`} aria-hidden="true" />
+                </div>
+              }
+            />
+          </div>
         ))}
       </div>
 
-      <div className="dashboard-task-stats-grid">
+      <div className="row">
         {taskCards.map((card) => (
-          <article key={card.key} className="dashboard-task-card">
-            <div className={`dashboard-task-icon dashboard-task-icon--${card.tone}`}>
-              <span aria-hidden="true">{taskIcon(card.tone)}</span>
-            </div>
-            <div>
-              <span>{dashboardTexts.tasks[card.key]}</span>
-              <strong>{countFormatter.format(card.value)}</strong>
-            </div>
-          </article>
+          <div className="col-lg-3 col-md-6 mb-3" key={card.key}>
+            <InfoBox
+              text={dashboardTexts.tasks[card.key]}
+              title={countFormatter.format(card.value)}
+              theme={card.theme}
+              icon={card.icon}
+            />
+          </div>
         ))}
       </div>
-    </section>
+    </>
   );
 }
 
@@ -191,49 +187,57 @@ function buildColorCards(stats: DashboardStats | undefined): ColorStatCard[] {
   return [
     {
       key: "potentialCustomerCount",
-      tone: "teal",
+      theme: "teal",
+      icon: "bi-person-plus",
       value: stats?.potentialCustomerCount ?? 0,
       formattedValue: countFormatter.format(stats?.potentialCustomerCount ?? 0),
     },
     {
       key: "totalCustomerCount",
-      tone: "amber",
+      theme: "warning",
+      icon: "bi-people",
       value: stats?.totalCustomerCount ?? 0,
       formattedValue: countFormatter.format(stats?.totalCustomerCount ?? 0),
     },
     {
       key: "customerVisitCount",
-      tone: "red",
+      theme: "danger",
+      icon: "bi-clipboard-check",
       value: stats?.customerVisitCount ?? 0,
       formattedValue: countFormatter.format(stats?.customerVisitCount ?? 0),
     },
     {
       key: "newCustomerCount",
-      tone: "purple",
+      theme: "purple",
+      icon: "bi-person-check",
       value: stats?.newCustomerCount ?? 0,
       formattedValue: countFormatter.format(stats?.newCustomerCount ?? 0),
     },
     {
       key: "vehicleEntryCount",
-      tone: "blue",
+      theme: "primary",
+      icon: "bi-car-front",
       value: stats?.vehicleEntryCount ?? 0,
       formattedValue: countFormatter.format(stats?.vehicleEntryCount ?? 0),
     },
     {
       key: "totalAmount",
-      tone: "green",
+      theme: "success",
+      icon: "bi-currency-exchange",
       value: stats?.totalAmount ?? 0,
       formattedValue: currencyFormatter.format(stats?.totalAmount ?? 0),
     },
     {
       key: "loadedCreditAmount",
-      tone: "dark",
+      theme: "dark",
+      icon: "bi-credit-card",
       value: stats?.loadedCreditAmount ?? 0,
       formattedValue: countFormatter.format(stats?.loadedCreditAmount ?? 0),
     },
     {
       key: "vehicleStockCount",
-      tone: "mint",
+      theme: "info",
+      icon: "bi-truck",
       value: stats?.vehicleStockCount ?? 0,
       formattedValue: countFormatter.format(stats?.vehicleStockCount ?? 0),
     },
@@ -244,36 +248,27 @@ function buildTaskCards(stats: DashboardStats | undefined): TaskStatCard[] {
   return [
     {
       key: "pendingTaskCount",
-      tone: "pending",
+      theme: "warning",
+      icon: "bi-hourglass-split",
       value: stats?.pendingTaskCount ?? 0,
     },
     {
       key: "inProgressTaskCount",
-      tone: "in-progress",
+      theme: "info",
+      icon: "bi-play-circle",
       value: stats?.inProgressTaskCount ?? 0,
     },
     {
       key: "completedTaskCount",
-      tone: "completed",
+      theme: "success",
+      icon: "bi-check-circle",
       value: stats?.completedTaskCount ?? 0,
     },
     {
       key: "overdueTaskCount",
-      tone: "overdue",
+      theme: "danger",
+      icon: "bi-exclamation-circle",
       value: stats?.overdueTaskCount ?? 0,
     },
   ];
-}
-
-function taskIcon(tone: TaskStatCard["tone"]): string {
-  switch (tone) {
-    case "pending":
-      return "◷";
-    case "in-progress":
-      return "▶";
-    case "completed":
-      return "✓";
-    case "overdue":
-      return "!";
-  }
 }

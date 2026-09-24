@@ -30,33 +30,64 @@ type ApiEnvelope<T> = {
   data?: T;
 };
 
-type RequestOtpPayload = {
-  phone: string;
-};
-
-type VerifyOtpPayload = {
-  phone: string;
-  otp_code: string;
-};
-
-type PasswordLoginPayload = {
+export type RequestOtpPayload = {
   phone: string;
   password: string;
 };
 
-export async function requestOtp(payload: RequestOtpPayload): Promise<void> {
-  await apiClient.post("/api/v1/auth/otp/request", payload);
+export type RequestOtpResult = {
+  mfaRequired: boolean;
+  mfaToken?: string;
+  mfaChannel?: string;
+  session?: SessionData;
+};
+
+export type VerifyOtpPayload = {
+  mfa_token: string;
+  otp_code: string;
+};
+
+type RawRequestOtpData = Partial<{
+  mfa_token: string;
+  mfa_channel: string;
+  user_id: number;
+  user: Partial<{
+    id: number;
+    full_name: string;
+    phone: string;
+    role_id: number;
+    role_name: string;
+  }>;
+  permissions: RawPermission[];
+}>;
+
+export async function requestOtp(
+  payload: RequestOtpPayload,
+): Promise<RequestOtpResult> {
+  const response = await apiClient.post<ApiEnvelope<RawRequestOtpData>>(
+    "/api/v1/auth/otp/request",
+    payload,
+  );
+
+  const data = response.data.data;
+
+  if (data?.user_id !== undefined || data?.user) {
+    return {
+      mfaRequired: false,
+      session: normalizeSessionData(data),
+    };
+  }
+
+  return {
+    mfaRequired: true,
+    mfaToken: data?.mfa_token,
+    mfaChannel: data?.mfa_channel,
+  };
 }
 
-export async function verifyOtp(payload: VerifyOtpPayload): Promise<void> {
-  await apiClient.post("/api/v1/auth/otp/verify", payload);
-}
-
-export async function loginWithPassword(
-  payload: PasswordLoginPayload,
-): Promise<SessionData> {
+export async function verifyOtp(payload: VerifyOtpPayload): Promise<SessionData> {
   const response = await apiClient.post<ApiEnvelope<RawSessionData>>(
-    "/api/v1/auth/password/login",
+    "/api/v1/auth/otp/verify",
     payload,
   );
 

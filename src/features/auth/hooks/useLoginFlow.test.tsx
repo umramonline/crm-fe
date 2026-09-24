@@ -2,19 +2,13 @@ import { act, renderHook } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { useLoginFlow } from "@/features/auth/hooks/useLoginFlow";
-import {
-  loginWithPassword,
-  requestOtp,
-  verifyOtp,
-} from "@/features/auth/services/authApi";
+import { requestOtp, verifyOtp } from "@/features/auth/services/authApi";
 
 vi.mock("@/features/auth/services/authApi", () => ({
-  loginWithPassword: vi.fn(),
   requestOtp: vi.fn(),
   verifyOtp: vi.fn(),
 }));
 
-const loginWithPasswordMock = vi.mocked(loginWithPassword);
 const requestOtpMock = vi.mocked(requestOtp);
 const verifyOtpMock = vi.mocked(verifyOtp);
 const sessionFixture = {
@@ -31,70 +25,127 @@ const sessionFixture = {
 
 describe("useLoginFlow", () => {
   beforeEach(() => {
-    loginWithPasswordMock.mockReset();
     requestOtpMock.mockReset();
     verifyOtpMock.mockReset();
   });
 
-  it("keeps the phone step when the phone format is invalid", async () => {
+  it("keeps the credentials step when the phone format is invalid", async () => {
     const { result } = renderHook(() => useLoginFlow());
 
     await act(async () => {
-      const submitResult = await result.current.submitPhone("5551234567");
+      const submitResult = await result.current.submitCredentials(
+        "5551234567",
+        "secret",
+      );
 
       expect(submitResult.ok).toBe(false);
     });
 
-    expect(result.current.currentStep).toBe("phone");
+    expect(result.current.currentStep).toBe("credentials");
     expect(requestOtpMock).not.toHaveBeenCalled();
   });
 
-  it("moves to the otp step when the phone format is valid and otp request succeeds", async () => {
-    requestOtpMock.mockResolvedValue();
+  it("keeps the credentials step when the password is empty", async () => {
     const { result } = renderHook(() => useLoginFlow());
 
     await act(async () => {
-      const submitResult = await result.current.submitPhone("05551234567");
+      const submitResult = await result.current.submitCredentials(
+        "05551234567",
+        " ",
+      );
+
+      expect(submitResult.ok).toBe(false);
+    });
+
+    expect(result.current.currentStep).toBe("credentials");
+    expect(requestOtpMock).not.toHaveBeenCalled();
+  });
+
+  it("moves to the otp step when credentials are valid and mfa is required", async () => {
+    requestOtpMock.mockResolvedValue({
+      mfaRequired: true,
+      mfaToken: "mfa-token",
+      mfaChannel: "sms",
+    });
+    const { result } = renderHook(() => useLoginFlow());
+
+    await act(async () => {
+      const submitResult = await result.current.submitCredentials(
+        "05551234567",
+        "secret",
+      );
 
       expect(submitResult.ok).toBe(true);
     });
 
-    expect(requestOtpMock).toHaveBeenCalledWith({ phone: "05551234567" });
+    expect(requestOtpMock).toHaveBeenCalledWith({
+      phone: "05551234567",
+      password: "secret",
+    });
     expect(result.current.currentStep).toBe("otp");
-    expect(result.current.phone).toBe("05551234567");
   });
 
-  it("keeps the phone step when the otp request fails", async () => {
+  it("authenticates immediately when mfa is disabled", async () => {
+    const onAuthenticated = vi.fn();
+    requestOtpMock.mockResolvedValue({
+      mfaRequired: false,
+      session: sessionFixture,
+    });
+    const { result } = renderHook(() => useLoginFlow({ onAuthenticated }));
+
+    await act(async () => {
+      const submitResult = await result.current.submitCredentials(
+        "05551234567",
+        "secret",
+      );
+
+      expect(submitResult.ok).toBe(true);
+    });
+
+    expect(onAuthenticated).toHaveBeenCalledWith(sessionFixture);
+    expect(result.current.currentStep).toBe("credentials");
+  });
+
+  it("keeps the credentials step when the otp request fails", async () => {
     requestOtpMock.mockRejectedValue(new Error("request failed"));
     const { result } = renderHook(() => useLoginFlow());
 
     await act(async () => {
-      const submitResult = await result.current.submitPhone("05551234567");
+      const submitResult = await result.current.submitCredentials(
+        "05551234567",
+        "secret",
+      );
 
       expect(submitResult.ok).toBe(false);
     });
 
-    expect(result.current.currentStep).toBe("phone");
+    expect(result.current.currentStep).toBe("credentials");
   });
 
-  it("returns from the otp step to the phone step", async () => {
-    requestOtpMock.mockResolvedValue();
+  it("returns from the otp step to the credentials step", async () => {
+    requestOtpMock.mockResolvedValue({
+      mfaRequired: true,
+      mfaToken: "mfa-token",
+    });
     const { result } = renderHook(() => useLoginFlow());
 
     await act(async () => {
-      await result.current.submitPhone("05551234567");
-      result.current.goBackToPhone();
+      await result.current.submitCredentials("05551234567", "secret");
+      result.current.goBackToCredentials();
     });
 
-    expect(result.current.currentStep).toBe("phone");
+    expect(result.current.currentStep).toBe("credentials");
   });
 
   it("keeps the otp step when the otp format is invalid", async () => {
-    requestOtpMock.mockResolvedValue();
+    requestOtpMock.mockResolvedValue({
+      mfaRequired: true,
+      mfaToken: "mfa-token",
+    });
     const { result } = renderHook(() => useLoginFlow());
 
     await act(async () => {
-      await result.current.submitPhone("05551234567");
+      await result.current.submitCredentials("05551234567", "secret");
     });
 
     await act(async () => {
@@ -107,13 +158,17 @@ describe("useLoginFlow", () => {
     expect(verifyOtpMock).not.toHaveBeenCalled();
   });
 
-  it("moves to the password step when otp verification succeeds", async () => {
-    requestOtpMock.mockResolvedValue();
-    verifyOtpMock.mockResolvedValue();
-    const { result } = renderHook(() => useLoginFlow());
+  it("authenticates when otp verification succeeds", async () => {
+    const onAuthenticated = vi.fn();
+    requestOtpMock.mockResolvedValue({
+      mfaRequired: true,
+      mfaToken: "mfa-token",
+    });
+    verifyOtpMock.mockResolvedValue(sessionFixture);
+    const { result } = renderHook(() => useLoginFlow({ onAuthenticated }));
 
     await act(async () => {
-      await result.current.submitPhone("05551234567");
+      await result.current.submitCredentials("05551234567", "secret");
     });
 
     await act(async () => {
@@ -123,19 +178,22 @@ describe("useLoginFlow", () => {
     });
 
     expect(verifyOtpMock).toHaveBeenCalledWith({
-      phone: "05551234567",
+      mfa_token: "mfa-token",
       otp_code: "123456",
     });
-    expect(result.current.currentStep).toBe("password");
+    expect(onAuthenticated).toHaveBeenCalledWith(sessionFixture);
   });
 
   it("keeps the otp step when otp verification fails", async () => {
-    requestOtpMock.mockResolvedValue();
+    requestOtpMock.mockResolvedValue({
+      mfaRequired: true,
+      mfaToken: "mfa-token",
+    });
     verifyOtpMock.mockRejectedValue(new Error("verify failed"));
     const { result } = renderHook(() => useLoginFlow());
 
     await act(async () => {
-      await result.current.submitPhone("05551234567");
+      await result.current.submitCredentials("05551234567", "secret");
     });
 
     await act(async () => {
@@ -145,70 +203,5 @@ describe("useLoginFlow", () => {
     });
 
     expect(result.current.currentStep).toBe("otp");
-  });
-
-  it("rejects empty passwords without calling the login endpoint", async () => {
-    requestOtpMock.mockResolvedValue();
-    verifyOtpMock.mockResolvedValue();
-    const { result } = renderHook(() => useLoginFlow());
-
-    await act(async () => {
-      await result.current.submitPhone("05551234567");
-      await result.current.submitOtp("123456");
-    });
-
-    await act(async () => {
-      const submitResult = await result.current.submitPassword(" ", false);
-
-      expect(submitResult.ok).toBe(false);
-    });
-
-    expect(loginWithPasswordMock).not.toHaveBeenCalled();
-    expect(result.current.currentStep).toBe("password");
-  });
-
-  it("logs in with the verified phone and password", async () => {
-    const onAuthenticated = vi.fn();
-    requestOtpMock.mockResolvedValue();
-    verifyOtpMock.mockResolvedValue();
-    loginWithPasswordMock.mockResolvedValue(sessionFixture);
-    const { result } = renderHook(() => useLoginFlow({ onAuthenticated }));
-
-    await act(async () => {
-      await result.current.submitPhone("05551234567");
-      await result.current.submitOtp("123456");
-    });
-
-    await act(async () => {
-      const submitResult = await result.current.submitPassword("secret", true);
-
-      expect(submitResult.ok).toBe(true);
-    });
-
-    expect(loginWithPasswordMock).toHaveBeenCalledWith({
-      phone: "05551234567",
-      password: "secret",
-    });
-    expect(onAuthenticated).toHaveBeenCalledTimes(1);
-  });
-
-  it("keeps the password step when password login fails", async () => {
-    requestOtpMock.mockResolvedValue();
-    verifyOtpMock.mockResolvedValue();
-    loginWithPasswordMock.mockRejectedValue(new Error("login failed"));
-    const { result } = renderHook(() => useLoginFlow());
-
-    await act(async () => {
-      await result.current.submitPhone("05551234567");
-      await result.current.submitOtp("123456");
-    });
-
-    await act(async () => {
-      const submitResult = await result.current.submitPassword("wrong", false);
-
-      expect(submitResult.ok).toBe(false);
-    });
-
-    expect(result.current.currentStep).toBe("password");
   });
 });
