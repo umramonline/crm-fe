@@ -35,10 +35,10 @@ CRM görünümü: light modda açık içerik (`#f4f6f9`), **sidebar her modda ko
 |------|---------|
 | Auth | `AuthLayout`, `Input`, `Button` |
 | Anasayfa / Dashboard | `ContentHeader`, `SmallBox`, `Card` |
-| IETTS | Tabulator pilot: `IettsDataTable`, Export CSV/JSON |
-| Diğer listeler | `ContentHeader`, `list-table-card`, filter row, `ListPagination` |
-| Modals | `ControlledModal` |
+| IETTS | `IettsDataTable`, Export CSV/JSON |
+| Görevler / Takipler / Galeri | `*DataTable` + `crmRemoteTabulator`, footer özet, Filtrele/Temizle |
 | İzinler | `@adminlte/react` `Table` |
+| Modals | `ControlledModal` |
 
 `@adminlte/react` `Datatable` sarmalayıcısı aksiyon hücreleri / CRM API için yetersiz; pilot doğrudan `tabulator-tables` + Bootstrap 5 teması kullanır ([Data Tables demo](https://adminlte.io/themes/next-react/tables/data/) ile aynı altyapı).
 

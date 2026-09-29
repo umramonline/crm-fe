@@ -51,31 +51,27 @@ export function MyPage() {
 }
 ```
 
-## Liste sayfası tablo iskeleti
+## Liste sayfası (Tabulator)
+
+CRM listeleri (IETTS, Görevler, Takipler, Galeri): `*DataTable` + `shared/tabulator/crmRemoteTabulator.ts`.
 
 ```tsx
 <div className="card list-table-card mb-3">
-  <form className="customer-filter-form" onSubmit={...}>
-    <ListTableToolbar>{/* Filtrele, Temizle, ... */}</ListTableToolbar>
+  <form className="customer-filter-form" onSubmit={handleFilterSubmit}>
+    <ListTableToolbar>
+      {/* Filtrele → tableRef.applyFilters(); Temizle → clearFilters(); isteğe CSV/JSON */}
+    </ListTableToolbar>
     <div className="card-body p-0">
-      <div className="table-responsive">
-        <table className="table table-striped table-hover table-sm mb-0">...</table>
-      </div>
+      <CustomersDataTable ref={tableRef} onLoadMeta={setListMeta} ... />
     </div>
-    <div className="card-footer">
-      <ListPagination
-        currentPage={currentPage}
-        lastPage={lastPage}
-        total={total}
-        isLoading={isLoading}
-        onPageChange={setCurrentPage}
-      />
+    <div className="card-footer list-table-footer py-2">
+      <span className="text-muted small">Toplam … · Sayfa …</span>
     </div>
   </form>
 </div>
 ```
 
-Filter satırı: `TableFilterInput` / `TableFilterSelect` (`page="customers"` gibi scope).
+Header filtreler Tabulator kolonlarında; **Filtrele** DOM değerlerini commit eder (`applyCrmTableFilters`). Geniş grid (Galeri): `responsiveLayout: false` + yatay kaydırma.
 
 ## Modal form alanı
 

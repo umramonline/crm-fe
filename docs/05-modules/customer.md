@@ -27,7 +27,8 @@ Referans listeleri (zones, cities, towns, branches) CRM API üzerinden gelir; UO
 
 | Bileşen | Rol |
 |---------|-----|
-| `CustomersPage` | Filtreli tablo, detay paneli, görev/follow-up tetikleri |
+| `CustomersPage` | Tabulator toolbar (Filtrele, export), detay modal, görev/follow-up |
+| `CustomersDataTable` | Remote Tabulator (`listCustomers`), seçim, satır renklendirme |
 | `CustomerEntryModal` | Yeni müşteri (bireysel / kurumsal) |
 | `CustomerSearchModal` | `q` ile arama |
 | `CustomerFullRegistrationPage` | 4 adımlı tam kayıt |
@@ -85,4 +86,8 @@ Tipler: [06-data-model.md](../06-data-model.md).
 - Full registration kurumsal sektör sabit liste: Teknoloji, İnşaat, Otomotiv, Gıda, Tekstil, Sağlık, Eğitim, Finans, Turizm, Diğer
 - Tam kayıt 4 adım; cep uniqueness `phone-exists` ile kontrol edilir
 - Metinlerde max length client-side vardır
-- Liste filtre + sort (`credit`, `point`, `created_at`, `vehicle_stock_count`)
+- Liste: header filtreler **Filtrele** ile uygulanır (`applyCrmTableFilters`); Tabulator sayfalama footer’da
+- Sıralama (API whitelist): `credit`, `point`, `created_at`, `vehicle_stock_count` — kredi/puan sıralaması birleşik listede Umramonline kontrolünü tetikler
+- Görev ata: bayi filtresi uygulandıktan sonra satır seçimi aktif
+- Export: CSV/JSON yalnızca görünen sayfa (`CustomersDataTable` / IETTS ile aynı kalıp)
+- Paylaşılan Tabulator: `shared/tabulator/crmRemoteTabulator.ts` (`responsiveLayout: false`, yatay kaydırma)

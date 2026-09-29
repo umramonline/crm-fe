@@ -1,12 +1,18 @@
-import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
+import { Button } from "@adminlte/react";
+import { FormEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { CustomerEntryModal } from "@/features/customers/components/CustomerEntryModal";
 import { CustomerSearchModal } from "@/features/customers/components/CustomerSearchModal";
+import {
+  CustomersDataTable,
+  type CustomersDataTableHandle,
+  type CustomersListMeta,
+} from "@/features/customers/components/CustomersDataTable";
 import { customerEntryTexts, customerTextMaxLength } from "@/features/customers/constants/customerEntryTexts";
+import { customerListTexts } from "@/features/customers/constants/customerListTexts";
 import {
   getCustomer,
   listBranches,
-  listCustomers,
   listZones,
   type Branch,
   type Customer,
@@ -24,28 +30,16 @@ import {
 import type { Permission } from "@/features/auth/services/authApi";
 import { ContentHeader } from "@/shared/components/ContentHeader";
 import { ControlledModal } from "@/shared/components/ControlledModal";
+import { ListTableToolbar } from "@/shared/components";
 import {
-  ListPagination,
-  ListTableToolbar,
-  TableActionGroup,
-  TableFilterInput,
-  TableFilterSelect,
-  TableIconButton,
-} from "@/shared/components";
-import { formFieldProps } from "@/shared/utils/formFieldProps";
+  CrmFormFieldCol,
+  CrmFormInput,
+  CrmFormSelect,
+} from "@/shared/components/CrmFormField";
 import { StandaloneFollowUpModal } from "@/features/followUps/components/StandaloneFollowUpModal";
-import { customerRowClass } from "@/shared/utils/customerRowClass";
 import { navigateToFullRegistration } from "@/shared/utils/navigation";
 
-const situationOptions = [
-  "Potansiyel Müşteri",
-  "Kayıp Müşteri",
-  "Pasif Müşteri",
-  "Yarı Aktif Müşteri",
-  "Aktif Müşteri",
-] as const;
-
-const typeOptions = ["Kurumsal", "Bireysel"] as const;
+const taskAssignFormId = "customers-task-assign-form";
 const taskPriorityOptions = ["high", "medium", "low"] as const;
 
 const pageText = {
@@ -54,23 +48,6 @@ const pageText = {
   taskAssignButton: "Görev Ata",
   taskAssignTitle: "Görev Ata",
 } as const;
-
-type CustomerFilters = {
-  situation: string;
-  unvan: string;
-  cep: string;
-  ad: string;
-  soyad: string;
-  branchName: string;
-  zoneName: string;
-  plusCardNo: string;
-  city: string;
-  town: string;
-  createdAt: string;
-  type: string;
-};
-
-type SortableColumn = NonNullable<CustomerListQuery["sortBy"]>;
 
 type TaskPriority = (typeof taskPriorityOptions)[number];
 
@@ -83,19 +60,10 @@ type TaskAssignForm = {
   priority: TaskPriority;
 };
 
-const emptyFilters: CustomerFilters = {
-  situation: "",
-  unvan: "",
-  cep: "",
-  ad: "",
-  soyad: "",
-  branchName: "",
-  zoneName: "",
-  plusCardNo: "",
-  city: "",
-  town: "",
-  createdAt: "",
-  type: "",
+const emptyListMeta: CustomersListMeta = {
+  total: 0,
+  currentPage: 1,
+  lastPage: 1,
 };
 
 function createEmptyTaskAssignForm(
@@ -144,19 +112,15 @@ export function CustomersPage({ permissions }: CustomersPageProps) {
   const canListTowns = permissionNames.has("customers.towns.list");
   const canListBranches = permissionNames.has("customers.branches.list");
 
+  const tableRef = useRef<CustomersDataTableHandle>(null);
   const [zones, setZones] = useState<Zone[]>([]);
   const [branches, setBranches] = useState<Branch[]>([]);
-  const [draftFilters, setDraftFilters] =
-    useState<CustomerFilters>(emptyFilters);
-  const [appliedFilters, setAppliedFilters] =
-    useState<CustomerFilters>(emptyFilters);
-  const [items, setItems] = useState<Customer[]>([]);
-  const [currentPage, setCurrentPage] = useState(1);
-  const [lastPage, setLastPage] = useState(1);
-  const [total, setTotal] = useState(0);
-  const [sortBy, setSortBy] = useState<CustomerListQuery["sortBy"]>("");
-  const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc");
-  const [isLoading, setIsLoading] = useState(false);
+  const [appliedBranchName, setAppliedBranchName] = useState("");
+  const [currentPageCustomers, setCurrentPageCustomers] = useState<Customer[]>(
+    [],
+  );
+  const [listMeta, setListMeta] = useState<CustomersListMeta>(emptyListMeta);
+  const [isTableLoading, setIsTableLoading] = useState(false);
   const [message, setMessage] = useState("");
   const [isSearchModalOpen, setIsSearchModalOpen] = useState(false);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
@@ -181,19 +145,22 @@ export function CustomersPage({ permissions }: CustomersPageProps) {
     useState(false);
   const [isCreatingTaskAssignment, setIsCreatingTaskAssignment] =
     useState(false);
-  const taskSelectionHeaderRef = useRef<HTMLInputElement>(null);
   const todayDateInputValue = useMemo(
     () => formatDateInputValue(new Date()),
     [],
   );
-  const hasAppliedBranchFilter = appliedFilters.branchName.trim() !== "";
+  const selectedCustomerIds = useMemo(
+    () => new Set(selectedTaskCustomers.keys()),
+    [selectedTaskCustomers],
+  );
+  const hasAppliedBranchFilter = appliedBranchName.trim() !== "";
   const selectedTaskBranch = useMemo(
     () =>
       branches.find((branch) => {
         const branchName = branch.name || branch.title;
-        return branchName === appliedFilters.branchName;
+        return branchName === appliedBranchName;
       }) ?? null,
-    [appliedFilters.branchName, branches],
+    [appliedBranchName, branches],
   );
   const selectedTaskBranchId = selectedTaskBranch?.id ?? null;
   const canSelectTaskCustomers =
@@ -201,17 +168,19 @@ export function CustomersPage({ permissions }: CustomersPageProps) {
   const selectedTaskCustomerCount = selectedTaskCustomers.size;
   const selectedCurrentPageCustomerCount = useMemo(
     () =>
-      items.filter((customer) => selectedTaskCustomers.has(customer.id)).length,
-    [items, selectedTaskCustomers],
+      currentPageCustomers.filter((customer) =>
+        selectedTaskCustomers.has(customer.id),
+      ).length,
+    [currentPageCustomers, selectedTaskCustomers],
   );
   const areCurrentPageCustomersSelected =
     canSelectTaskCustomers &&
-    items.length > 0 &&
-    selectedCurrentPageCustomerCount === items.length;
+    currentPageCustomers.length > 0 &&
+    selectedCurrentPageCustomerCount === currentPageCustomers.length;
   const areSomeCurrentPageCustomersSelected =
     canSelectTaskCustomers &&
     selectedCurrentPageCustomerCount > 0 &&
-    selectedCurrentPageCustomerCount < items.length;
+    selectedCurrentPageCustomerCount < currentPageCustomers.length;
 
   useEffect(() => {
     setSelectedTaskCustomers(new Map());
@@ -220,16 +189,22 @@ export function CustomersPage({ permissions }: CustomersPageProps) {
     setTaskAssignErrors({});
     setTaskAssignableUsers([]);
     setIsCreatingTaskAssignment(false);
-  }, [appliedFilters.branchName, todayDateInputValue]);
+  }, [appliedBranchName, todayDateInputValue]);
 
-  useEffect(() => {
-    if (!taskSelectionHeaderRef.current) {
-      return;
-    }
+  const handleTableError = useCallback((errorMessage: string) => {
+    setMessage(errorMessage);
+  }, []);
 
-    taskSelectionHeaderRef.current.indeterminate =
-      areSomeCurrentPageCustomersSelected;
-  }, [areSomeCurrentPageCustomersSelected]);
+  const handleLoadMeta = useCallback((meta: CustomersListMeta) => {
+    setListMeta(meta);
+  }, []);
+
+  const handleFiltersApplied = useCallback(
+    (query: Partial<CustomerListQuery>) => {
+      setAppliedBranchName(query.branchName?.trim() ?? "");
+    },
+    [],
+  );
 
   useEffect(() => {
     if (!isTaskAssignModalOpen || !selectedTaskBranchId) {
@@ -331,76 +306,17 @@ export function CustomersPage({ permissions }: CustomersPageProps) {
     };
   }, [canListBranches]);
 
-  useEffect(() => {
-    if (!canListCustomers) {
-      return;
-    }
-
-    let isActive = true;
-
-    async function loadCustomers(): Promise<void> {
-      setIsLoading(true);
-      setMessage("");
-
-      try {
-        const result = await listCustomers({
-          page: currentPage,
-          perPage: 20,
-          situation: appliedFilters.situation,
-          unvan: appliedFilters.unvan,
-          cep: appliedFilters.cep,
-          ad: appliedFilters.ad,
-          soyad: appliedFilters.soyad,
-          branchName: appliedFilters.branchName,
-          zoneName: appliedFilters.zoneName,
-          plusCardNo: appliedFilters.plusCardNo,
-          city: appliedFilters.city,
-          town: appliedFilters.town,
-          createdAt: appliedFilters.createdAt,
-          type: appliedFilters.type,
-          sortBy,
-          sortOrder,
-        });
-
-        if (!isActive) {
-          return;
-        }
-
-        setItems(result.items);
-        setCurrentPage(result.pagination.currentPage || 1);
-        setLastPage(result.pagination.lastPage || 1);
-        setTotal(result.pagination.total || 0);
-      } catch {
-        if (isActive) {
-          setItems([]);
-          setMessage("Müşteri listesi getirilemedi.");
-        }
-      } finally {
-        if (isActive) {
-          setIsLoading(false);
-        }
-      }
-    }
-
-    void loadCustomers();
-
-    return () => {
-      isActive = false;
-    };
-  }, [appliedFilters, canListCustomers, currentPage, sortBy, sortOrder]);
-
   function handleFilterSubmit(event: FormEvent<HTMLFormElement>): void {
     event.preventDefault();
-    setCurrentPage(1);
-    setAppliedFilters({ ...draftFilters });
+    setMessage("");
+    tableRef.current?.applyFilters();
   }
 
   function handleResetFilters(): void {
-    setDraftFilters(emptyFilters);
-    setAppliedFilters(emptyFilters);
-    setCurrentPage(1);
-    setSortBy("");
-    setSortOrder("desc");
+    setMessage("");
+    tableRef.current?.clearFilters();
+    setAppliedBranchName("");
+    setCurrentPageCustomers([]);
     setSelectedTaskCustomers(new Map());
     setIsTaskAssignModalOpen(false);
   }
@@ -454,8 +370,7 @@ export function CustomersPage({ permissions }: CustomersPageProps) {
 
   function handleCustomerCreated(): void {
     setMessage(customerEntryTexts.createSuccess);
-    setCurrentPage(1);
-    setAppliedFilters((current) => ({ ...current }));
+    tableRef.current?.refresh();
   }
 
   function handleTaskCustomerToggle(
@@ -478,7 +393,10 @@ export function CustomersPage({ permissions }: CustomersPageProps) {
     });
   }
 
-  function handleCurrentPageTaskCustomerToggle(checked: boolean): void {
+  function handleToggleCurrentPage(
+    checked: boolean,
+    pageCustomers: Customer[],
+  ): void {
     if (!canSelectTaskCustomers) {
       return;
     }
@@ -490,7 +408,7 @@ export function CustomersPage({ permissions }: CustomersPageProps) {
 
     setSelectedTaskCustomers((current) => {
       const next = new Map(current);
-      items.forEach((customer) => {
+      pageCustomers.forEach((customer) => {
         next.set(customer.id, customer);
       });
 
@@ -584,7 +502,7 @@ export function CustomersPage({ permissions }: CustomersPageProps) {
         branchName:
           selectedTaskBranch?.name ||
           selectedTaskBranch?.title ||
-          appliedFilters.branchName,
+          appliedBranchName,
         visitDate: taskAssignForm.visitDate,
         dueDate: taskAssignForm.dueDate,
         priority: taskAssignForm.priority,
@@ -605,29 +523,6 @@ export function CustomersPage({ permissions }: CustomersPageProps) {
     } finally {
       setIsCreatingTaskAssignment(false);
     }
-  }
-
-  function handleSort(column: SortableColumn): void {
-    if (!column) {
-      return;
-    }
-
-    if (sortBy === column) {
-      setSortOrder((current) => (current === "asc" ? "desc" : "asc"));
-      return;
-    }
-
-    setSortBy(column);
-    setSortOrder("desc");
-    setCurrentPage(1);
-  }
-
-  function sortIndicator(column: SortableColumn): string {
-    if (sortBy !== column) {
-      return "";
-    }
-
-    return sortOrder === "asc" ? " ↑" : " ↓";
   }
 
   if (!canListCustomers) {
@@ -726,185 +621,135 @@ export function CustomersPage({ permissions }: CustomersPageProps) {
           onClose={handleCloseTaskAssignModal}
           title={pageText.taskAssignTitle}
           size="xl"
+          footer={
+            <>
+              <Button
+                theme="secondary"
+                size="sm"
+                type="button"
+                onClick={handleCloseTaskAssignModal}
+              >
+                Vazgeç
+              </Button>
+              <Button
+                theme="primary"
+                size="sm"
+                type="submit"
+                form={taskAssignFormId}
+                disabled={!canCreateTasks || isCreatingTaskAssignment}
+              >
+                {isCreatingTaskAssignment ? "Kaydediliyor..." : "Kaydet"}
+              </Button>
+            </>
+          }
         >
-            <div className="task-assign-summary">
+            <div className="task-assign-summary mb-3">
               <span>Seçili müşteri sayısı</span>
               <strong>{selectedTaskCustomerCount}</strong>
               <span>Bayi</span>
-              <strong>{appliedFilters.branchName || "-"}</strong>
+              <strong>{appliedBranchName || "-"}</strong>
             </div>
 
             <form
+              id={taskAssignFormId}
               className="task-assign-form"
               onSubmit={handleTaskAssignSubmit}
+              noValidate
             >
-              <label className="field-label">
-                Başlık
-                <input
-                  {...formFieldProps("customers-task-assign", "title", {
-                    label: "Başlık",
-                  })}
-                  className="form-control form-control-sm"
-                  maxLength={customerTextMaxLength}
-                  value={taskAssignForm.title}
-                  onChange={(event) =>
-                    updateTaskAssignField("title", event.target.value)
-                  }
-                />
-                {taskAssignErrors.title ? (
-                  <span className="customer-field-error">
-                    {taskAssignErrors.title}
-                  </span>
-                ) : null}
-              </label>
-
-              <label className="field-label">
-                Açıklama
-                <input
-                  {...formFieldProps("customers-task-assign", "description", {
-                    label: "Açıklama",
-                  })}
-                  className="form-control form-control-sm"
-                  maxLength={customerTextMaxLength}
-                  value={taskAssignForm.description}
-                  onChange={(event) =>
-                    updateTaskAssignField("description", event.target.value)
-                  }
-                />
-                {taskAssignErrors.description ? (
-                  <span className="customer-field-error">
-                    {taskAssignErrors.description}
-                  </span>
-                ) : null}
-              </label>
-
-              <label className="field-label">
-                Atanacak Kullanıcı
-                <select
-                  {...formFieldProps("customers-task-assign", "assignedUserId", {
-                    label: "Atanacak Kullanıcı",
-                  })}
-                  className="form-control form-control-sm"
-                  value={taskAssignForm.assignedUserId}
-                  onChange={(event) =>
-                    updateTaskAssignField("assignedUserId", event.target.value)
-                  }
-                  disabled={
-                    !selectedTaskBranchId || isTaskAssignableUsersLoading
-                  }
-                >
-                  <option value="">
-                    {isTaskAssignableUsersLoading
-                      ? "Kullanıcılar yükleniyor..."
-                      : "Seçiniz"}
-                  </option>
-                  {taskAssignableUsers.map((user) => (
-                    <option key={user.id} value={user.id}>
-                      {user.assignedUserFullName}
-                    </option>
-                  ))}
-                </select>
-                {taskAssignErrors.assigned_user_id ? (
-                  <span className="customer-field-error">
-                    {taskAssignErrors.assigned_user_id}
-                  </span>
-                ) : null}
-              </label>
-
-              <label className="field-label">
-                Ziyaret Tarihi
-                <input
-                  {...formFieldProps("customers-task-assign", "visitDate", {
-                    label: "Ziyaret Tarihi",
-                  })}
-                  className="form-control form-control-sm"
-                  type="date"
-                  min={todayDateInputValue}
-                  value={taskAssignForm.visitDate}
-                  onChange={(event) =>
-                    updateTaskAssignField("visitDate", event.target.value)
-                  }
-                />
-                {taskAssignErrors.visit_date ? (
-                  <span className="customer-field-error">
-                    {taskAssignErrors.visit_date}
-                  </span>
-                ) : null}
-              </label>
-
-              <label className="field-label">
-                Bitiş Tarihi
-                <input
-                  {...formFieldProps("customers-task-assign", "dueDate", {
-                    label: "Bitiş Tarihi",
-                  })}
-                  className="form-control form-control-sm"
-                  type="date"
-                  min={taskAssignForm.visitDate || undefined}
-                  value={taskAssignForm.dueDate}
-                  onChange={(event) =>
-                    updateTaskAssignField("dueDate", event.target.value)
-                  }
-                />
-                {taskAssignErrors.due_date ? (
-                  <span className="customer-field-error">
-                    {taskAssignErrors.due_date}
-                  </span>
-                ) : null}
-              </label>
-
-              <label className="field-label">
-                Öncelik
-                <select
-                  {...formFieldProps("customers-task-assign", "priority", {
-                    label: "Öncelik",
-                  })}
-                  className="form-control form-control-sm"
-                  value={taskAssignForm.priority}
-                  onChange={(event) =>
-                    updateTaskAssignField("priority", event.target.value)
-                  }
-                >
-                  {taskPriorityOptions.map((priority) => (
-                    <option key={priority} value={priority}>
-                      {formatTaskPriority(priority)}
-                    </option>
-                  ))}
-                </select>
-                {taskAssignErrors.priority ? (
-                  <span className="customer-field-error">
-                    {taskAssignErrors.priority}
-                  </span>
-                ) : null}
-              </label>
+              <div className="row g-3">
+                <CrmFormFieldCol wide>
+                  <CrmFormInput
+                    formScope="customers-task-assign"
+                    field="title"
+                    label="Başlık"
+                    value={taskAssignForm.title}
+                    maxLength={customerTextMaxLength}
+                    onChange={(value) => updateTaskAssignField("title", value)}
+                    error={taskAssignErrors.title}
+                  />
+                </CrmFormFieldCol>
+                <CrmFormFieldCol wide>
+                  <CrmFormInput
+                    formScope="customers-task-assign"
+                    field="description"
+                    label="Açıklama"
+                    value={taskAssignForm.description}
+                    maxLength={customerTextMaxLength}
+                    onChange={(value) => updateTaskAssignField("description", value)}
+                    error={taskAssignErrors.description}
+                  />
+                </CrmFormFieldCol>
+                <CrmFormFieldCol>
+                  <CrmFormSelect
+                    formScope="customers-task-assign"
+                    field="assignedUserId"
+                    label="Atanacak Kullanıcı"
+                    value={taskAssignForm.assignedUserId}
+                    disabled={!selectedTaskBranchId || isTaskAssignableUsersLoading}
+                    placeholderOption={
+                      isTaskAssignableUsersLoading
+                        ? "Kullanıcılar yükleniyor..."
+                        : "Seçiniz"
+                    }
+                    options={taskAssignableUsers.map((user) => ({
+                      value: String(user.id),
+                      label: user.assignedUserFullName,
+                    }))}
+                    onChange={(value) => updateTaskAssignField("assignedUserId", value)}
+                    error={taskAssignErrors.assigned_user_id}
+                  />
+                </CrmFormFieldCol>
+                <CrmFormFieldCol>
+                  <CrmFormInput
+                    formScope="customers-task-assign"
+                    field="visitDate"
+                    label="Ziyaret Tarihi"
+                    type="date"
+                    min={todayDateInputValue}
+                    value={taskAssignForm.visitDate}
+                    onChange={(value) => updateTaskAssignField("visitDate", value)}
+                    error={taskAssignErrors.visit_date}
+                  />
+                </CrmFormFieldCol>
+                <CrmFormFieldCol>
+                  <CrmFormInput
+                    formScope="customers-task-assign"
+                    field="dueDate"
+                    label="Bitiş Tarihi"
+                    type="date"
+                    min={taskAssignForm.visitDate || undefined}
+                    value={taskAssignForm.dueDate}
+                    onChange={(value) => updateTaskAssignField("dueDate", value)}
+                    error={taskAssignErrors.due_date}
+                  />
+                </CrmFormFieldCol>
+                <CrmFormFieldCol>
+                  <CrmFormSelect
+                    formScope="customers-task-assign"
+                    field="priority"
+                    label="Öncelik"
+                    value={taskAssignForm.priority}
+                    hidePlaceholder
+                    options={taskPriorityOptions.map((priority) => ({
+                      value: priority,
+                      label: formatTaskPriority(priority),
+                    }))}
+                    onChange={(value) => updateTaskAssignField("priority", value)}
+                    error={taskAssignErrors.priority}
+                  />
+                </CrmFormFieldCol>
+              </div>
 
               {taskAssignErrors.branch_id ? (
-                <span className="customer-field-error task-assign-form-wide">
+                <span className="customer-field-error task-assign-form-wide d-block mt-2">
                   {taskAssignErrors.branch_id}
                 </span>
               ) : null}
               {taskAssignErrors.customer_ids ? (
-                <span className="customer-field-error task-assign-form-wide">
+                <span className="customer-field-error task-assign-form-wide d-block mt-2">
                   {taskAssignErrors.customer_ids}
                 </span>
               ) : null}
-
-              <div className="customer-modal-actions task-assign-form-wide">
-                <button
-                  className="btn btn-secondary btn-sm"
-                  type="button"
-                  onClick={handleCloseTaskAssignModal}
-                >
-                  Vazgeç
-                </button>
-                <button
-                  className="btn btn-primary btn-sm"
-                  type="submit"
-                  disabled={!canCreateTasks || isCreatingTaskAssignment}
-                >
-                  {isCreatingTaskAssignment ? "Kaydediliyor..." : "Kaydet"}
-                </button>
-              </div>
             </form>
         </ControlledModal>
       ) : null}
@@ -936,402 +781,83 @@ export function CustomersPage({ permissions }: CustomersPageProps) {
             <button
               className="btn btn-secondary btn-sm"
               type="button"
+              disabled={isTableLoading}
               onClick={handleResetFilters}
             >
               Temizle
             </button>
+            <button
+              className="btn btn-outline-secondary btn-sm"
+              type="button"
+              disabled={isTableLoading}
+              onClick={() => tableRef.current?.downloadCsv("galeri-listesi.csv")}
+            >
+              {customerListTexts.exportCsv}
+            </button>
+            <button
+              className="btn btn-outline-secondary btn-sm"
+              type="button"
+              disabled={isTableLoading}
+              onClick={() => tableRef.current?.downloadJson("galeri-listesi.json")}
+            >
+              {customerListTexts.exportJson}
+            </button>
+            <span className="text-muted small ms-auto d-none d-md-inline">
+              {customerListTexts.exportCurrentPageHint}
+            </span>
           </ListTableToolbar>
 
+          <p className="text-muted small d-md-none mb-0 px-3 pt-0 pb-2">
+            {customerListTexts.exportCurrentPageHint}
+          </p>
+
           <div className="card-body p-0">
-      <div className="table-responsive">
-        <table className="table table-striped table-hover table-sm mb-0">
-          <thead>
-            <tr>
-              <th className="customer-selection-cell">
-                <input
-                  ref={taskSelectionHeaderRef}
-                  {...formFieldProps("customers", "select-all", {
-                    label: "Listelenen müşterileri seç",
-                  })}
-                  type="checkbox"
-                  checked={areCurrentPageCustomersSelected}
-                  disabled={!canSelectTaskCustomers || items.length === 0}
-                  onChange={(event) =>
-                    handleCurrentPageTaskCustomerToggle(event.target.checked)
-                  }
-                />
-              </th>
-              <th className="table-actions-cell">İşlemler</th>
-              <th>Durum</th>
-              <th>Firma İsmi</th>
-              <th>Yetkili Telefonu</th>
-              <th>Yetkili İsmi</th>
-              <th>Yetkili Soyismi</th>
-              <th>
-                <button
-                  className="btn btn-link btn-sm p-0 border-0 text-start"
-                  type="button"
-                  onClick={() => handleSort("vehicle_stock_count")}
-                >
-                  Araç Stok Adedi
-                  {sortIndicator("vehicle_stock_count")}
-                </button>
-              </th>
-              <th>Bayi</th>
-              <th>Bölge</th>
-              <th>Plus Card No</th>
-              <th>
-                <button
-                  className="btn btn-link btn-sm p-0 border-0 text-start"
-                  type="button"
-                  onClick={() => handleSort("credit")}
-                >
-                  Kredi Bakiyesi
-                  {sortIndicator("credit")}
-                </button>
-              </th>
-              <th>
-                <button
-                  className="btn btn-link btn-sm p-0 border-0 text-start"
-                  type="button"
-                  onClick={() => handleSort("point")}
-                >
-                  Puan Bakiyesi
-                  {sortIndicator("point")}
-                </button>
-              </th>
-              <th>İl</th>
-              <th>İlçe</th>
-              <th>
-                <button
-                  className="btn btn-link btn-sm p-0 border-0 text-start"
-                  type="button"
-                  onClick={() => handleSort("created_at")}
-                >
-                  Kayıt Tarihi
-                  {sortIndicator("created_at")}
-                </button>
-              </th>
-              <th>Müşteri Türü</th>
-            </tr>
-            <tr className="customer-filter-row">
-              <th />
-              <th />
-              <th>
-                <TableFilterSelect
-                  page="customers"
-                  field="situation"
-                  label="Durum"
-                  className="form-control form-control-sm"
-                  value={draftFilters.situation}
-                  onChange={(event) =>
-                    setDraftFilters((current) => ({
-                      ...current,
-                      situation: event.target.value,
-                    }))
-                  }
-                >
-                  <option value="">Tümü</option>
-                  {situationOptions.map((option) => (
-                    <option key={option} value={option}>
-                      {option}
-                    </option>
-                  ))}
-                </TableFilterSelect>
-              </th>
-              <th>
-                <TableFilterInput
-                  page="customers"
-                  field="unvan"
-                  label="Ünvan"
-                  value={draftFilters.unvan}
-                  onChange={(event) =>
-                    setDraftFilters((current) => ({
-                      ...current,
-                      unvan: event.target.value,
-                    }))
-                  }
-                />
-              </th>
-              <th>
-                <TableFilterInput
-                  page="customers"
-                  field="cep"
-                  label="Cep"
-                  value={draftFilters.cep}
-                  onChange={(event) =>
-                    setDraftFilters((current) => ({
-                      ...current,
-                      cep: event.target.value,
-                    }))
-                  }
-                />
-              </th>
-              <th>
-                <TableFilterInput
-                  page="customers"
-                  field="ad"
-                  label="Ad"
-                  value={draftFilters.ad}
-                  onChange={(event) =>
-                    setDraftFilters((current) => ({
-                      ...current,
-                      ad: event.target.value,
-                    }))
-                  }
-                />
-              </th>
-              <th>
-                <TableFilterInput
-                  page="customers"
-                  field="soyad"
-                  label="Soyad"
-                  value={draftFilters.soyad}
-                  onChange={(event) =>
-                    setDraftFilters((current) => ({
-                      ...current,
-                      soyad: event.target.value,
-                    }))
-                  }
-                />
-              </th>
-              <th />
-              <th>
-                <TableFilterSelect
-                  page="customers"
-                  field="branchName"
-                  label="Bayi"
-                  className="form-control form-control-sm"
-                  value={draftFilters.branchName}
-                  onChange={(event) =>
-                    setDraftFilters((current) => ({
-                      ...current,
-                      branchName: event.target.value,
-                    }))
-                  }
-                  disabled={!canListBranches || isBranchFilterLoading}
-                >
-                  <option value="">Tümü</option>
-                  {branches.map((branch) => {
-                    const branchName = branch.name || branch.title;
-
-                    return (
-                      <option key={branch.id} value={branchName}>
-                        {branchName}
-                      </option>
-                    );
-                  })}
-                </TableFilterSelect>
-              </th>
-              <th>
-                <TableFilterSelect
-                  page="customers"
-                  field="zoneName"
-                  label="Bölge"
-                  className="form-control form-control-sm"
-                  value={draftFilters.zoneName}
-                  onChange={(event) =>
-                    setDraftFilters((current) => ({
-                      ...current,
-                      zoneName: event.target.value,
-                    }))
-                  }
-                  disabled={!canListZones}
-                >
-                  <option value="">Tümü</option>
-                  {zones.map((zone) => (
-                    <option key={zone.id} value={zone.name}>
-                      {zone.name}
-                    </option>
-                  ))}
-                </TableFilterSelect>
-              </th>
-              <th>
-                <TableFilterInput
-                  page="customers"
-                  field="plusCardNo"
-                  label="PlusCard No"
-                  value={draftFilters.plusCardNo}
-                  onChange={(event) =>
-                    setDraftFilters((current) => ({
-                      ...current,
-                      plusCardNo: event.target.value,
-                    }))
-                  }
-                />
-              </th>
-              <th />
-              <th />
-              <th>
-                <TableFilterInput
-                  page="customers"
-                  field="city"
-                  label="İl"
-                  value={draftFilters.city}
-                  onChange={(event) =>
-                    setDraftFilters((current) => ({
-                      ...current,
-                      city: event.target.value,
-                    }))
-                  }
-                />
-              </th>
-              <th>
-                <TableFilterInput
-                  page="customers"
-                  field="town"
-                  label="İlçe"
-                  value={draftFilters.town}
-                  onChange={(event) =>
-                    setDraftFilters((current) => ({
-                      ...current,
-                      town: event.target.value,
-                    }))
-                  }
-                />
-              </th>
-              <th>
-                <TableFilterInput
-                  page="customers"
-                  field="createdAt"
-                  label="Oluşturulma Tarihi"
-                  value={draftFilters.createdAt}
-                  onChange={(event) =>
-                    setDraftFilters((current) => ({
-                      ...current,
-                      createdAt: event.target.value,
-                    }))
-                  }
-                />
-              </th>
-              <th>
-                <TableFilterSelect
-                  page="customers"
-                  field="type"
-                  label="Müşteri Türü"
-                  className="form-control form-control-sm"
-                  value={draftFilters.type}
-                  onChange={(event) =>
-                    setDraftFilters((current) => ({
-                      ...current,
-                      type: event.target.value,
-                    }))
-                  }
-                >
-                  <option value="">Tümü</option>
-                  {typeOptions.map((option) => (
-                    <option key={option} value={option}>
-                      {option}
-                    </option>
-                  ))}
-                </TableFilterSelect>
-              </th>
-            </tr>
-          </thead>
-          <tbody>
-            {items.length === 0 && !isLoading ? (
-              <tr>
-                <td colSpan={17}>Kayıt bulunamadı.</td>
-              </tr>
-            ) : null}
-
-            {items.map((customer, index) => (
-              <tr
-                key={`${customer.id}-${customer.uoId}-${customer.plusCardNo}-${customer.cep}-${index}`}
-                className={customerRowClass(customer.situation)}
-              >
-                <td className="customer-selection-cell">
-                  <input
-                    {...formFieldProps("customers", "select-customer", {
-                      suffix: customer.id,
-                      label: `${customerDisplayNameFromList(customer)} müşterisini seç`,
-                    })}
-                    type="checkbox"
-                    checked={selectedTaskCustomers.has(customer.id)}
-                    disabled={!canSelectTaskCustomers || !customer.id}
-                    onChange={(event) =>
-                      handleTaskCustomerToggle(customer, event.target.checked)
-                    }
-                  />
-                </td>
-                <td className="table-actions-cell">
-                  <TableActionGroup label="Müşteri işlemleri">
-                    <TableIconButton
-                      action="viewDetail"
-                      label="Müşteri detayını görüntüle"
-                      variant="info"
-                      disabled={!canViewCustomerDetail || !customer.id}
-                      onClick={() => void handleOpenCustomerDetail(customer.id)}
-                    />
-                    {canViewFullRegistration && customer.id ? (
-                      <TableIconButton
-                        action="editRecord"
-                        label="Müşteri tam kaydını düzenle"
-                        variant="warning"
-                        onClick={() => navigateToFullRegistration(customer.id)}
-                      />
-                    ) : null}
-                    {canCreateStandaloneFollowUp && customer.id ? (
-                      <TableIconButton
-                        action="createFollowUp"
-                        label="Takip kaydı oluştur"
-                        variant="success"
-                        onClick={() => handleOpenStandaloneFollowUp(customer)}
-                      />
-                    ) : null}
-                  </TableActionGroup>
-                </td>
-                <td>{customer.situation || "-"}</td>
-                <td>{customer.unvan || "-"}</td>
-                <td>{customer.cep || "-"}</td>
-                <td>{customer.ad || "-"}</td>
-                <td>{customer.soyad || "-"}</td>
-                <td>{formatVehicleStockCount(customer.vehicleStockCount)}</td>
-                <td>{customer.branchName || "-"}</td>
-                <td>{customer.zoneName || "-"}</td>
-                <td>{customer.plusCardNo || "-"}</td>
-                <td>{formatCredit(customer.credit)}</td>
-                <td>{formatCredit(customer.point)}</td>
-                <td>{customer.city || "-"}</td>
-                <td>{customer.town || "-"}</td>
-                <td>{formatDate(customer.createdAt)}</td>
-                <td>{formatCustomerType(customer.type)}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+            <CustomersDataTable
+              ref={tableRef}
+              branches={branches}
+              zones={zones}
+              canListBranches={canListBranches}
+              isBranchFilterLoading={isBranchFilterLoading}
+              canListZones={canListZones}
+              canSelectTaskCustomers={canSelectTaskCustomers}
+              canViewCustomerDetail={canViewCustomerDetail}
+              canViewFullRegistration={canViewFullRegistration}
+              canCreateStandaloneFollowUp={canCreateStandaloneFollowUp}
+              selectedCustomerIds={selectedCustomerIds}
+              areCurrentPageCustomersSelected={areCurrentPageCustomersSelected}
+              areSomeCurrentPageCustomersSelected={
+                areSomeCurrentPageCustomersSelected
+              }
+              onToggleCustomer={handleTaskCustomerToggle}
+              onToggleCurrentPage={handleToggleCurrentPage}
+              onOpenCustomerDetail={(customerId) =>
+                void handleOpenCustomerDetail(customerId)
+              }
+              onOpenStandaloneFollowUp={handleOpenStandaloneFollowUp}
+              onNavigateFullRegistration={navigateToFullRegistration}
+              onFiltersApplied={handleFiltersApplied}
+              onPageCustomersChange={setCurrentPageCustomers}
+              onError={handleTableError}
+              onLoadMeta={handleLoadMeta}
+              onLoadingChange={setIsTableLoading}
+            />
           </div>
 
-          <div className="card-footer">
-            <ListPagination
-              currentPage={currentPage}
-              lastPage={lastPage}
-              total={total}
-              isLoading={isLoading}
-              onPageChange={setCurrentPage}
-            />
+          <div
+            className={`card-footer list-table-footer py-2${isTableLoading ? " list-table-footer--loading" : ""}`}
+          >
+            <span className="text-muted small list-table-footer-summary">
+              Toplam <strong>{listMeta.total}</strong> kayıt
+              <span className="mx-1" aria-hidden="true">
+                ·
+              </span>
+              Sayfa {listMeta.currentPage} / {Math.max(1, listMeta.lastPage)}
+            </span>
           </div>
         </form>
       </div>
     </>
   );
-}
-
-function formatCredit(value: number): string {
-  return new Intl.NumberFormat("tr-TR", {
-    maximumFractionDigits: 0,
-  }).format(value);
-}
-
-function formatVehicleStockCount(value: number | null): string {
-  if (value === null) {
-    return "-";
-  }
-
-  return new Intl.NumberFormat("tr-TR", {
-    maximumFractionDigits: 0,
-  }).format(value);
 }
 
 function formatDate(value: string): string {
@@ -1366,16 +892,6 @@ function formatCustomerType(value: string): string {
   }
 
   return value;
-}
-
-function customerDisplayNameFromList(customer: Customer): string {
-  const corporateName = customer.unvan.trim();
-  if (corporateName) {
-    return corporateName;
-  }
-
-  const individualName = `${customer.ad} ${customer.soyad}`.trim();
-  return individualName || "-";
 }
 
 function formatTaskPriority(priority: TaskPriority): string {

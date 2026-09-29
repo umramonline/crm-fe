@@ -1,4 +1,4 @@
-import { Table } from "@adminlte/react";
+import { Button, Table } from "@adminlte/react";
 import { FormEvent, useEffect, useMemo, useState } from "react";
 
 import {
@@ -490,17 +490,18 @@ export function AuthorizationPage({ permissions }: AuthorizationPageProps) {
                 </div>
                 <div className="col-12">
                   <div className="button-row">
-                    <button className="btn btn-primary btn-sm" type="submit">
+                    <Button theme="primary" size="sm" type="submit">
                       {moduleForm.id ? "Güncelle" : "Ekle"}
-                    </button>
+                    </Button>
                     {moduleForm.id ? (
-                      <button
-                        className="btn btn-secondary btn-sm"
+                      <Button
+                        theme="secondary"
+                        size="sm"
                         type="button"
                         onClick={() => setModuleForm(emptyModuleForm)}
                       >
                         Vazgeç
-                      </button>
+                      </Button>
                     ) : null}
                   </div>
                 </div>
@@ -672,19 +673,20 @@ export function AuthorizationPage({ permissions }: AuthorizationPageProps) {
 
                 <div className="col-12">
                   <div className="button-row">
-                    <button className="btn btn-primary btn-sm" type="submit">
+                    <Button theme="primary" size="sm" type="submit">
                       {methodForm.id ? "Güncelle" : "Ekle"}
-                    </button>
+                    </Button>
                     {methodForm.id ? (
-                      <button
-                        className="btn btn-secondary btn-sm"
+                      <Button
+                        theme="secondary"
+                        size="sm"
                         type="button"
                         onClick={() =>
                           setMethodForm({ ...emptyMethodForm, moduleId: selectedModuleId })
                         }
                       >
                         Vazgeç
-                      </button>
+                      </Button>
                     ) : null}
                   </div>
                 </div>

@@ -329,7 +329,17 @@ export const FollowUpsDataTable = forwardRef<
       }),
     );
 
-    table.on("rowClick", (_event, row) => {
+    table.on("rowClick", (event, row) => {
+      const target = event.target;
+      if (
+        target instanceof Element &&
+        target.closest(
+          "[data-follow-up-view], [data-follow-up-edit], [data-follow-up-customer]",
+        )
+      ) {
+        return;
+      }
+
       if (canViewFollowUpDetail) {
         tableCallbacksRef.onOpenFollowUpDetail(row.getData() as FollowUpListItem);
       }

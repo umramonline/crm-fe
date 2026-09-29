@@ -274,6 +274,37 @@ footer.app-footer .crm-footer-content::before {
   color: var(--bs-secondary-color);
 }
 
+.list-table-card .crm-tabulator .tabulator-row.table-success {
+  background-color: var(--bs-success-bg-subtle);
+}
+
+.list-table-card .crm-tabulator .tabulator-row.table-warning {
+  background-color: var(--bs-warning-bg-subtle);
+}
+
+.list-table-card .crm-tabulator .tabulator-row.table-danger {
+  background-color: var(--bs-danger-bg-subtle);
+}
+
+/* Customers: many columns — horizontal scroll, no responsive row collapse */
+.list-table-card .customers-tabulator.crm-tabulator {
+  overflow-x: auto;
+}
+
+.list-table-card .customers-tabulator .tabulator-tableholder {
+  overflow-x: auto;
+}
+
+.list-table-card .customers-tabulator .tabulator-cell.table-actions-cell {
+  white-space: nowrap;
+  overflow: visible;
+}
+
+.list-table-card .customers-tabulator .tabulator-cell.customer-selection-cell {
+  text-align: center;
+  vertical-align: middle;
+}
+
 [data-bs-theme="dark"] .list-table-card .crm-tabulator .tabulator-footer .tabulator-page:not(.active):not(.disabled):not([disabled]) {
   color: var(--bs-body-color) !important;
   background-color: var(--bs-body-bg) !important;
@@ -440,31 +471,55 @@ footer.app-footer .crm-footer-content::before {
   text-align: center;
 }
 
-.full-registration-form {
-  padding: 1rem 0;
+.full-registration-form .card-body {
+  padding-top: 1.25rem;
 }
 
-.full-registration-steps {
+.full-registration-stepper .nav-link {
   display: flex;
+  align-items: center;
+  justify-content: center;
   gap: 0.5rem;
-  margin-bottom: 1rem;
-}
-
-.full-registration-steps span {
-  width: 2rem;
-  height: 2rem;
-  display: grid;
-  place-items: center;
-  border-radius: 999px;
   border: 1px solid var(--bs-border-color);
   color: var(--bs-secondary);
-  font-weight: 700;
+  font-weight: 600;
+  cursor: default;
 }
 
-.full-registration-steps span.active {
+.full-registration-stepper .nav-link.active {
+  background-color: var(--bs-primary);
   border-color: var(--bs-primary);
-  background: var(--bs-primary);
   color: #fff;
+}
+
+.full-registration-stepper-complete {
+  border-color: var(--bs-success) !important;
+  color: var(--bs-success) !important;
+  background-color: rgba(var(--bs-success-rgb), 0.08);
+}
+
+.full-registration-stepper-index {
+  display: inline-grid;
+  place-items: center;
+  width: 1.5rem;
+  height: 1.5rem;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  background: rgba(0, 0, 0, 0.06);
+}
+
+.full-registration-stepper .nav-link.active .full-registration-stepper-index {
+  background: rgba(255, 255, 255, 0.25);
+  color: inherit;
+}
+
+.full-registration-progress {
+  height: 0.35rem;
+}
+
+.full-registration-phone-card .card-body {
+  padding-bottom: 0.75rem;
 }
 
 .customer-entry-form {

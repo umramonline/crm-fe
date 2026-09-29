@@ -1,9 +1,6 @@
 import { Button } from "@adminlte/react";
 import { FormEvent, useEffect, useState } from "react";
 
-import { ControlledModal } from "@/shared/components/ControlledModal";
-import { formFieldProps } from "@/shared/utils/formFieldProps";
-
 import {
   customerEntryTexts,
   customerTextMaxLength,
@@ -25,6 +22,12 @@ import {
   type CustomerEntryType,
   type NewCustomerForm,
 } from "@/features/customers/utils/customerEntryValidation";
+import { ControlledModal } from "@/shared/components/ControlledModal";
+import {
+  CrmFormFieldCol,
+  CrmFormInput,
+  CrmFormSelect,
+} from "@/shared/components/CrmFormField";
 
 type CustomerEntryModalProps = {
   isOpen: boolean;
@@ -36,6 +39,8 @@ type CustomerEntryModalProps = {
   canListTowns: boolean;
   canListBranches: boolean;
 };
+
+const customerEntryFormId = "customer-entry-form";
 
 export function CustomerEntryModal({
   isOpen,
@@ -79,20 +84,19 @@ export function CustomerEntryModal({
     }
 
     let isActive = true;
+    setIsReferenceLoading(true);
 
     async function loadReferenceData(): Promise<void> {
-      setIsReferenceLoading(true);
-
       try {
         const [nextCities, nextBranches] = await Promise.all([
-          canListCities ? listCities() : Promise.resolve<City[]>([]),
-          canListBranches ? listBranches() : Promise.resolve<Branch[]>([]),
+          canListCities ? listCities() : Promise.resolve([]),
+          canListBranches ? listBranches() : Promise.resolve([]),
         ]);
-
-        if (isActive) {
-          setCities(nextCities);
-          setBranches(nextBranches);
+        if (!isActive) {
+          return;
         }
+        setCities(nextCities);
+        setBranches(nextBranches);
       } catch {
         if (isActive) {
           onError(customerEntryTexts.referenceFailed);
@@ -128,7 +132,6 @@ export function CustomerEntryModal({
       } catch {
         if (isActive) {
           setTowns([]);
-          onError(customerEntryTexts.referenceFailed);
         }
       }
     }
@@ -138,13 +141,16 @@ export function CustomerEntryModal({
     return () => {
       isActive = false;
     };
-  }, [
-    canListTowns,
-    createStep,
-    isOpen,
-    newCustomerForm.ilKodu,
-    onError,
-  ]);
+  }, [canListTowns, createStep, isOpen, newCustomerForm.ilKodu]);
+
+  function updateNewCustomerField(field: keyof NewCustomerForm, value: string): void {
+    setNewCustomerForm((current) => ({
+      ...current,
+      [field]: value,
+      ...(field === "ilKodu" ? { ilceKodu: "" } : {}),
+    }));
+    setCreateErrors((current) => ({ ...current, [field]: "" }));
+  }
 
   function handleSelectCustomerEntryType(type: Exclude<CustomerEntryType, "">): void {
     setCustomerEntryType(type);
@@ -153,42 +159,25 @@ export function CustomerEntryModal({
     setCreateStep(2);
   }
 
-  function updateNewCustomerField(
-    field: keyof NewCustomerForm,
-    value: string,
-  ): void {
-    setNewCustomerForm((current) => ({
-      ...current,
-      [field]: value,
-      ...(field === "ilKodu" ? { ilceKodu: "" } : {}),
-    }));
-  }
-
   async function handleCreateCustomerSubmit(
     event: FormEvent<HTMLFormElement>,
   ): Promise<void> {
     event.preventDefault();
 
-    if (customerEntryType !== "bireysel" && customerEntryType !== "kurumsal") {
-      setCreateErrors({ type: "Müşteri türü seçiniz." });
-      return;
-    }
-
-    const validationErrors = validateNewCustomerForm(
-      customerEntryType,
+    const errors = validateNewCustomerForm(
+      customerEntryType as Exclude<CustomerEntryType, "">,
       newCustomerForm,
     );
-    if (Object.keys(validationErrors).length > 0) {
-      setCreateErrors(validationErrors);
+    setCreateErrors(errors);
+    if (Object.keys(errors).length > 0) {
       return;
     }
 
     setIsCreatingCustomer(true);
-    setCreateErrors({});
 
     try {
       await createCustomer({
-        type: customerEntryType,
+        type: customerEntryType as Exclude<CustomerEntryType, "">,
         ad: newCustomerForm.ad.trim(),
         soyad: newCustomerForm.soyad.trim(),
         cep: newCustomerForm.cep.trim(),
@@ -200,9 +189,8 @@ export function CustomerEntryModal({
         mahalle: newCustomerForm.mahalle.trim(),
         branchId: Number(newCustomerForm.branchId),
       });
-
-      onClose();
       onCreated();
+      onClose();
     } catch (error: unknown) {
       if (error instanceof CustomerValidationError) {
         setCreateErrors(error.errors);
@@ -228,259 +216,198 @@ export function CustomerEntryModal({
           : customerEntryTexts.formStepTitle
       }
       size="xl"
+      footer={
+        createStep === 2 ? (
+          <>
+            <Button
+              theme="secondary"
+              size="sm"
+              type="button"
+              onClick={() => setCreateStep(1)}
+            >
+              Geri
+            </Button>
+            <Button
+              theme="primary"
+              size="sm"
+              type="submit"
+              form={customerEntryFormId}
+              disabled={!canCreateCustomers || isCreatingCustomer}
+            >
+              {isCreatingCustomer ? "Kaydediliyor..." : "Kaydet"}
+            </Button>
+          </>
+        ) : undefined
+      }
     >
-        {createStep === 1 ? (
-          <div className="customer-entry-type-grid">
-            <button
-              className="customer-entry-type-card"
-              type="button"
-              onClick={() => handleSelectCustomerEntryType("bireysel")}
-            >
-              Bireysel
-            </button>
-            <button
-              className="customer-entry-type-card"
-              type="button"
-              onClick={() => handleSelectCustomerEntryType("kurumsal")}
-            >
-              Kurumsal
-            </button>
-          </div>
-        ) : (
-          <form
-            className="customer-entry-form"
-            onSubmit={(event) => void handleCreateCustomerSubmit(event)}
+      {createStep === 1 ? (
+        <div className="customer-entry-type-grid">
+          <button
+            className="customer-entry-type-card"
+            type="button"
+            onClick={() => handleSelectCustomerEntryType("bireysel")}
           >
+            Bireysel
+          </button>
+          <button
+            className="customer-entry-type-card"
+            type="button"
+            onClick={() => handleSelectCustomerEntryType("kurumsal")}
+          >
+            Kurumsal
+          </button>
+        </div>
+      ) : (
+        <form
+          id={customerEntryFormId}
+          className="customer-entry-form"
+          onSubmit={(event) => void handleCreateCustomerSubmit(event)}
+          noValidate
+        >
+          <div className="row g-3">
             {customerEntryType === "bireysel" ? (
               <>
-                <label className="field-label">
-                  Ad
-                  <input
-                    {...formFieldProps("customer-entry", "ad", { label: "Ad" })}
-                    className="form-control form-control-sm"
-                    maxLength={customerTextMaxLength}
+                <CrmFormFieldCol>
+                  <CrmFormInput
+                    formScope="customer-entry"
+                    field="ad"
+                    label="Ad"
                     value={newCustomerForm.ad}
-                    onChange={(event) =>
-                      updateNewCustomerField("ad", event.target.value)
-                    }
-                  />
-                  {createErrors.ad ? (
-                    <span className="customer-field-error">{createErrors.ad}</span>
-                  ) : null}
-                </label>
-                <label className="field-label">
-                  Soyad
-                  <input
-                    {...formFieldProps("customer-entry", "soyad", { label: "Soyad" })}
-                    className="form-control form-control-sm"
                     maxLength={customerTextMaxLength}
+                    onChange={(value) => updateNewCustomerField("ad", value)}
+                    error={createErrors.ad}
+                  />
+                </CrmFormFieldCol>
+                <CrmFormFieldCol>
+                  <CrmFormInput
+                    formScope="customer-entry"
+                    field="soyad"
+                    label="Soyad"
                     value={newCustomerForm.soyad}
-                    onChange={(event) =>
-                      updateNewCustomerField("soyad", event.target.value)
-                    }
+                    maxLength={customerTextMaxLength}
+                    onChange={(value) => updateNewCustomerField("soyad", value)}
+                    error={createErrors.soyad}
                   />
-                  {createErrors.soyad ? (
-                    <span className="customer-field-error">
-                      {createErrors.soyad}
-                    </span>
-                  ) : null}
-                </label>
-                <label className="field-label">
-                  Cep
-                  <input
-                    {...formFieldProps("customer-entry", "cep", { label: "Cep" })}
-                    className="form-control form-control-sm"
-                    inputMode="numeric"
-                    pattern="05[0-9]{9}"
-                    maxLength={11}
-                    placeholder="05XXXXXXXXX"
+                </CrmFormFieldCol>
+                <CrmFormFieldCol>
+                  <CrmFormInput
+                    formScope="customer-entry"
+                    field="cep"
+                    label="Cep"
                     value={newCustomerForm.cep}
-                    onChange={(event) =>
-                      updateNewCustomerField("cep", event.target.value)
-                    }
+                    isPhone
+                    onChange={(value) => updateNewCustomerField("cep", value)}
+                    error={createErrors.cep}
                   />
-                  {createErrors.cep ? (
-                    <span className="customer-field-error">{createErrors.cep}</span>
-                  ) : null}
-                </label>
+                </CrmFormFieldCol>
               </>
             ) : (
               <>
-                <label className="field-label">
-                  Ünvan
-                  <input
-                    {...formFieldProps("customer-entry", "unvan", { label: "Ünvan" })}
-                    className="form-control form-control-sm"
-                    maxLength={customerTextMaxLength}
+                <CrmFormFieldCol>
+                  <CrmFormInput
+                    formScope="customer-entry"
+                    field="unvan"
+                    label="Ünvan"
                     value={newCustomerForm.unvan}
-                    onChange={(event) =>
-                      updateNewCustomerField("unvan", event.target.value)
-                    }
-                  />
-                  {createErrors.unvan ? (
-                    <span className="customer-field-error">
-                      {createErrors.unvan}
-                    </span>
-                  ) : null}
-                </label>
-                <label className="field-label">
-                  Yetkili Adı
-                  <input
-                    {...formFieldProps("customer-entry", "yetkiliAdi", {
-                      label: "Yetkili Adı",
-                    })}
-                    className="form-control form-control-sm"
                     maxLength={customerTextMaxLength}
+                    onChange={(value) => updateNewCustomerField("unvan", value)}
+                    error={createErrors.unvan}
+                  />
+                </CrmFormFieldCol>
+                <CrmFormFieldCol>
+                  <CrmFormInput
+                    formScope="customer-entry"
+                    field="yetkiliAdi"
+                    label="Yetkili Adı"
                     value={newCustomerForm.yetkiliAdi}
-                    onChange={(event) =>
-                      updateNewCustomerField("yetkiliAdi", event.target.value)
-                    }
+                    maxLength={customerTextMaxLength}
+                    onChange={(value) => updateNewCustomerField("yetkiliAdi", value)}
+                    error={createErrors.yetkili_adi}
                   />
-                  {createErrors.yetkili_adi ? (
-                    <span className="customer-field-error">
-                      {createErrors.yetkili_adi}
-                    </span>
-                  ) : null}
-                </label>
-                <label className="field-label">
-                  Telefon
-                  <input
-                    {...formFieldProps("customer-entry", "telefon", { label: "Telefon" })}
-                    className="form-control form-control-sm"
-                    inputMode="numeric"
-                    pattern="05[0-9]{9}"
-                    maxLength={11}
-                    placeholder="05XXXXXXXXX"
+                </CrmFormFieldCol>
+                <CrmFormFieldCol>
+                  <CrmFormInput
+                    formScope="customer-entry"
+                    field="telefon"
+                    label="Telefon"
                     value={newCustomerForm.telefon}
-                    onChange={(event) =>
-                      updateNewCustomerField("telefon", event.target.value)
-                    }
+                    isPhone
+                    onChange={(value) => updateNewCustomerField("telefon", value)}
+                    error={createErrors.telefon}
                   />
-                  {createErrors.telefon ? (
-                    <span className="customer-field-error">
-                      {createErrors.telefon}
-                    </span>
-                  ) : null}
-                </label>
+                </CrmFormFieldCol>
               </>
             )}
 
-            <label className="field-label">
-              İl
-              <select
-                {...formFieldProps("customer-entry", "ilKodu", { label: "İl" })}
-                className="form-control form-control-sm"
+            <CrmFormFieldCol>
+              <CrmFormSelect
+                formScope="customer-entry"
+                field="ilKodu"
+                label="İl"
                 value={newCustomerForm.ilKodu}
-                onChange={(event) =>
-                  updateNewCustomerField("ilKodu", event.target.value)
-                }
                 disabled={isReferenceLoading || !canListCities}
-              >
-                <option value="">
-                  {isReferenceLoading
+                placeholderOption={
+                  isReferenceLoading
                     ? customerEntryTexts.citiesLoading
-                    : "Seçiniz"}
-                </option>
-                {cities.map((city) => (
-                  <option key={city.id} value={city.id}>
-                    {city.title}
-                  </option>
-                ))}
-              </select>
-              {createErrors.il_kodu ? (
-                <span className="customer-field-error">
-                  {createErrors.il_kodu}
-                </span>
-              ) : null}
-            </label>
-
-            <label className="field-label">
-              İlçe
-              <select
-                {...formFieldProps("customer-entry", "ilceKodu", { label: "İlçe" })}
-                className="form-control form-control-sm"
-                value={newCustomerForm.ilceKodu}
-                onChange={(event) =>
-                  updateNewCustomerField("ilceKodu", event.target.value)
+                    : "Seçiniz"
                 }
-                disabled={!newCustomerForm.ilKodu || !canListTowns}
-              >
-                <option value="">Seçiniz</option>
-                {towns.map((town) => (
-                  <option key={town.id} value={town.id}>
-                    {town.title}
-                  </option>
-                ))}
-              </select>
-              {createErrors.ilce_kodu ? (
-                <span className="customer-field-error">
-                  {createErrors.ilce_kodu}
-                </span>
-              ) : null}
-            </label>
-
-            <label className="field-label">
-              Mahalle
-              <input
-                {...formFieldProps("customer-entry", "mahalle", { label: "Mahalle" })}
-                className="form-control form-control-sm"
-                maxLength={customerTextMaxLength}
-                value={newCustomerForm.mahalle}
-                onChange={(event) =>
-                  updateNewCustomerField("mahalle", event.target.value)
-                }
+                options={cities.map((city) => ({
+                  value: String(city.id),
+                  label: city.title,
+                }))}
+                onChange={(value) => updateNewCustomerField("ilKodu", value)}
+                error={createErrors.il_kodu}
               />
-              {createErrors.mahalle ? (
-                <span className="customer-field-error">
-                  {createErrors.mahalle}
-                </span>
-              ) : null}
-            </label>
-
-            <label className="field-label">
-              Bayi
-              <select
-                {...formFieldProps("customer-entry", "branchId", { label: "Bayi" })}
-                className="form-control form-control-sm"
+            </CrmFormFieldCol>
+            <CrmFormFieldCol>
+              <CrmFormSelect
+                formScope="customer-entry"
+                field="ilceKodu"
+                label="İlçe"
+                value={newCustomerForm.ilceKodu}
+                disabled={!newCustomerForm.ilKodu || !canListTowns}
+                options={towns.map((town) => ({
+                  value: String(town.id),
+                  label: town.title,
+                }))}
+                onChange={(value) => updateNewCustomerField("ilceKodu", value)}
+                error={createErrors.ilce_kodu}
+              />
+            </CrmFormFieldCol>
+            <CrmFormFieldCol>
+              <CrmFormInput
+                formScope="customer-entry"
+                field="mahalle"
+                label="Mahalle"
+                value={newCustomerForm.mahalle}
+                maxLength={customerTextMaxLength}
+                onChange={(value) => updateNewCustomerField("mahalle", value)}
+                error={createErrors.mahalle}
+              />
+            </CrmFormFieldCol>
+            <CrmFormFieldCol>
+              <CrmFormSelect
+                formScope="customer-entry"
+                field="branchId"
+                label="Bayi"
                 value={newCustomerForm.branchId}
-                onChange={(event) =>
-                  updateNewCustomerField("branchId", event.target.value)
-                }
                 disabled={isReferenceLoading || !canListBranches}
-              >
-                <option value="">
-                  {isReferenceLoading
+                placeholderOption={
+                  isReferenceLoading
                     ? customerEntryTexts.citiesLoading
-                    : "Seçiniz"}
-                </option>
-                {branches.map((branch) => (
-                  <option key={branch.id} value={branch.id}>
-                    {branch.name}
-                  </option>
-                ))}
-              </select>
-              {createErrors.branch_id ? (
-                <span className="customer-field-error">
-                  {createErrors.branch_id}
-                </span>
-              ) : null}
-            </label>
-
-            <div className="d-flex justify-content-end gap-2 mt-3">
-              <Button theme="secondary" size="sm" type="button" onClick={() => setCreateStep(1)}>
-                Geri
-              </Button>
-              <Button
-                theme="primary"
-                size="sm"
-                type="submit"
-                disabled={!canCreateCustomers || isCreatingCustomer}
-              >
-                {isCreatingCustomer ? "Kaydediliyor..." : "Kaydet"}
-              </Button>
-            </div>
-          </form>
-        )}
+                    : "Seçiniz"
+                }
+                options={branches.map((branch) => ({
+                  value: String(branch.id),
+                  label: branch.name,
+                }))}
+                onChange={(value) => updateNewCustomerField("branchId", value)}
+                error={createErrors.branch_id}
+              />
+            </CrmFormFieldCol>
+          </div>
+        </form>
+      )}
     </ControlledModal>
   );
 }

@@ -1,3 +1,4 @@
+import { Button } from "@adminlte/react";
 import { FormEvent, useCallback, useMemo, useRef, useState } from "react";
 
 import type { Permission } from "@/features/auth/services/authApi";
@@ -21,11 +22,12 @@ import {
   type FollowUpsDataTableHandle,
   type FollowUpsListMeta,
 } from "@/features/followUps/components/FollowUpsDataTable";
+import { FollowUpRecordFormBody } from "@/features/followUps/components/FollowUpRecordFormBody";
+import { followUpVisitTypes } from "@/features/followUps/constants/followUpFormConstants";
 import { apiBaseUrl } from "@/services/apiClient";
 import { ListTableToolbar } from "@/shared/components";
 import { ContentHeader } from "@/shared/components/ContentHeader";
 import { ControlledModal } from "@/shared/components/ControlledModal";
-import { formFieldProps } from "@/shared/utils/formFieldProps";
 
 type FollowUpsPageProps = {
   permissions: Permission[];
@@ -52,30 +54,7 @@ type FollowUpEditForm = {
 
 type FollowUpEditErrors = Partial<Record<string, string>>;
 
-const followUpAgreementFailureReasons = [
-  "Fiyat yüksek",
-  "Mesafe Uzak",
-  "Bayi ile yaşanan sorunlar",
-  "Ekpertize ihtiyaç duymuyor",
-  "Kendisi yapıyor",
-  "Başka ekspertize yaptırıyor",
-  "Değerlendirme",
-];
-
-const followUpMeetPersonTitles = [
-  "Genel Müdür",
-  "Satış Müdürü",
-  "Operasyon Müdürü",
-  "Pazarlama Müdürü",
-  "İşletme Müdürü",
-  "Bölge Müdürü",
-  "Şube Müdürü",
-  "Yönetici",
-  "Sahibi",
-  "Ortağı",
-];
-
-const followUpVisitTypes = ["Yerinde Ziyaret"];
+const followUpEditFormId = "follow-ups-edit-form";
 
 const emptyListMeta: FollowUpsListMeta = {
   total: 0,
@@ -152,6 +131,14 @@ export function FollowUpsPage({ permissions }: FollowUpsPageProps) {
     tableRef.current?.clearFilters();
   }
 
+  function closeFollowUpModals(): void {
+    setSelectedFollowUp(null);
+    setSelectedImageIndex(null);
+    setEditForm(null);
+    setEditErrors({});
+    setSelectedCustomerDetail(null);
+  }
+
   async function handleOpenFollowUpDetail(
     followUp: FollowUpListItem,
   ): Promise<void> {
@@ -160,11 +147,11 @@ export function FollowUpsPage({ permissions }: FollowUpsPageProps) {
     }
 
     setMessage("");
+    closeFollowUpModals();
 
     try {
       const detail = await getFollowUp(followUp.uuid);
       setSelectedFollowUp(detail);
-      setSelectedImageIndex(null);
     } catch {
       setMessage("Takip kaydı detayı getirilemedi.");
     }
@@ -178,7 +165,7 @@ export function FollowUpsPage({ permissions }: FollowUpsPageProps) {
     }
 
     setMessage("");
-    setEditErrors({});
+    closeFollowUpModals();
     setIsLoadingEditForm(true);
 
     try {
@@ -385,7 +372,7 @@ export function FollowUpsPage({ permissions }: FollowUpsPageProps) {
       return;
     }
 
-    setSelectedCustomerDetail(null);
+    closeFollowUpModals();
     setIsLoadingCustomerDetail(true);
     setMessage("");
 
@@ -431,8 +418,71 @@ export function FollowUpsPage({ permissions }: FollowUpsPageProps) {
       />
       <section className="card list-table-card mb-3">
       {isLoadingEditForm ? (
-        <p className="text-muted small">Takip kaydı düzenleme bilgileri yükleniyor...</p>
+        <p className="card-body pb-0 text-muted small mb-0">
+          Takip kaydı düzenleme bilgileri yükleniyor...
+        </p>
       ) : null}
+      <form className="customer-filter-form" onSubmit={handleFilterSubmit}>
+        <ListTableToolbar>
+          <button
+            className="btn btn-primary btn-sm"
+            type="submit"
+            disabled={isTableLoading}
+          >
+            Filtrele
+          </button>
+          <button
+            className="btn btn-secondary btn-sm"
+            type="button"
+            disabled={isTableLoading}
+            onClick={handleResetFilters}
+          >
+            Temizle
+          </button>
+        </ListTableToolbar>
+
+        {message || isLoadingCustomerDetail ? (
+          <div className="card-body pb-0">
+            {message ? (
+              <p className="alert alert-danger py-2 mb-2 customer-message">{message}</p>
+            ) : null}
+            {isLoadingCustomerDetail ? (
+              <p className="text-muted small mb-0">Müşteri detayı yükleniyor...</p>
+            ) : null}
+          </div>
+        ) : null}
+
+        <div className="card-body p-0">
+          <FollowUpsDataTable
+            ref={tableRef}
+            listLoader={followUpListLoader}
+            canViewFollowUpDetail={canViewFollowUpDetail}
+            canUpdateFollowUps={canUpdateFollowUps}
+            canViewCustomerDetail={canViewCustomerDetail}
+            onOpenFollowUpDetail={(followUp) => void handleOpenFollowUpDetail(followUp)}
+            onOpenEditFollowUp={(followUp) => void handleOpenEditFollowUp(followUp)}
+            onOpenCustomerDetail={(customerId) =>
+              void handleOpenCustomerDetail(customerId)
+            }
+            onError={handleTableError}
+            onLoadMeta={handleLoadMeta}
+            onLoadingChange={setIsTableLoading}
+          />
+        </div>
+
+        <div
+          className={`card-footer list-table-footer py-2${isTableLoading ? " list-table-footer--loading" : ""}`}
+        >
+          <span className="text-muted small list-table-footer-summary">
+            Toplam <strong>{listMeta.total}</strong> kayıt
+            <span className="mx-1" aria-hidden="true">
+              ·
+            </span>
+            Sayfa {listMeta.currentPage} / {Math.max(1, listMeta.lastPage)}
+          </span>
+        </div>
+      </form>
+    </section>
 
       {editForm ? (
         <ControlledModal
@@ -440,327 +490,100 @@ export function FollowUpsPage({ permissions }: FollowUpsPageProps) {
           onClose={handleCloseEditFollowUp}
           title="Takip Kaydı Düzenle"
           size="xl"
+          footer={
+            <>
+              <Button
+                theme="secondary"
+                size="sm"
+                type="button"
+                disabled={isUpdatingFollowUp}
+                onClick={handleCloseEditFollowUp}
+              >
+                Vazgeç
+              </Button>
+              <Button
+                theme="primary"
+                size="sm"
+                type="submit"
+                form={followUpEditFormId}
+                disabled={isUpdatingFollowUp}
+              >
+                {isUpdatingFollowUp ? "Güncelleniyor..." : "Güncelle"}
+              </Button>
+            </>
+          }
         >
-            <form className="customer-entry-form" onSubmit={handleEditSubmit}>
-              <div className="customer-detail-grid task-assign-form-wide">
-                <span>Takip Başlığı</span>
-                <strong>{editForm.title || "-"}</strong>
-                <span>Müşteri</span>
-                <strong>{editForm.customerUnvan || "-"}</strong>
-              </div>
-
-              <h3 className="task-assign-form-wide">Ziyaret Bilgileri</h3>
-              <label className="field-label">
-                Görüşme Tarihi
-                <input
-                  {...formFieldProps("follow-ups-edit", "visitDate", {
-                    label: "Görüşme Tarihi",
-                  })}
-                  className="form-control form-control-sm"
-                  type="date"
-                  value={editForm.visitDate}
-                  disabled
-                  readOnly
-                />
-              </label>
-              <label className="field-label">
-                Bir Sonraki Ziyaret Tarihi
-                <input
-                  {...formFieldProps("follow-ups-edit", "nextVisitDate", {
-                    label: "Bir Sonraki Ziyaret Tarihi",
-                  })}
-                  className="form-control form-control-sm"
-                  type="date"
-                  min={editForm.visitDate}
-                  value={editForm.nextVisitDate}
-                  onChange={(event) =>
-                    updateEditForm("nextVisitDate", event.target.value)
-                  }
-                />
-                {editErrors.nextVisitDate ? (
-                  <span className="customer-field-error">
-                    {editErrors.nextVisitDate}
-                  </span>
-                ) : null}
-              </label>
-              <label className="field-label">
-                Görüşme Türü*
-                <select
-                  {...formFieldProps("follow-ups-edit", "visitType", {
-                    label: "Görüşme Türü",
-                  })}
-                  className="form-control form-control-sm"
-                  value={editForm.visitType}
-                  onChange={(event) =>
-                    updateEditForm("visitType", event.target.value)
-                  }
-                >
-                  <option value="">Seçiniz</option>
-                  {followUpVisitTypes.map((visitType) => (
-                    <option key={visitType} value={visitType}>
-                      {visitType}
-                    </option>
-                  ))}
-                </select>
-                {editErrors.visitType ? (
-                  <span className="customer-field-error">
-                    {editErrors.visitType}
-                  </span>
-                ) : null}
-              </label>
-              <h3 className="task-assign-form-wide">Görüşülen Kişi Bilgileri</h3>
-              <div className="follow-up-meet-people task-assign-form-wide">
-                {editForm.meetPeople.map((person, index) => (
-                  <div className="follow-up-meet-person-card" key={person.formId}>
-                    <div className="follow-up-meet-person-header">
-                      <strong>Görüşülen Kişi {index + 1}</strong>
-                      <button
-                        className="btn btn-secondary btn-sm"
-                        type="button"
-                        disabled={editForm.meetPeople.length <= 1}
-                        onClick={() => removeEditMeetPerson(person.formId)}
-                      >
-                        Sil
-                      </button>
-                    </div>
-                    <label className="field-label">
-                      Görevi*
-                      <select
-                        {...formFieldProps("follow-ups-edit", "title", {
-                          label: "Görevi",
-                          suffix: index,
-                        })}
-                        className="form-control form-control-sm"
-                        value={person.title}
-                        onChange={(event) =>
-                          updateEditMeetPerson(person.formId, "title", event.target.value)
-                        }
-                      >
-                        <option value="">Seçiniz</option>
-                        {followUpMeetPersonTitles.map((title) => (
-                          <option key={title} value={title}>
-                            {title}
-                          </option>
-                        ))}
-                      </select>
-                    </label>
-                    <label className="field-label">
-                      Ad*
-                      <input
-                        {...formFieldProps("follow-ups-edit", "name", {
-                          label: "Ad",
-                          suffix: index,
-                        })}
-                        className="form-control form-control-sm"
-                        value={person.name}
-                        maxLength={50}
-                        onChange={(event) =>
-                          updateEditMeetPerson(person.formId, "name", event.target.value)
-                        }
-                      />
-                    </label>
-                    <label className="field-label">
-                      Soyad*
-                      <input
-                        {...formFieldProps("follow-ups-edit", "surname", {
-                          label: "Soyad",
-                          suffix: index,
-                        })}
-                        className="form-control form-control-sm"
-                        value={person.surname}
-                        maxLength={50}
-                        onChange={(event) =>
-                          updateEditMeetPerson(person.formId, "surname", event.target.value)
-                        }
-                      />
-                    </label>
-                    <label className="field-label">
-                      Telefon*
-                      <input
-                        {...formFieldProps("follow-ups-edit", "phone", {
-                          label: "Telefon",
-                          suffix: index,
-                        })}
-                        className="form-control form-control-sm"
-                        type="tel"
-                        inputMode="tel"
-                        placeholder="05XXXXXXXXX"
-                        value={person.phone}
-                        maxLength={20}
-                        onChange={(event) =>
-                          updateEditMeetPerson(person.formId, "phone", event.target.value)
-                        }
-                      />
-                    </label>
-                    <label className="field-label">
-                      Eposta
-                      <input
-                        {...formFieldProps("follow-ups-edit", "email", {
-                          label: "Eposta",
-                          suffix: index,
-                        })}
-                        className="form-control form-control-sm"
-                        type="email"
-                        value={person.email}
-                        maxLength={100}
-                        onChange={(event) =>
-                          updateEditMeetPerson(person.formId, "email", event.target.value)
-                        }
-                      />
-                    </label>
+            <form
+              id={followUpEditFormId}
+              className="customer-entry-form"
+              onSubmit={handleEditSubmit}
+              noValidate
+            >
+              <FollowUpRecordFormBody
+                formScope="follow-ups-edit"
+                headerSummary={
+                  <div className="customer-detail-grid task-assign-form-wide mb-3">
+                    <span>Takip Başlığı</span>
+                    <strong>{editForm.title || "-"}</strong>
+                    <span>Müşteri</span>
+                    <strong>{editForm.customerUnvan || "-"}</strong>
                   </div>
-                ))}
-                {editErrors.meetPeople ? (
-                  <span className="customer-field-error">{editErrors.meetPeople}</span>
-                ) : null}
-                <button
-                  className="btn btn-primary btn-sm follow-up-add-person-button"
-                  type="button"
-                  onClick={addEditMeetPerson}
-                >
-                  Kişi Ekle
-                </button>
-              </div>
-
-              <h3 className="task-assign-form-wide">Anlaşma Bilgileri</h3>
-              <label className="field-label">
-                Anlaşma Sağlandı mı?
-                <select
-                  {...formFieldProps("follow-ups-edit", "agreementReached", {
-                    label: "Anlaşma Sağlandı mı?",
-                  })}
-                  className="form-control form-control-sm"
-                  value={editForm.agreementReached ? "true" : "false"}
-                  onChange={(event) =>
-                    updateEditForm("agreementReached", event.target.value === "true")
-                  }
-                >
-                  <option value="false">Hayır</option>
-                  <option value="true">Evet</option>
-                </select>
-              </label>
-              {!editForm.agreementReached ? (
-                <label className="field-label">
-                  Anlaşamama Sebebi*
-                  <select
-                    {...formFieldProps("follow-ups-edit", "agreementFailureReason", {
-                      label: "Anlaşamama Sebebi",
-                    })}
-                    className="form-control form-control-sm"
-                    value={editForm.agreementFailureReason}
-                    onChange={(event) =>
-                      updateEditForm("agreementFailureReason", event.target.value)
-                    }
-                  >
-                    <option value="">Seçiniz</option>
-                    {followUpAgreementFailureReasons.map((reason) => (
-                      <option key={reason} value={reason}>
-                        {reason}
-                      </option>
-                    ))}
-                  </select>
-                  {editErrors.agreementFailureReason ? (
-                    <span className="customer-field-error">
-                      {editErrors.agreementFailureReason}
-                    </span>
-                  ) : null}
-                </label>
-              ) : null}
-              <label className="field-label task-assign-form-wide">
-                Not
-                <textarea
-                  {...formFieldProps("follow-ups-edit", "note", { label: "Not" })}
-                  className="form-control form-control-sm"
-                  value={editForm.note}
-                  maxLength={150}
-                  onChange={(event) => updateEditForm("note", event.target.value)}
-                />
-                {editErrors.note ? (
-                  <span className="customer-field-error">{editErrors.note}</span>
-                ) : null}
-              </label>
-
-              <h3 className="task-assign-form-wide">Resim</h3>
-              {editForm.existingImages.length > 0 ? (
-                <div className="follow-up-upload-list task-assign-form-wide">
-                  {editForm.existingImages.map((image, index) => (
-                    <div key={image.uuid}>
-                      <span>Mevcut Resim {index + 1}</span>
-                      <button
-                        className="btn btn-secondary btn-sm"
-                        type="button"
-                        onClick={() => removeExistingEditImage(image.uuid)}
-                      >
-                        Sil
-                      </button>
-                    </div>
-                  ))}
-                </div>
-              ) : null}
-              <label className="field-label task-assign-form-wide">
-                <span className="follow-up-upload-box">
-                  <input
-                    {...formFieldProps("follow-ups-edit", "images", { label: "Resim" })}
-                    className="follow-up-upload-input"
-                    type="file"
-                    accept="image/jpeg,image/png,image/gif,image/webp"
-                    multiple
-                    onChange={(event) => handleEditImageChange(event.target.files)}
-                  />
-                  <span className="follow-up-upload-title">
-                    Yeni resim seçmek için tıklayın
-                  </span>
-                  <span className="follow-up-upload-help">
-                    JPEG, PNG, JPG, GIF veya WebP. Maksimum 3 resim, toplam 5 MB.
-                  </span>
-                </span>
-                {editErrors.images ? (
-                  <span className="customer-field-error">{editErrors.images}</span>
-                ) : null}
-              </label>
-              {editForm.images.length > 0 ? (
-                <ul className="follow-up-upload-list task-assign-form-wide">
-                  {editForm.images.map((image, index) => (
-                    <li key={`${image.name}-${image.size}-${index}`}>
-                      <span>{image.name}</span>
-                      <span>{formatFileSize(image.size)}</span>
-                      <button
-                        className="btn btn-secondary btn-sm"
-                        type="button"
-                        onClick={() => removeNewEditImage(index)}
-                      >
-                        Sil
-                      </button>
-                    </li>
-                  ))}
-                </ul>
-              ) : null}
-              {editErrors.form ? (
-                <p className="customer-field-error task-assign-form-wide">
-                  {editErrors.form}
-                </p>
-              ) : null}
-              <div className="customer-modal-actions">
-                <button
-                  className="btn btn-secondary btn-sm"
-                  type="button"
-                  disabled={isUpdatingFollowUp}
-                  onClick={handleCloseEditFollowUp}
-                >
-                  Vazgeç
-                </button>
-                <button
-                  className="btn btn-primary btn-sm"
-                  type="submit"
-                  disabled={isUpdatingFollowUp}
-                >
-                  {isUpdatingFollowUp ? "Güncelleniyor..." : "Güncelle"}
-                </button>
-              </div>
+                }
+                visitDate={editForm.visitDate}
+                nextVisitDate={editForm.nextVisitDate}
+                visitType={editForm.visitType}
+                visitDateLabel="Görüşme Tarihi"
+                visitDateReadOnly
+                onNextVisitDateChange={(value) =>
+                  updateEditForm("nextVisitDate", value)
+                }
+                onVisitTypeChange={(value) => updateEditForm("visitType", value)}
+                nextVisitDateError={editErrors.nextVisitDate}
+                visitTypeError={editErrors.visitType}
+                meetPeople={editForm.meetPeople.map((person) => ({
+                  rowKey: person.formId,
+                  title: person.title,
+                  name: person.name,
+                  surname: person.surname,
+                  phone: person.phone,
+                  email: person.email,
+                }))}
+                meetPeopleError={editErrors.meetPeople}
+                onMeetPersonChange={(rowKey, field, value) =>
+                  updateEditMeetPerson(
+                    rowKey,
+                    field as keyof Omit<EditMeetPersonForm, "formId" | "uuid">,
+                    value,
+                  )
+                }
+                onAddMeetPerson={addEditMeetPerson}
+                onRemoveMeetPerson={removeEditMeetPerson}
+                agreementReached={editForm.agreementReached}
+                agreementFailureReason={editForm.agreementFailureReason}
+                onAgreementReachedChange={(value) =>
+                  updateEditForm("agreementReached", value)
+                }
+                onAgreementFailureReasonChange={(value) =>
+                  updateEditForm("agreementFailureReason", value)
+                }
+                agreementFailureReasonError={editErrors.agreementFailureReason}
+                note={editForm.note}
+                onNoteChange={(value) => updateEditForm("note", value)}
+                noteError={editErrors.note}
+                existingImages={editForm.existingImages.map((image, index) => ({
+                  uuid: image.uuid,
+                  label: `Mevcut Resim ${index + 1}`,
+                }))}
+                onRemoveExistingImage={removeExistingEditImage}
+                newImages={editForm.images}
+                onNewImagesChange={handleEditImageChange}
+                onRemoveNewImage={removeNewEditImage}
+                imagesError={editErrors.images}
+                formError={editErrors.form}
+              />
             </form>
         </ControlledModal>
       ) : null}
-
       {selectedFollowUp ? (
         <ControlledModal
           isOpen
@@ -918,67 +741,6 @@ export function FollowUpsPage({ permissions }: FollowUpsPageProps) {
             </div>
         </ControlledModal>
       ) : null}
-      <form className="customer-filter-form" onSubmit={handleFilterSubmit}>
-        <ListTableToolbar>
-          <button
-            className="btn btn-primary btn-sm"
-            type="submit"
-            disabled={isTableLoading}
-          >
-            Filtrele
-          </button>
-          <button
-            className="btn btn-secondary btn-sm"
-            type="button"
-            disabled={isTableLoading}
-            onClick={handleResetFilters}
-          >
-            Temizle
-          </button>
-        </ListTableToolbar>
-
-        {message || isLoadingCustomerDetail ? (
-          <div className="card-body pb-0">
-            {message ? (
-              <p className="alert alert-danger py-2 mb-2 customer-message">{message}</p>
-            ) : null}
-            {isLoadingCustomerDetail ? (
-              <p className="text-muted small mb-0">Müşteri detayı yükleniyor...</p>
-            ) : null}
-          </div>
-        ) : null}
-
-        <div className="card-body p-0">
-          <FollowUpsDataTable
-            ref={tableRef}
-            listLoader={followUpListLoader}
-            canViewFollowUpDetail={canViewFollowUpDetail}
-            canUpdateFollowUps={canUpdateFollowUps}
-            canViewCustomerDetail={canViewCustomerDetail}
-            onOpenFollowUpDetail={(followUp) => void handleOpenFollowUpDetail(followUp)}
-            onOpenEditFollowUp={(followUp) => void handleOpenEditFollowUp(followUp)}
-            onOpenCustomerDetail={(customerId) =>
-              void handleOpenCustomerDetail(customerId)
-            }
-            onError={handleTableError}
-            onLoadMeta={handleLoadMeta}
-            onLoadingChange={setIsTableLoading}
-          />
-        </div>
-
-        <div
-          className={`card-footer list-table-footer py-2${isTableLoading ? " list-table-footer--loading" : ""}`}
-        >
-          <span className="text-muted small list-table-footer-summary">
-            Toplam <strong>{listMeta.total}</strong> kayıt
-            <span className="mx-1" aria-hidden="true">
-              ·
-            </span>
-            Sayfa {listMeta.currentPage} / {Math.max(1, listMeta.lastPage)}
-          </span>
-        </div>
-      </form>
-    </section>
     </>
   );
 }
@@ -1024,7 +786,7 @@ function validateEditForm(form: FollowUpEditForm): FollowUpEditErrors {
 
   if (!form.visitType.trim()) {
     errors.visitType = "Görüşme türü zorunludur.";
-  } else if (!followUpVisitTypes.includes(form.visitType)) {
+  } else if (!(followUpVisitTypes as readonly string[]).includes(form.visitType)) {
     errors.visitType = "Görüşme türü geçersiz.";
   }
 
@@ -1064,18 +826,6 @@ function validateEditForm(form: FollowUpEditForm): FollowUpEditErrors {
   }
 
   return errors;
-}
-
-function formatFileSize(size: number): string {
-  if (size < 1024) {
-    return `${size} B`;
-  }
-
-  if (size < 1024 * 1024) {
-    return `${(size / 1024).toFixed(1)} KB`;
-  }
-
-  return `${(size / (1024 * 1024)).toFixed(1)} MB`;
 }
 
 function formatDate(value: string): string {

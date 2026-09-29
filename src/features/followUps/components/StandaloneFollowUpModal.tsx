@@ -1,7 +1,8 @@
+import { Button } from "@adminlte/react";
 import { FormEvent, useEffect, useState } from "react";
 
+import { FollowUpRecordFormBody } from "@/features/followUps/components/FollowUpRecordFormBody";
 import { ControlledModal } from "@/shared/components/ControlledModal";
-import { formFieldProps } from "@/shared/utils/formFieldProps";
 
 import {
   getCustomer,
@@ -17,28 +18,7 @@ import {
   type FollowUpVisitType,
 } from "@/features/tasks/services/taskApi";
 
-const visitTypes: FollowUpVisitType[] = ["Yerinde Ziyaret"];
-const failureReasons: FollowUpAgreementFailureReason[] = [
-  "Fiyat yüksek",
-  "Mesafe Uzak",
-  "Bayi ile yaşanan sorunlar",
-  "Ekpertize ihtiyaç duymuyor",
-  "Kendisi yapıyor",
-  "Başka ekspertize yaptırıyor",
-  "Değerlendirme",
-];
-const personTitles: FollowUpMeetPersonTitle[] = [
-  "Genel Müdür",
-  "Satış Müdürü",
-  "Operasyon Müdürü",
-  "Pazarlama Müdürü",
-  "İşletme Müdürü",
-  "Bölge Müdürü",
-  "Şube Müdürü",
-  "Yönetici",
-  "Sahibi",
-  "Ortağı",
-];
+const standaloneFollowUpFormId = "follow-up-standalone-form";
 const imageTypes = new Set(["image/jpeg", "image/png", "image/gif", "image/webp"]);
 const maxImageTotalSize = 5 * 1024 * 1024;
 
@@ -220,337 +200,135 @@ export function StandaloneFollowUpModal({
       onClose={onClose}
       title="Takip Kaydı"
       size="xl"
-    >
-        <form className="customer-entry-form" onSubmit={handleSubmit}>
-          <div className="customer-detail-grid task-assign-form-wide">
-            <span>Görev</span>
-            <strong>Görevsiz Takip</strong>
-            <span>Müşteri</span>
-            <strong>{customerDisplayName(customer)}</strong>
-          </div>
-
-          <h3 className="task-assign-form-wide">Ziyaret Bilgileri</h3>
-          <label className="field-label">
-            Görüşme Tarihi*
-            <input
-              {...formFieldProps("follow-up-standalone", "visitDate", {
-                label: "Görüşme Tarihi",
-              })}
-              className="form-control form-control-sm"
-              type="date"
-              min={todayDate()}
-              data-follow-up-error-field="visitDate"
-              value={form.visitDate}
-              onChange={(event) => updateForm("visitDate", event.target.value)}
-            />
-            {fieldError(errors, "visitDate")}
-          </label>
-          <label className="field-label">
-            Bir Sonraki Ziyaret Tarihi
-            <input
-              {...formFieldProps("follow-up-standalone", "nextVisitDate", {
-                label: "Bir Sonraki Ziyaret Tarihi",
-              })}
-              className="form-control form-control-sm"
-              type="date"
-              min={form.visitDate}
-              data-follow-up-error-field="nextVisitDate"
-              value={form.nextVisitDate}
-              onChange={(event) => updateForm("nextVisitDate", event.target.value)}
-            />
-            {fieldError(errors, "nextVisitDate")}
-          </label>
-          <label className="field-label">
-            Görüşme Türü*
-            <select
-              {...formFieldProps("follow-up-standalone", "visitType", {
-                label: "Görüşme Türü",
-              })}
-              className="form-control form-control-sm"
-              data-follow-up-error-field="visitType"
-              value={form.visitType}
-              onChange={(event) =>
-                updateForm("visitType", event.target.value as FollowUpVisitType | "")
-              }
-            >
-              <option value="">Seçiniz</option>
-              {visitTypes.map((visitType) => (
-                <option key={visitType} value={visitType}>
-                  {visitType}
-                </option>
-              ))}
-            </select>
-            {fieldError(errors, "visitType")}
-          </label>
-
-          <h3 className="task-assign-form-wide">Görüşülen Kişi Bilgileri</h3>
-          <div
-            className="follow-up-meet-people task-assign-form-wide"
-            data-follow-up-error-field="meetPeople"
-            tabIndex={-1}
+      footer={
+        <>
+          <Button
+            theme="secondary"
+            size="sm"
+            type="button"
+            disabled={isSubmitting}
+            onClick={onClose}
           >
-            {form.meetPeople.map((person, index) => (
-              <div className="follow-up-meet-person-card" key={person.id}>
-                <div className="follow-up-meet-person-header">
-                  <strong>Görüşülen Kişi {index + 1}</strong>
-                  <button
-                    className="btn btn-secondary btn-sm"
-                    type="button"
-                    disabled={form.meetPeople.length <= 1}
-                    onClick={() => removePerson(person.id)}
-                  >
-                    Sil
-                  </button>
-                </div>
-                <label className="field-label">
-                  Görevi*
-                  <select
-                    {...formFieldProps("follow-up-standalone", "title", {
-                      label: "Görevi",
-                      suffix: index,
-                    })}
-                    className="form-control form-control-sm"
-                    data-follow-up-error-field={personErrorKey(person.id, "title")}
-                    value={person.title}
-                    onChange={(event) => updatePerson(person.id, "title", event.target.value)}
-                  >
-                    <option value="">Seçiniz</option>
-                    {personTitles.map((title) => (
-                      <option key={title} value={title}>
-                        {title}
-                      </option>
-                    ))}
-                  </select>
-                  {fieldError(errors, personErrorKey(person.id, "title"))}
-                </label>
-                <PersonInput
-                  label="Ad*"
-                  field="name"
-                  person={person}
-                  index={index}
-                  errors={errors}
-                  onChange={updatePerson}
-                />
-                <PersonInput
-                  label="Soyad*"
-                  field="surname"
-                  person={person}
-                  index={index}
-                  errors={errors}
-                  onChange={updatePerson}
-                />
-                <PersonInput
-                  label="Telefon*"
-                  field="phone"
-                  person={person}
-                  index={index}
-                  errors={errors}
-                  onChange={updatePerson}
-                />
-                <PersonInput
-                  label="Eposta"
-                  field="email"
-                  person={person}
-                  index={index}
-                  errors={errors}
-                  onChange={updatePerson}
-                />
+            Vazgeç
+          </Button>
+          <Button
+            theme="primary"
+            size="sm"
+            type="submit"
+            form={standaloneFollowUpFormId}
+            disabled={isSubmitting}
+          >
+            {isSubmitting ? "Kaydediliyor..." : "Kaydet"}
+          </Button>
+        </>
+      }
+    >
+        <form
+          id={standaloneFollowUpFormId}
+          className="customer-entry-form"
+          onSubmit={handleSubmit}
+          noValidate
+        >
+          <FollowUpRecordFormBody
+            formScope="follow-up-standalone"
+            headerSummary={
+              <div className="customer-detail-grid task-assign-form-wide mb-3">
+                <span>Görev</span>
+                <strong>Görevsiz Takip</strong>
+                <span>Müşteri</span>
+                <strong>{customerDisplayName(customer)}</strong>
               </div>
-            ))}
-            {fieldError(errors, "meetPeople")}
-            <button
-              className="btn btn-primary btn-sm follow-up-add-person-button"
-              type="button"
-              onClick={addPerson}
-            >
-              Kişi Ekle
-            </button>
-          </div>
+            }
+            visitDate={form.visitDate}
+            nextVisitDate={form.nextVisitDate}
+            visitType={form.visitType}
+            minVisitDate={todayDate()}
+            onVisitDateChange={(value) => updateForm("visitDate", value)}
+            onNextVisitDateChange={(value) => updateForm("nextVisitDate", value)}
+            onVisitTypeChange={(value) =>
+              updateForm("visitType", value as FollowUpVisitType | "")
+            }
+            visitDateError={errors.visitDate}
+            nextVisitDateError={errors.nextVisitDate}
+            visitTypeError={errors.visitType}
+            meetPeople={form.meetPeople.map((person) => ({
+              rowKey: person.id,
+              title: person.title,
+              name: person.name,
+              surname: person.surname,
+              phone: person.phone,
+              email: person.email,
+            }))}
+            meetPeopleError={errors.meetPeople}
+            meetPersonFieldError={(rowKey, field) =>
+              errors[personErrorKey(rowKey, field as MeetPersonField)]
+            }
+            onMeetPersonChange={(rowKey, field, value) =>
+              updatePerson(rowKey, field as MeetPersonField, value)
+            }
+            onAddMeetPerson={addPerson}
+            onRemoveMeetPerson={removePerson}
+            beforeAgreement={
+              <>
+                <h3 className="task-assign-form-wide">Firma Bilgileri</h3>
+                <div className="customer-detail-grid task-assign-form-wide">
+                  <span>Firma Adı</span>
+                  <strong>{customer.unvan || "-"}</strong>
+                  <span>E-posta</span>
+                  <strong>
+                    {isCompanyInfoLoading ? "Yükleniyor..." : customerDetail?.eposta || "-"}
+                  </strong>
+                  <span>Pluscard No</span>
+                  <strong>
+                    {isCompanyInfoLoading
+                      ? "Yükleniyor..."
+                      : plusCardDetail?.plusCardNo || customer.plusCardNo || "-"}
+                  </strong>
+                  <span>PlusCard Kredi</span>
+                  <strong>
+                    {isCompanyInfoLoading
+                      ? "Yükleniyor..."
+                      : plusCardDetail?.credit || customer.credit || "-"}
+                  </strong>
+                  <span>Pluscard Puan</span>
+                  <strong>
+                    {isCompanyInfoLoading ? "Yükleniyor..." : plusCardDetail?.point || "-"}
+                  </strong>
+                  <span>Araç Stok Adedi</span>
+                  <strong>
+                    {customerDetail?.vehicleStockCount ?? customer.vehicleStockCount ?? "-"}
+                  </strong>
+                </div>
+                {companyInfoMessage ? (
+                  <p className="customer-field-error task-assign-form-wide">
+                    {companyInfoMessage}
+                  </p>
+                ) : null}
+              </>
+            }
+            agreementReached={form.agreementReached}
+            agreementFailureReason={form.agreementFailureReason}
+            onAgreementReachedChange={(value) => updateForm("agreementReached", value)}
+            onAgreementFailureReasonChange={(value) =>
+              updateForm(
+                "agreementFailureReason",
+                value as FollowUpAgreementFailureReason | "",
+              )
+            }
+            agreementFailureReasonError={errors.agreementFailureReason}
+            note={form.note}
+            onNoteChange={(value) => updateForm("note", value)}
+            noteError={errors.note}
+            newImages={form.images}
+            onNewImagesChange={(files) =>
+              updateForm("images", Array.from(files ?? []))
+            }
+            imagesError={errors.images}
+            formError={errors.form}
+          />
 
-          <h3 className="task-assign-form-wide">Firma Bilgileri</h3>
-          <div className="customer-detail-grid task-assign-form-wide">
-            <span>Firma Adı</span>
-            <strong>{customer.unvan || "-"}</strong>
-            <span>E-posta</span>
-            <strong>
-              {isCompanyInfoLoading ? "Yükleniyor..." : customerDetail?.eposta || "-"}
-            </strong>
-            <span>Pluscard No</span>
-            <strong>
-              {isCompanyInfoLoading
-                ? "Yükleniyor..."
-                : plusCardDetail?.plusCardNo || customer.plusCardNo || "-"}
-            </strong>
-            <span>PlusCard Kredi</span>
-            <strong>
-              {isCompanyInfoLoading
-                ? "Yükleniyor..."
-                : plusCardDetail?.credit || customer.credit || "-"}
-            </strong>
-            <span>Pluscard Puan</span>
-            <strong>
-              {isCompanyInfoLoading ? "Yükleniyor..." : plusCardDetail?.point || "-"}
-            </strong>
-            <span>Araç Stok Adedi</span>
-            <strong>
-              {customerDetail?.vehicleStockCount ?? customer.vehicleStockCount ?? "-"}
-            </strong>
-          </div>
-          {companyInfoMessage ? (
-            <p className="customer-field-error task-assign-form-wide">
-              {companyInfoMessage}
-            </p>
-          ) : null}
-
-          <h3 className="task-assign-form-wide">Anlaşma Bilgileri</h3>
-          <label className="field-label">
-            Anlaşma Sağlandı mı?
-            <select
-              {...formFieldProps("follow-up-standalone", "agreementReached", {
-                label: "Anlaşma Sağlandı mı?",
-              })}
-              className="form-control form-control-sm"
-              value={form.agreementReached ? "true" : "false"}
-              onChange={(event) =>
-                updateForm("agreementReached", event.target.value === "true")
-              }
-            >
-              <option value="false">Hayır</option>
-              <option value="true">Evet</option>
-            </select>
-          </label>
-          {!form.agreementReached ? (
-            <label className="field-label">
-              Anlaşamama Sebebi*
-              <select
-                {...formFieldProps("follow-up-standalone", "agreementFailureReason", {
-                  label: "Anlaşamama Sebebi",
-                })}
-                className="form-control form-control-sm"
-                data-follow-up-error-field="agreementFailureReason"
-                value={form.agreementFailureReason}
-                onChange={(event) =>
-                  updateForm(
-                    "agreementFailureReason",
-                    event.target.value as FollowUpAgreementFailureReason | "",
-                  )
-                }
-              >
-                <option value="">Seçiniz</option>
-                {failureReasons.map((reason) => (
-                  <option key={reason} value={reason}>
-                    {reason}
-                  </option>
-                ))}
-              </select>
-              {fieldError(errors, "agreementFailureReason")}
-            </label>
-          ) : null}
-          <label className="field-label task-assign-form-wide">
-            Not
-            <textarea
-              {...formFieldProps("follow-up-standalone", "note", { label: "Not" })}
-              className="form-control form-control-sm"
-              data-follow-up-error-field="note"
-              maxLength={150}
-              value={form.note}
-              onChange={(event) => updateForm("note", event.target.value)}
-            />
-            {fieldError(errors, "note")}
-          </label>
-
-          <h3 className="task-assign-form-wide">Resim</h3>
-          <label className="field-label task-assign-form-wide">
-            <span className="follow-up-upload-box">
-              <input
-                {...formFieldProps("follow-up-standalone", "images", { label: "Resim" })}
-                className="follow-up-upload-input"
-                type="file"
-                accept="image/jpeg,image/png,image/gif,image/webp"
-                multiple
-                data-follow-up-error-field="images"
-                onChange={(event) =>
-                  updateForm("images", Array.from(event.target.files ?? []))
-                }
-              />
-              <span className="follow-up-upload-title">
-                Resim seçmek için tıklayın
-              </span>
-              <span className="follow-up-upload-help">
-                JPEG, PNG, JPG, GIF veya WebP. Maksimum 3 resim, toplam 5 MB.
-              </span>
-            </span>
-            {fieldError(errors, "images")}
-          </label>
-          {form.images.length > 0 ? (
-            <ul className="follow-up-upload-list task-assign-form-wide">
-              {form.images.map((image) => (
-                <li key={`${image.name}-${image.size}`}>
-                  <span>{image.name}</span>
-                  <span>{formatFileSize(image.size)}</span>
-                </li>
-              ))}
-            </ul>
-          ) : null}
-          {errors.form ? (
-            <p className="customer-field-error task-assign-form-wide">{errors.form}</p>
-          ) : null}
-
-          <div className="customer-modal-actions">
-            <button
-              className="btn btn-secondary btn-sm"
-              type="button"
-              disabled={isSubmitting}
-              onClick={onClose}
-            >
-              Vazgeç
-            </button>
-            <button className="btn btn-primary btn-sm" type="submit" disabled={isSubmitting}>
-              {isSubmitting ? "Kaydediliyor..." : "Kaydet"}
-            </button>
-          </div>
         </form>
     </ControlledModal>
-  );
-}
-
-type PersonInputProps = {
-  label: string;
-  field: "name" | "surname" | "phone" | "email";
-  person: MeetPersonForm;
-  index: number;
-  errors: FormErrors;
-  onChange: (id: string, field: MeetPersonField, value: string) => void;
-};
-
-function PersonInput({
-  label,
-  field,
-  person,
-  index,
-  errors,
-  onChange,
-}: PersonInputProps) {
-  const key = personErrorKey(person.id, field);
-  return (
-    <label className="field-label">
-      {label}
-      <input
-        {...formFieldProps("follow-up-standalone", field, {
-          label: label.replace("*", ""),
-          suffix: index,
-        })}
-        className="form-control form-control-sm"
-        type={field === "email" ? "email" : field === "phone" ? "tel" : "text"}
-        inputMode={field === "phone" ? "tel" : undefined}
-        placeholder={field === "phone" ? "05XXXXXXXXX" : undefined}
-        maxLength={field === "phone" ? 11 : field === "email" ? 100 : 50}
-        data-follow-up-error-field={key}
-        value={person[field]}
-        onChange={(event) => onChange(person.id, field, event.target.value)}
-      />
-      {fieldError(errors, key)}
-    </label>
   );
 }
 
@@ -660,12 +438,6 @@ function personErrorKey(id: string, field: MeetPersonField): string {
   return `meetPeople.${id}.${field}`;
 }
 
-function fieldError(errors: FormErrors, key: string) {
-  return errors[key] ? (
-    <span className="customer-field-error">{errors[key]}</span>
-  ) : null;
-}
-
 function scrollToFirstError(errors: FormErrors): void {
   const firstKey = Object.keys(errors).find((key) => errors[key]);
   if (!firstKey) return;
@@ -693,8 +465,3 @@ function todayDate(): string {
   return `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`;
 }
 
-function formatFileSize(size: number): string {
-  if (size < 1024) return `${size} B`;
-  if (size < 1024 * 1024) return `${(size / 1024).toFixed(1)} KB`;
-  return `${(size / (1024 * 1024)).toFixed(1)} MB`;
-}

@@ -65,9 +65,69 @@ export function commitPendingHeaderFilters(table: Tabulator | null): void {
   }
 }
 
+/** Tabulator skips ajax when already on page 1 — refreshFilter forces remote reload. */
+export function triggerRemoteFilterReload(table: Tabulator | null): void {
+  if (!table) {
+    return;
+  }
+
+  const currentPage = table.getPage();
+  if (currentPage !== 1) {
+    void table.setPage(1);
+    return;
+  }
+
+  table.refreshFilter();
+}
+
 export function applyCrmTableFilters(table: Tabulator | null): void {
+  if (!table) {
+    return;
+  }
+
   commitPendingHeaderFilters(table);
-  void table?.setPage(1);
+  triggerRemoteFilterReload(table);
+}
+
+export function clearCrmTableFilters(table: Tabulator | null): void {
+  if (!table) {
+    return;
+  }
+
+  table.clearHeaderFilter();
+  triggerRemoteFilterReload(table);
+}
+
+export function resolveRemoteHeaderFilters(
+  table: Tabulator | null,
+  requestFilters: CrmRemoteTabulatorRequestParams["filter"],
+): NonNullable<CrmRemoteTabulatorRequestParams["filter"]> {
+  if (requestFilters && requestFilters.length > 0) {
+    return requestFilters;
+  }
+
+  const headerFilters = table?.getFilters(true);
+  if (!headerFilters || headerFilters.length === 0) {
+    return [];
+  }
+
+  return headerFilters.map((filter) => ({
+    field: String(filter.field ?? ""),
+    value: filter.value,
+  }));
+}
+
+const CRM_LIST_ALL_FILTER_LABEL = "Tümü";
+
+function isRemoteHeaderFilterEmpty(value: string): boolean {
+  const trimmed = value.trim();
+  if (!trimmed) {
+    return true;
+  }
+
+  return trimmed.localeCompare(CRM_LIST_ALL_FILTER_LABEL, "tr", {
+    sensitivity: "accent",
+  }) === 0;
 }
 
 export function mapHeaderFilters<T extends Record<string, unknown>>(
@@ -79,7 +139,7 @@ export function mapHeaderFilters<T extends Record<string, unknown>>(
   for (const filter of filters ?? []) {
     const key = fieldMap[filter.field];
     const value = String(filter.value ?? "").trim();
-    if (key && value) {
+    if (key && value && !isRemoteHeaderFilterEmpty(value)) {
       (query as Record<string, string>)[key as string] = value;
     }
   }
@@ -95,6 +155,8 @@ export type CreateCrmRemoteTabulatorOptionsInput = {
   remoteSort: RemoteSortState;
   getTableInstance: () => Tabulator | null;
   ajaxRequestFunc: Options["ajaxRequestFunc"];
+  /** Wide grids (e.g. customers): use false + horizontal scroll instead of row collapse. */
+  responsiveLayout?: false | "collapse";
 };
 
 export function createCrmRemoteTabulatorOptions(
@@ -104,7 +166,7 @@ export function createCrmRemoteTabulatorOptions(
 
   return {
     layout: "fitColumns",
-    responsiveLayout: "collapse",
+    responsiveLayout: input.responsiveLayout ?? "collapse",
     placeholder: input.placeholder,
     dataLoader: false,
     pagination: true,

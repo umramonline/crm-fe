@@ -1,7 +1,13 @@
+import { Button } from "@adminlte/react";
 import { useEffect, useState } from "react";
 
 import { ContentHeader } from "@/shared/components/ContentHeader";
-import { formFieldProps } from "@/shared/utils/formFieldProps";
+import {
+  CrmFormFieldCol,
+  CrmFormInput,
+  CrmFormSelect,
+  defaultCrmFormTextMaxLength,
+} from "@/shared/components/CrmFormField";
 import {
   completeFullRegistration,
   fullRegistrationPhoneExists,
@@ -72,7 +78,6 @@ const emptyFullRegistrationForm: FullRegistrationForm = {
   addressDetail: "",
 };
 
-const customerTextMaxLength = 255;
 const telephoneTitleMaxLength = 255;
 const turkeyMobilePhoneRegex = /^05[0-9]{9}$/;
 const corporateSectorOptions = [
@@ -88,6 +93,19 @@ const corporateSectorOptions = [
   "Diğer",
 ];
 
+const fullRegistrationSteps = [
+  { step: 1 as const, label: "Kimlik" },
+  { step: 2 as const, label: "İletişim" },
+  { step: 3 as const, label: "Telefonlar" },
+  { step: 4 as const, label: "Adres" },
+];
+
+const fullRegistrationStepTitles: Record<1 | 2 | 3 | 4, string> = {
+  1: "Kimlik bilgileri",
+  2: "İletişim, bayi ve stok",
+  3: "Ek cep telefonları",
+  4: "Adres bilgileri",
+};
 
 export function CustomerFullRegistrationPage({
   customerId,
@@ -302,250 +320,432 @@ export function CustomerFullRegistrationPage({
       />
 
       <div className="card mb-3">
-        <div className="card-body">
-          <p className="text-muted">
+        <div className="card-header">
+          <h3 className="card-title mb-0">Tam kayıt formu</h3>
+          <p className="text-muted small mb-0 mt-1">
             Backend müşteri kaydını dört aşamada tamamlayabilirsiniz.
           </p>
-
-          {message ? <div className="alert alert-info">{message}</div> : null}
-
-      <form className="full-registration-form" onSubmit={(event) => event.preventDefault()}>
-        <div className="full-registration-steps">
-          {[1, 2, 3, 4].map((stepNumber) => (
-            <span key={stepNumber} className={step === stepNumber ? "active" : ""}>
-              {stepNumber}
-            </span>
-          ))}
         </div>
 
-        {step === 1 ? (
-          <div className="customer-entry-form">
-            <FormSelect
-              field="type"
-              label="Müşteri Türü *"
-              value={form.type}
-              onChange={(value) => updateField("type", value)}
-              options={[
-                { value: "bireysel", label: "Bireysel" },
-                { value: "kurumsal", label: "Kurumsal" },
-              ]}
-              error={errors.type}
-              disabled={hasUoId}
-            />
-            <FormInput
-              field="cep"
-              label="Cep *"
-              value={form.cep}
-              onChange={(value) => updateField("cep", value)}
-              error={errors.cep}
-              isPhone
-              maxLength={11}
-              disabled={hasUoId}
-            />
-            <FormInput field="ad" label="Ad *" value={form.ad} onChange={(value) => updateField("ad", value)} error={errors.ad} disabled={hasUoId} />
-            <FormInput field="soyad" label="Soyad *" value={form.soyad} onChange={(value) => updateField("soyad", value)} error={errors.soyad} disabled={hasUoId} />
-            {form.type === "bireysel" ? (
-              <>
-                <FormInput field="tcNo" label="T.C. No" value={form.tcNo} onChange={(value) => updateField("tcNo", value)} error={errors.tc_no} disabled={hasUoId} />
-                <FormInput field="dogumTarihi" label="Doğum Tarihi" type="date" value={form.dogumTarihi} onChange={(value) => updateField("dogumTarihi", value)} error={errors.dogum_tarihi} disabled={hasUoId} />
-              </>
-            ) : (
-              <>
-                <FormInput field="unvan" label="Ünvan *" value={form.unvan} onChange={(value) => updateField("unvan", value)} error={errors.unvan} disabled={hasUoId} />
-                <FormSelect
-                  field="corporateSector"
-                  label="Sektör *"
-                  value={form.corporateSector}
-                  onChange={(value) => updateField("corporateSector", value)}
-                  options={corporateSectorOptions.map((sector) => ({ value: sector, label: sector }))}
-                  error={errors.corporate_sector}
-                />
-              </>
-            )}
-          </div>
-        ) : null}
+        <form
+          className="full-registration-form"
+          onSubmit={(event) => event.preventDefault()}
+          noValidate
+        >
+          <div className="card-body">
+            {message ? (
+              <div className="alert alert-info py-2" role="status">
+                {message}
+              </div>
+            ) : null}
 
-        {step === 2 ? (
-          <div className="customer-entry-form">
-            <FormSelect
-              field="branchId"
-              label="Bayi *"
-              value={form.branchId}
-              onChange={(value) => updateField("branchId", value)}
-              options={branches.map((branch) => ({ value: String(branch.id), label: branch.name }))}
-              error={errors.branch_id}
-              disabled={hasUoId}
-            />
-            <FormInput field="eposta" label="E-posta" value={form.eposta} onChange={(value) => updateField("eposta", value)} error={errors.eposta} disabled={hasUoId} />
-            <FormInput field="website" label="Website" value={form.website} onChange={(value) => updateField("website", value)} error={errors.website} />
-            <FormInput field="googleMapLink" label="Google Map Link" value={form.googleMapLink} onChange={(value) => updateField("googleMapLink", value)} error={errors.google_map_link} />
-            <FormInput field="classifiedsWebsiteLink" label="İlan Sitesi Linki" value={form.classifiedsWebsiteLink} onChange={(value) => updateField("classifiedsWebsiteLink", value)} error={errors.classifieds_website_link} />
-            <FormInput field="vehicleStockCount" label="Araç Stok Adedi *" type="number" value={form.vehicleStockCount} onChange={(value) => updateField("vehicleStockCount", value)} error={errors.vehicle_stock_count} />
-            {form.type === "kurumsal" ? (
-              <>
-                <FormInput field="vergiNo" label="Vergi No *" value={form.vergiNo} onChange={(value) => updateField("vergiNo", value)} error={errors.vergi_no} disabled={hasUoId} />
-                <FormInput field="vergiDairesi" label="Vergi Dairesi *" value={form.vergiDairesi} onChange={(value) => updateField("vergiDairesi", value)} error={errors.vergi_dairesi} disabled={hasUoId} />
-              </>
+            <nav
+              className="full-registration-stepper nav nav-pills nav-fill flex-column flex-sm-row gap-2 mb-3"
+              aria-label="Tam kayıt adımları"
+            >
+              {fullRegistrationSteps.map(({ step: stepNumber, label }) => {
+                const isActive = step === stepNumber;
+                const isComplete = step > stepNumber;
+
+                return (
+                  <span
+                    key={stepNumber}
+                    className={`nav-link py-2 ${isActive ? "active" : ""} ${isComplete ? "full-registration-stepper-complete" : ""}`}
+                    aria-current={isActive ? "step" : undefined}
+                  >
+                    <span className="full-registration-stepper-index">{stepNumber}</span>
+                    <span className="full-registration-stepper-label">{label}</span>
+                  </span>
+                );
+              })}
+            </nav>
+
+            <div
+              className="progress full-registration-progress mb-4"
+              role="progressbar"
+              aria-valuemin={1}
+              aria-valuemax={4}
+              aria-valuenow={step}
+              aria-label="Form ilerlemesi"
+            >
+              <div
+                className="progress-bar"
+                style={{ width: `${(step / 4) * 100}%` }}
+              />
+            </div>
+
+            <h4 className="h5 mb-3">{fullRegistrationStepTitles[step]}</h4>
+
+            {step === 1 ? (
+              <div className="row g-3">
+                <CrmFormFieldCol>
+                  <CrmFormSelect
+                    formScope="full-registration"
+                    field="type"
+                    label="Müşteri Türü *"
+                    value={form.type}
+                    onChange={(value) => updateField("type", value)}
+                    options={[
+                      { value: "bireysel", label: "Bireysel" },
+                      { value: "kurumsal", label: "Kurumsal" },
+                    ]}
+                    error={errors.type}
+                    disabled={hasUoId}
+                  />
+                </CrmFormFieldCol>
+                <CrmFormFieldCol>
+                  <CrmFormInput
+                    formScope="full-registration"
+                    field="cep"
+                    label="Cep *"
+                    value={form.cep}
+                    onChange={(value) => updateField("cep", value)}
+                    error={errors.cep}
+                    isPhone
+                    maxLength={11}
+                    disabled={hasUoId}
+                  />
+                </CrmFormFieldCol>
+                <CrmFormFieldCol>
+                  <CrmFormInput
+                    formScope="full-registration"
+                    field="ad"
+                    label="Ad *"
+                    value={form.ad}
+                    onChange={(value) => updateField("ad", value)}
+                    error={errors.ad}
+                    disabled={hasUoId}
+                  />
+                </CrmFormFieldCol>
+                <CrmFormFieldCol>
+                  <CrmFormInput
+                    formScope="full-registration"
+                    field="soyad"
+                    label="Soyad *"
+                    value={form.soyad}
+                    onChange={(value) => updateField("soyad", value)}
+                    error={errors.soyad}
+                    disabled={hasUoId}
+                  />
+                </CrmFormFieldCol>
+                {form.type === "bireysel" ? (
+                  <>
+                    <CrmFormFieldCol>
+                      <CrmFormInput
+                    formScope="full-registration"
+                        field="tcNo"
+                        label="T.C. No"
+                        value={form.tcNo}
+                        onChange={(value) => updateField("tcNo", value)}
+                        error={errors.tc_no}
+                        disabled={hasUoId}
+                      />
+                    </CrmFormFieldCol>
+                    <CrmFormFieldCol>
+                      <CrmFormInput
+                    formScope="full-registration"
+                        field="dogumTarihi"
+                        label="Doğum Tarihi"
+                        type="date"
+                        value={form.dogumTarihi}
+                        onChange={(value) => updateField("dogumTarihi", value)}
+                        error={errors.dogum_tarihi}
+                        disabled={hasUoId}
+                      />
+                    </CrmFormFieldCol>
+                  </>
+                ) : (
+                  <>
+                    <CrmFormFieldCol>
+                      <CrmFormInput
+                    formScope="full-registration"
+                        field="unvan"
+                        label="Ünvan *"
+                        value={form.unvan}
+                        onChange={(value) => updateField("unvan", value)}
+                        error={errors.unvan}
+                        disabled={hasUoId}
+                      />
+                    </CrmFormFieldCol>
+                    <CrmFormFieldCol>
+                      <CrmFormSelect
+                    formScope="full-registration"
+                        field="corporateSector"
+                        label="Sektör *"
+                        value={form.corporateSector}
+                        onChange={(value) => updateField("corporateSector", value)}
+                        options={corporateSectorOptions.map((sector) => ({
+                          value: sector,
+                          label: sector,
+                        }))}
+                        error={errors.corporate_sector}
+                      />
+                    </CrmFormFieldCol>
+                  </>
+                )}
+              </div>
+            ) : null}
+
+            {step === 2 ? (
+              <div className="row g-3">
+                <CrmFormFieldCol>
+                  <CrmFormSelect
+                    formScope="full-registration"
+                    field="branchId"
+                    label="Bayi *"
+                    value={form.branchId}
+                    onChange={(value) => updateField("branchId", value)}
+                    options={branches.map((branch) => ({
+                      value: String(branch.id),
+                      label: branch.name,
+                    }))}
+                    error={errors.branch_id}
+                    disabled={hasUoId}
+                  />
+                </CrmFormFieldCol>
+                <CrmFormFieldCol>
+                  <CrmFormInput
+                    formScope="full-registration"
+                    field="eposta"
+                    label="E-posta"
+                    value={form.eposta}
+                    onChange={(value) => updateField("eposta", value)}
+                    error={errors.eposta}
+                    disabled={hasUoId}
+                  />
+                </CrmFormFieldCol>
+                <CrmFormFieldCol>
+                  <CrmFormInput
+                    formScope="full-registration"
+                    field="website"
+                    label="Website"
+                    value={form.website}
+                    onChange={(value) => updateField("website", value)}
+                    error={errors.website}
+                  />
+                </CrmFormFieldCol>
+                <CrmFormFieldCol>
+                  <CrmFormInput
+                    formScope="full-registration"
+                    field="googleMapLink"
+                    label="Google Map Link"
+                    value={form.googleMapLink}
+                    onChange={(value) => updateField("googleMapLink", value)}
+                    error={errors.google_map_link}
+                  />
+                </CrmFormFieldCol>
+                <CrmFormFieldCol>
+                  <CrmFormInput
+                    formScope="full-registration"
+                    field="classifiedsWebsiteLink"
+                    label="İlan Sitesi Linki"
+                    value={form.classifiedsWebsiteLink}
+                    onChange={(value) => updateField("classifiedsWebsiteLink", value)}
+                    error={errors.classifieds_website_link}
+                  />
+                </CrmFormFieldCol>
+                <CrmFormFieldCol>
+                  <CrmFormInput
+                    formScope="full-registration"
+                    field="vehicleStockCount"
+                    label="Araç Stok Adedi *"
+                    type="number"
+                    value={form.vehicleStockCount}
+                    onChange={(value) => updateField("vehicleStockCount", value)}
+                    error={errors.vehicle_stock_count}
+                  />
+                </CrmFormFieldCol>
+                {form.type === "kurumsal" ? (
+                  <>
+                    <CrmFormFieldCol>
+                      <CrmFormInput
+                    formScope="full-registration"
+                        field="vergiNo"
+                        label="Vergi No *"
+                        value={form.vergiNo}
+                        onChange={(value) => updateField("vergiNo", value)}
+                        error={errors.vergi_no}
+                        disabled={hasUoId}
+                      />
+                    </CrmFormFieldCol>
+                    <CrmFormFieldCol>
+                      <CrmFormInput
+                    formScope="full-registration"
+                        field="vergiDairesi"
+                        label="Vergi Dairesi *"
+                        value={form.vergiDairesi}
+                        onChange={(value) => updateField("vergiDairesi", value)}
+                        error={errors.vergi_dairesi}
+                        disabled={hasUoId}
+                      />
+                    </CrmFormFieldCol>
+                  </>
+                ) : null}
+              </div>
+            ) : null}
+
+            {step === 3 ? (
+              <div className="full-registration-list">
+                <div className="d-flex flex-wrap align-items-center gap-2 mb-3">
+                  <Button
+                    theme="primary"
+                    size="sm"
+                    type="button"
+                    onClick={addTelephone}
+                    disabled={hasUoId}
+                  >
+                    Cep Telefonu Ekle
+                  </Button>
+                  {form.telephones.length === 0 ? (
+                    <p className="text-muted small mb-0">Ek cep telefonu yok.</p>
+                  ) : null}
+                </div>
+                {form.telephones.map((telephone, index) => (
+                  <div
+                    className="card card-outline card-secondary mb-2 full-registration-phone-card"
+                    key={`${index}-${telephone.id ?? 0}`}
+                  >
+                    <div className="card-body py-3">
+                      <div className="row g-3 align-items-end">
+                        <CrmFormFieldCol>
+                          <CrmFormInput
+                    formScope="full-registration"
+                            field="telephoneTitle"
+                            suffix={index}
+                            label="Cep telefonu başlığı"
+                            value={telephone.title}
+                            onChange={(value) => updateTelephone(index, "title", value)}
+                            disabled={hasUoId}
+                          />
+                        </CrmFormFieldCol>
+                        <CrmFormFieldCol>
+                          <CrmFormInput
+                    formScope="full-registration"
+                            field="telephonePhone"
+                            suffix={index}
+                            label="Cep telefonu"
+                            value={telephone.phoneNumber}
+                            onChange={(value) =>
+                              updateTelephone(index, "phoneNumber", value)
+                            }
+                            isPhone
+                            disabled={hasUoId}
+                          />
+                        </CrmFormFieldCol>
+                        <div className="col-12 col-md-6 col-lg-auto">
+                          <Button
+                            theme="secondary"
+                            size="sm"
+                            type="button"
+                            onClick={() => removeTelephone(index)}
+                            disabled={hasUoId}
+                          >
+                            Sil
+                          </Button>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+                {errors.telephones ? (
+                  <span className="customer-field-error">{errors.telephones}</span>
+                ) : null}
+              </div>
+            ) : null}
+
+            {step === 4 ? (
+              <div className="row g-3">
+                <CrmFormFieldCol>
+                  <CrmFormSelect
+                    formScope="full-registration"
+                    field="ilKodu"
+                    label="İl *"
+                    value={form.ilKodu}
+                    onChange={(value) => updateField("ilKodu", value)}
+                    options={cities.map((city) => ({
+                      value: String(city.id),
+                      label: city.title,
+                    }))}
+                    error={errors.il_kodu}
+                    disabled={hasUoId}
+                  />
+                </CrmFormFieldCol>
+                <CrmFormFieldCol>
+                  <CrmFormSelect
+                    formScope="full-registration"
+                    field="ilceKodu"
+                    label="İlçe"
+                    value={form.ilceKodu}
+                    onChange={(value) => updateField("ilceKodu", value)}
+                    options={towns.map((town) => ({
+                      value: String(town.id),
+                      label: town.title,
+                    }))}
+                    error={errors.ilce_kodu}
+                    disabled={hasUoId}
+                  />
+                </CrmFormFieldCol>
+                <CrmFormFieldCol>
+                  <CrmFormInput
+                    formScope="full-registration"
+                    field="mahalle"
+                    label="Mahalle"
+                    value={form.mahalle}
+                    onChange={(value) => updateField("mahalle", value)}
+                    error={errors.mahalle}
+                    disabled={hasUoId}
+                  />
+                </CrmFormFieldCol>
+                <CrmFormFieldCol wide>
+                  <CrmFormInput
+                    formScope="full-registration"
+                    field="addressDetail"
+                    label="Adres Detayı *"
+                    value={form.addressDetail}
+                    onChange={(value) => updateField("addressDetail", value)}
+                    error={errors.address_detail}
+                    disabled={hasUoId}
+                  />
+                </CrmFormFieldCol>
+              </div>
             ) : null}
           </div>
-        ) : null}
 
-        {step === 3 ? (
-          <div className="full-registration-list">
-            <button className="btn btn-primary btn-sm" type="button" onClick={addTelephone} disabled={hasUoId}>
-              Cep Telefonu Ekle
-            </button>
-            {form.telephones.length === 0 ? <p className="text-muted small">Ek cep telefonu yok.</p> : null}
-            {form.telephones.map((telephone, index) => (
-              <div className="full-registration-phone-row" key={`${index}-${telephone.id ?? 0}`}>
-                <FormInput field="telephoneTitle" suffix={index} label="Cep telefonu başlığı" value={telephone.title} onChange={(value) => updateTelephone(index, "title", value)} disabled={hasUoId} />
-                <FormInput field="telephonePhone" suffix={index} label="Cep telefonu" value={telephone.phoneNumber} onChange={(value) => updateTelephone(index, "phoneNumber", value)} isPhone disabled={hasUoId} />
-                <button className="btn btn-secondary btn-sm" type="button" onClick={() => removeTelephone(index)} disabled={hasUoId}>
-                  Sil
-                </button>
-              </div>
-            ))}
-            {errors.telephones ? <span className="customer-field-error">{errors.telephones}</span> : null}
+          <div className="card-footer d-flex flex-wrap justify-content-between gap-2">
+            <Button
+              theme="secondary"
+              size="sm"
+              type="button"
+              onClick={step === 1 ? onBack : handleBack}
+            >
+              {step === 1 ? "Listeye Dön" : "Geri"}
+            </Button>
+            {step < 4 ? (
+              <Button
+                theme="primary"
+                size="sm"
+                type="button"
+                onClick={() => void handleNext()}
+              >
+                Sonraki
+              </Button>
+            ) : (
+              <Button
+                theme="primary"
+                size="sm"
+                type="button"
+                onClick={() => void handleCompleteRegistration()}
+              >
+                Tam Kaydı Tamamla
+              </Button>
+            )}
           </div>
-        ) : null}
-
-        {step === 4 ? (
-          <div className="customer-entry-form">
-            <FormSelect
-              field="ilKodu"
-              label="İl *"
-              value={form.ilKodu}
-              onChange={(value) => updateField("ilKodu", value)}
-              options={cities.map((city) => ({ value: String(city.id), label: city.title }))}
-              error={errors.il_kodu}
-              disabled={hasUoId}
-            />
-            <FormSelect
-              field="ilceKodu"
-              label="İlçe"
-              value={form.ilceKodu}
-              onChange={(value) => updateField("ilceKodu", value)}
-              options={towns.map((town) => ({ value: String(town.id), label: town.title }))}
-              error={errors.ilce_kodu}
-              disabled={hasUoId}
-            />
-            <FormInput field="mahalle" label="Mahalle" value={form.mahalle} onChange={(value) => updateField("mahalle", value)} error={errors.mahalle} disabled={hasUoId} />
-            <FormInput field="addressDetail" label="Adres Detayı *" value={form.addressDetail} onChange={(value) => updateField("addressDetail", value)} error={errors.address_detail} disabled={hasUoId} />
-          </div>
-        ) : null}
-
-        <div className="customer-modal-actions">
-          <button className="btn btn-secondary btn-sm" type="button" onClick={step === 1 ? onBack : handleBack}>
-            {step === 1 ? "Listeye Dön" : "Geri"}
-          </button>
-          {step < 4 ? (
-            <button className="btn btn-primary btn-sm" type="button" onClick={() => void handleNext()}>
-              Sonraki
-            </button>
-          ) : (
-            <button className="btn btn-primary btn-sm" type="button" onClick={() => void handleCompleteRegistration()}>
-              Tam Kaydı Tamamla
-            </button>
-          )}
-        </div>
-      </form>
-        </div>
+        </form>
       </div>
     </>
   );
 }
 
-type FormInputProps = {
-  field: string;
-  label: string;
-  value: string;
-  onChange: (value: string) => void;
-  error?: string;
-  type?: string;
-  maxLength?: number;
-  isPhone?: boolean;
-  disabled?: boolean;
-  suffix?: string | number;
-};
-
-function FormInput({
-  field,
-  label,
-  value,
-  onChange,
-  error,
-  type = "text",
-  maxLength = customerTextMaxLength,
-  isPhone = false,
-  disabled = false,
-  suffix,
-}: FormInputProps) {
-  const fieldProps = formFieldProps("full-registration", field, { label, suffix });
-
-  return (
-    <label className="field-label" htmlFor={fieldProps.id}>
-      {label}
-      <input
-        {...fieldProps}
-        className="form-control form-control-sm"
-        type={type}
-        inputMode={isPhone ? "numeric" : undefined}
-        pattern={isPhone ? "05[0-9]{9}" : undefined}
-        maxLength={type === "number" ? undefined : isPhone ? 11 : maxLength}
-        placeholder={isPhone ? "05XXXXXXXXX" : undefined}
-        value={value}
-        onChange={(event) => onChange(event.target.value)}
-        disabled={disabled}
-      />
-      {error ? <span className="customer-field-error">{error}</span> : null}
-    </label>
-  );
-}
-
-type FormSelectProps = {
-  field: string;
-  label: string;
-  value: string;
-  options: Array<{ value: string; label: string }>;
-  onChange: (value: string) => void;
-  error?: string;
-  disabled?: boolean;
-  suffix?: string | number;
-};
-
-function FormSelect({
-  field,
-  label,
-  value,
-  options,
-  onChange,
-  error,
-  disabled = false,
-  suffix,
-}: FormSelectProps) {
-  const fieldProps = formFieldProps("full-registration", field, { label, suffix });
-
-  return (
-    <label className="field-label" htmlFor={fieldProps.id}>
-      {label}
-      <select
-        {...fieldProps}
-        className="form-control form-control-sm"
-        value={value}
-        onChange={(event) => onChange(event.target.value)}
-        disabled={disabled}
-      >
-        <option value="">Seçiniz</option>
-        {options.map((option) => (
-          <option key={option.value} value={option.value}>
-            {option.label}
-          </option>
-        ))}
-      </select>
-      {error ? <span className="customer-field-error">{error}</span> : null}
-    </label>
-  );
-}
 
 function validateStep(
   step: 1 | 2 | 3 | 4,
@@ -691,7 +891,7 @@ function validateMaxLength(
   field: string,
   value: string,
   label: string,
-  maxLength = customerTextMaxLength,
+  maxLength = defaultCrmFormTextMaxLength,
 ): void {
   if (value.trim().length > maxLength) {
     errors[field] = `${label} en fazla ${maxLength} karakter olabilir.`;

@@ -374,18 +374,18 @@ export async function listCustomers(
       params: {
         page: query.page,
         per_page: query.perPage,
-        situation: query.situation || undefined,
+        situation: normalizeCustomerListSelectFilter(query.situation),
         unvan: query.unvan || undefined,
-        cep: query.cep || undefined,
+        cep: normalizeCustomerListPhoneFilter(query.cep) || undefined,
         ad: query.ad || undefined,
         soyad: query.soyad || undefined,
-        branch_name: query.branchName || undefined,
-        zone_name: query.zoneName || undefined,
+        branch_name: normalizeCustomerListSelectFilter(query.branchName),
+        zone_name: normalizeCustomerListSelectFilter(query.zoneName),
         plus_card_no: query.plusCardNo || undefined,
         city: query.city || undefined,
         town: query.town || undefined,
         created_at: query.createdAt || undefined,
-        type: query.type || undefined,
+        type: normalizeCustomerListSelectFilter(query.type),
         sort_by: query.sortBy || undefined,
         sort_order: query.sortOrder || undefined,
       },
@@ -508,4 +508,23 @@ function nullableNumberValue(value: unknown): number | null {
 
 function stringValue(value: unknown): string {
   return typeof value === "string" ? value : value == null ? "" : String(value);
+}
+
+function normalizeCustomerListSelectFilter(value?: string): string | undefined {
+  const trimmed = value?.trim() ?? "";
+  if (!trimmed || trimmed === "Tümü") {
+    return undefined;
+  }
+
+  return trimmed;
+}
+
+/** Strip spaces/punctuation so partial phone filters match stored 05XXXXXXXXX values. */
+function normalizeCustomerListPhoneFilter(value?: string): string {
+  const trimmed = value?.trim() ?? "";
+  if (!trimmed) {
+    return "";
+  }
+
+  return trimmed.replace(/[\s()-]/g, "");
 }
