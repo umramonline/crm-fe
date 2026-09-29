@@ -1,4 +1,4 @@
-import { Button, Input } from "@adminlte/react";
+import { Button } from "@adminlte/react";
 import { FormEvent, useEffect, useState } from "react";
 
 import { customerEntryTexts } from "@/features/customers/constants/customerEntryTexts";
@@ -7,6 +7,9 @@ import {
   type CustomerDetail,
 } from "@/features/customers/services/customerApi";
 import { ControlledModal } from "@/shared/components/ControlledModal";
+import { CrmDetailGrid } from "@/shared/components/CrmDetailGrid";
+import { CrmFormInput } from "@/shared/components/CrmFormField";
+import { CrmFormSection } from "@/shared/components/CrmFormSection";
 
 type CustomerSearchModalProps = {
   isOpen: boolean;
@@ -99,23 +102,39 @@ export function CustomerSearchModal({
         </>
       }
     >
-      <form id="customer-search-form" onSubmit={(event) => void handleSubmit(event)}>
-        <Input
-          id="customer-search-query"
-          name="customer-search-query"
-          label="Arama"
-          value={searchQuery}
-          placeholder={customerEntryTexts.searchPlaceholder}
-          onChange={(event) => setSearchQuery(event.target.value)}
-        />
+      <form
+        id="customer-search-form"
+        className="customer-entry-form"
+        onSubmit={(event) => void handleSubmit(event)}
+      >
+        <CrmFormSection title="Arama kriteri">
+          <CrmFormInput
+            formScope="customer-search"
+            field="query"
+            label="Arama"
+            value={searchQuery}
+            placeholder={customerEntryTexts.searchPlaceholder}
+            onChange={setSearchQuery}
+          />
+        </CrmFormSection>
       </form>
 
       {foundCustomer ? (
-        <div className="customer-found-card mt-3">
-          <strong>{customerDisplayName(foundCustomer)}</strong>
-          <span>{foundCustomer.cep || foundCustomer.telefon || "-"}</span>
-          <span>{foundCustomer.tcNo || foundCustomer.vergiNo || "-"}</span>
-        </div>
+        <CrmFormSection title="Bulunan müşteri">
+          <CrmDetailGrid
+            items={[
+              { label: "Ad / Ünvan", value: customerDisplayName(foundCustomer) },
+              {
+                label: "Telefon",
+                value: foundCustomer.cep || foundCustomer.telefon || "-",
+              },
+              {
+                label: "T.C. / Vergi No",
+                value: foundCustomer.tcNo || foundCustomer.vergiNo || "-",
+              },
+            ]}
+          />
+        </CrmFormSection>
       ) : null}
     </ControlledModal>
   );

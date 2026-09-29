@@ -1,5 +1,5 @@
 import { Modal } from "@adminlte/react";
-import { useEffect, useId, useState, type ReactNode } from "react";
+import { useEffect, useId, useRef, useState, type ReactNode } from "react";
 
 type BootstrapModal = {
   show: () => void;
@@ -41,6 +41,31 @@ function releaseModalFocus(modalElement: HTMLElement): void {
   }
 }
 
+/** React unmount or abrupt state clear often skips Bootstrap hide — strip leftover layer. */
+function cleanupBootstrapModalLayer(modalElement: HTMLElement | null): void {
+  if (modalElement) {
+    modalElement.classList.remove("show");
+    modalElement.setAttribute("aria-hidden", "true");
+    modalElement.removeAttribute("aria-modal");
+    modalElement.removeAttribute("role");
+    modalElement.style.removeProperty("display");
+    modalElement.style.removeProperty("padding-right");
+
+    const instance = window.bootstrap?.Modal.getInstance(modalElement);
+    instance?.dispose();
+  }
+
+  const openModalCount = document.querySelectorAll(".modal.show").length;
+  if (openModalCount === 0) {
+    document.querySelectorAll(".modal-backdrop").forEach((backdrop) => {
+      backdrop.remove();
+    });
+    document.body.classList.remove("modal-open");
+    document.body.style.removeProperty("overflow");
+    document.body.style.removeProperty("padding-right");
+  }
+}
+
 export function ControlledModal({
   isOpen,
   onClose,
@@ -53,6 +78,8 @@ export function ControlledModal({
 }: ControlledModalProps) {
   const modalId = useId().replace(/:/g, "");
   const [isMounted, setIsMounted] = useState(isOpen);
+  const onCloseRef = useRef(onClose);
+  onCloseRef.current = onClose;
 
   useEffect(() => {
     if (isOpen) {
@@ -83,7 +110,7 @@ export function ControlledModal({
 
     function handleHidden(): void {
       setIsMounted(false);
-      onClose();
+      onCloseRef.current();
     }
 
     modalElement.addEventListener("hide.bs.modal", handleHide);
@@ -98,8 +125,9 @@ export function ControlledModal({
     return () => {
       modalElement.removeEventListener("hide.bs.modal", handleHide);
       modalElement.removeEventListener("hidden.bs.modal", handleHidden);
+      cleanupBootstrapModalLayer(modalRoot);
     };
-  }, [isMounted, isOpen, modalId, onClose]);
+  }, [isMounted, isOpen, modalId]);
 
   if (!isMounted) {
     return null;

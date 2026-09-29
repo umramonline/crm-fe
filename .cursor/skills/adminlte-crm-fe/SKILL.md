@@ -73,18 +73,13 @@ CRM listeleri (IETTS, Görevler, Takipler, Galeri): `*DataTable` + `shared/tabul
 
 Header filtreler Tabulator kolonlarında; **Filtrele** DOM değerlerini commit eder (`applyCrmTableFilters`). Geniş grid (Galeri): `responsiveLayout: false` + yatay kaydırma.
 
-## Modal form alanı
+## Modal / sayfa formu
 
-```tsx
-import { formFieldProps } from "@/shared/utils/formFieldProps";
-
-<input
-  {...formFieldProps("my-modal", "title", { label: "Başlık" })}
-  className="form-control form-control-sm"
-  value={title}
-  onChange={...}
-/>
-```
+- Bölümler: `CrmFormSection` (`@adminlte/react` `Card`, `variant="outline"`)
+- Alanlar: `CrmFormInput` / `CrmFormSelect` / `CrmFormTextarea` → `Input` / `Select` / `Textarea` + `formFieldProps`
+- Grid: `row g-3` + `CrmFormFieldCol`
+- Dosya: `InputFile` (resim yükleme)
+- Modal kabuğu: `ControlledModal` + footer `Button` + `form={id}` submit
 
 ## Referanslar
 

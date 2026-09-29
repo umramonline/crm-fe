@@ -1,6 +1,7 @@
 import { Button } from "@adminlte/react";
 import { FormEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
 
+import { CustomerDetailModalBody } from "@/features/customers/components/CustomerDetailModalBody";
 import { CustomerEntryModal } from "@/features/customers/components/CustomerEntryModal";
 import { CustomerSearchModal } from "@/features/customers/components/CustomerSearchModal";
 import {
@@ -35,7 +36,8 @@ import {
   CrmFormFieldCol,
   CrmFormInput,
   CrmFormSelect,
-} from "@/shared/components/CrmFormField";
+  CrmFormSection,
+} from "@/shared/components";
 import { StandaloneFollowUpModal } from "@/features/followUps/components/StandaloneFollowUpModal";
 import { navigateToFullRegistration } from "@/shared/utils/navigation";
 
@@ -582,36 +584,11 @@ export function CustomersPage({ permissions }: CustomersPageProps) {
           title={pageText.detailTitle}
           size="xl"
         >
-            <div className="customer-detail-grid">
-              <span>ID</span>
-              <strong>{selectedCustomerDetail.id || "-"}</strong>
-              <span>Ünvan</span>
-              <strong>{selectedCustomerDetail.unvan || "-"}</strong>
-              <span>Ad</span>
-              <strong>{selectedCustomerDetail.ad || "-"}</strong>
-              <span>Soyad</span>
-              <strong>{selectedCustomerDetail.soyad || "-"}</strong>
-              <span>Yetkili Adı</span>
-              <strong>{selectedCustomerDetail.yetkiliAdi || "-"}</strong>
-              <span>Cep</span>
-              <strong>{selectedCustomerDetail.cep || "-"}</strong>
-              <span>Telefon</span>
-              <strong>{selectedCustomerDetail.telefon || "-"}</strong>
-              <span>Mahalle</span>
-              <strong>{selectedCustomerDetail.mahalle || "-"}</strong>
-              <span>İl Kodu</span>
-              <strong>{selectedCustomerDetail.ilKodu || "-"}</strong>
-              <span>İlçe Kodu</span>
-              <strong>{selectedCustomerDetail.ilceKodu || "-"}</strong>
-              <span>Vergi No</span>
-              <strong>{selectedCustomerDetail.vergiNo || "-"}</strong>
-              <span>T.C. No</span>
-              <strong>{selectedCustomerDetail.tcNo || "-"}</strong>
-              <span>Müşteri Türü</span>
-              <strong>{formatCustomerType(selectedCustomerDetail.type)}</strong>
-              <span>Kayıt Tarihi</span>
-              <strong>{formatDate(selectedCustomerDetail.createdAt)}</strong>
-            </div>
+          <CustomerDetailModalBody
+            customer={selectedCustomerDetail}
+            formatCustomerType={formatCustomerType}
+            formatDate={formatDate}
+          />
         </ControlledModal>
       ) : null}
 
@@ -643,19 +620,22 @@ export function CustomersPage({ permissions }: CustomersPageProps) {
             </>
           }
         >
-            <div className="task-assign-summary mb-3">
-              <span>Seçili müşteri sayısı</span>
-              <strong>{selectedTaskCustomerCount}</strong>
-              <span>Bayi</span>
-              <strong>{appliedBranchName || "-"}</strong>
-            </div>
-
             <form
               id={taskAssignFormId}
-              className="task-assign-form"
+              className="customer-entry-form"
               onSubmit={handleTaskAssignSubmit}
               noValidate
             >
+              <CrmFormSection title="Seçim özeti">
+                <div className="customer-detail-grid">
+                  <span>Seçili müşteri sayısı</span>
+                  <strong>{selectedTaskCustomerCount}</strong>
+                  <span>Bayi</span>
+                  <strong>{appliedBranchName || "-"}</strong>
+                </div>
+              </CrmFormSection>
+
+              <CrmFormSection title="Görev bilgileri">
               <div className="row g-3">
                 <CrmFormFieldCol wide>
                   <CrmFormInput
@@ -741,15 +721,12 @@ export function CustomersPage({ permissions }: CustomersPageProps) {
               </div>
 
               {taskAssignErrors.branch_id ? (
-                <span className="customer-field-error task-assign-form-wide d-block mt-2">
-                  {taskAssignErrors.branch_id}
-                </span>
+                <p className="text-danger small mb-0 mt-2">{taskAssignErrors.branch_id}</p>
               ) : null}
               {taskAssignErrors.customer_ids ? (
-                <span className="customer-field-error task-assign-form-wide d-block mt-2">
-                  {taskAssignErrors.customer_ids}
-                </span>
+                <p className="text-danger small mb-0 mt-2">{taskAssignErrors.customer_ids}</p>
               ) : null}
+              </CrmFormSection>
             </form>
         </ControlledModal>
       ) : null}

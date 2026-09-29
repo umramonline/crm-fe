@@ -1,4 +1,4 @@
-import { Input } from "@adminlte/react";
+import { Input, Select, Textarea } from "@adminlte/react";
 import type { ReactNode } from "react";
 
 import { formFieldProps } from "@/shared/utils/formFieldProps";
@@ -31,8 +31,8 @@ export type CrmFormInputProps = {
   suffix?: string | number;
   min?: string;
   placeholder?: string;
-  className?: string;
   readOnly?: boolean;
+  hint?: string;
   "data-follow-up-error-field"?: string;
 };
 
@@ -50,33 +50,33 @@ export function CrmFormInput({
   suffix,
   min,
   placeholder,
-  className = "mb-0",
   readOnly,
+  hint,
   "data-follow-up-error-field": followUpErrorField,
 }: CrmFormInputProps) {
   const fieldProps = formFieldProps(formScope, field, { label, suffix });
 
   return (
-    <div className="mb-0">
-      <Input
-        id={fieldProps.id}
-        name={fieldProps.name}
-        label={label}
-        className={className}
-        type={type}
-        inputMode={isPhone ? "tel" : undefined}
-        pattern={isPhone ? "05[0-9]{9}" : undefined}
-        maxLength={type === "number" ? undefined : isPhone ? 11 : maxLength}
-        placeholder={placeholder ?? (isPhone ? "05XXXXXXXXX" : undefined)}
-        value={value}
-        min={min}
-        disabled={disabled}
-        readOnly={readOnly}
-        data-follow-up-error-field={followUpErrorField}
-        onChange={(event) => onChange(event.target.value)}
-      />
-      {error ? <span className="customer-field-error">{error}</span> : null}
-    </div>
+    <Input
+      id={fieldProps.id}
+      name={fieldProps.name}
+      label={label}
+      fgroupClass="mb-0"
+      igroupSize="sm"
+      error={error}
+      hint={hint}
+      type={type}
+      inputMode={isPhone ? "tel" : undefined}
+      pattern={isPhone ? "05[0-9]{9}" : undefined}
+      maxLength={type === "number" ? undefined : isPhone ? 11 : maxLength}
+      placeholder={placeholder ?? (isPhone ? "05XXXXXXXXX" : undefined)}
+      value={value}
+      min={min}
+      disabled={disabled}
+      readOnly={readOnly}
+      data-follow-up-error-field={followUpErrorField}
+      onChange={(event) => onChange(event.target.value)}
+    />
   );
 }
 
@@ -110,29 +110,25 @@ export function CrmFormSelect({
   "data-follow-up-error-field": followUpErrorField,
 }: CrmFormSelectProps) {
   const fieldProps = formFieldProps(formScope, field, { label, suffix });
+  const selectOptions = [
+    ...(hidePlaceholder ? [] : [{ value: "", label: placeholderOption }]),
+    ...options,
+  ];
 
   return (
-    <div className="mb-0">
-      <label className="form-label" htmlFor={fieldProps.id}>
-        {label}
-      </label>
-      <select
-        {...fieldProps}
-        className="form-select form-select-sm"
-        value={value}
-        disabled={disabled}
-        data-follow-up-error-field={followUpErrorField}
-        onChange={(event) => onChange(event.target.value)}
-      >
-        {hidePlaceholder ? null : <option value="">{placeholderOption}</option>}
-        {options.map((option) => (
-          <option key={option.value} value={option.value}>
-            {option.label}
-          </option>
-        ))}
-      </select>
-      {error ? <span className="customer-field-error">{error}</span> : null}
-    </div>
+    <Select
+      id={fieldProps.id}
+      name={fieldProps.name}
+      label={label}
+      fgroupClass="mb-0"
+      className="form-select-sm"
+      value={value}
+      disabled={disabled}
+      error={error}
+      options={selectOptions}
+      data-follow-up-error-field={followUpErrorField}
+      onChange={(event) => onChange(event.target.value)}
+    />
   );
 }
 
@@ -146,6 +142,7 @@ export type CrmFormTextareaProps = {
   disabled?: boolean;
   maxLength?: number;
   rows?: number;
+  hint?: string;
   "data-follow-up-error-field"?: string;
 };
 
@@ -159,26 +156,26 @@ export function CrmFormTextarea({
   disabled = false,
   maxLength = defaultCrmFormTextMaxLength,
   rows = 3,
+  hint,
   "data-follow-up-error-field": followUpErrorField,
 }: CrmFormTextareaProps) {
   const fieldProps = formFieldProps(formScope, field, { label });
 
   return (
-    <div className="mb-0">
-      <label className="form-label" htmlFor={fieldProps.id}>
-        {label}
-      </label>
-      <textarea
-        {...fieldProps}
-        className="form-control form-control-sm"
-        rows={rows}
-        maxLength={maxLength}
-        value={value}
-        disabled={disabled}
-        data-follow-up-error-field={followUpErrorField}
-        onChange={(event) => onChange(event.target.value)}
-      />
-      {error ? <span className="customer-field-error">{error}</span> : null}
-    </div>
+    <Textarea
+      id={fieldProps.id}
+      name={fieldProps.name}
+      label={label}
+      fgroupClass="mb-0"
+      className="form-control-sm"
+      rows={rows}
+      maxLength={maxLength}
+      value={value}
+      disabled={disabled}
+      error={error}
+      hint={hint}
+      data-follow-up-error-field={followUpErrorField}
+      onChange={(event) => onChange(event.target.value)}
+    />
   );
 }

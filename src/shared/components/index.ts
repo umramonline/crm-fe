@@ -13,3 +13,5 @@ export {
   CrmFormTextarea,
   defaultCrmFormTextMaxLength,
 } from "./CrmFormField";
+export { CrmFormSection } from "./CrmFormSection";
+export { CrmDetailGrid, type CrmDetailItem } from "./CrmDetailGrid";

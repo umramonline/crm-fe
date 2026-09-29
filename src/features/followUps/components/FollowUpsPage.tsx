@@ -22,10 +22,11 @@ import {
   type FollowUpsDataTableHandle,
   type FollowUpsListMeta,
 } from "@/features/followUps/components/FollowUpsDataTable";
+import { CustomerDetailModalBody } from "@/features/customers/components/CustomerDetailModalBody";
 import { FollowUpRecordFormBody } from "@/features/followUps/components/FollowUpRecordFormBody";
 import { followUpVisitTypes } from "@/features/followUps/constants/followUpFormConstants";
 import { apiBaseUrl } from "@/services/apiClient";
-import { ListTableToolbar } from "@/shared/components";
+import { CrmDetailGrid, CrmFormSection, ListTableToolbar } from "@/shared/components";
 import { ContentHeader } from "@/shared/components/ContentHeader";
 import { ControlledModal } from "@/shared/components/ControlledModal";
 
@@ -527,7 +528,7 @@ export function FollowUpsPage({ permissions }: FollowUpsPageProps) {
               <FollowUpRecordFormBody
                 formScope="follow-ups-edit"
                 headerSummary={
-                  <div className="customer-detail-grid task-assign-form-wide mb-3">
+                  <div className="customer-detail-grid">
                     <span>Takip Başlığı</span>
                     <strong>{editForm.title || "-"}</strong>
                     <span>Müşteri</span>
@@ -592,85 +593,102 @@ export function FollowUpsPage({ permissions }: FollowUpsPageProps) {
             </form>
         </ControlledModal>
       ) : null}
-      {selectedFollowUp ? (
+      {selectedFollowUp && selectedImageIndex === null ? (
         <ControlledModal
           isOpen
           onClose={handleCloseFollowUpDetail}
           title="Takip Kaydı Detayı"
           size="xl"
         >
-            <div className="customer-detail-grid">
-              <span>Takip Başlığı</span>
-              <strong>{selectedFollowUp.title || "-"}</strong>
-              <span>Müşteri</span>
-              <strong>{selectedFollowUp.customerUnvan || "-"}</strong>
-              <span>Atanan Personel</span>
-              <strong>{selectedFollowUp.assignedUserFullName || "-"}</strong>
-              <span>Müşteri Bayisi</span>
-              <strong>{selectedFollowUp.branchName || "-"}</strong>
-              <span>Ziyaret Tipi</span>
-              <strong>{selectedFollowUp.visitType || "-"}</strong>
-              <span>Ziyaret Tarihi</span>
-              <strong>{formatDate(selectedFollowUp.visitDate)}</strong>
-              <span>Sonraki Ziyaret Tarihi</span>
-              <strong>{formatDate(selectedFollowUp.nextVisitDate)}</strong>
-              <span>Anlaşma Sağlandı mı?</span>
-              <strong>{formatAgreement(selectedFollowUp.agreementReached)}</strong>
-              <span>Anlaşmama Sebebi</span>
-              <strong>{selectedFollowUp.agreementFailureReason || "-"}</strong>
-              <span>Not</span>
-              <strong>{selectedFollowUp.note || "-"}</strong>
-            </div>
+          <div className="customer-entry-form">
+            <CrmFormSection title="Kayıt özeti">
+              <CrmDetailGrid
+                items={[
+                  { label: "Takip Başlığı", value: selectedFollowUp.title || "-" },
+                  { label: "Müşteri", value: selectedFollowUp.customerUnvan || "-" },
+                  {
+                    label: "Atanan Personel",
+                    value: selectedFollowUp.assignedUserFullName || "-",
+                  },
+                  { label: "Müşteri Bayisi", value: selectedFollowUp.branchName || "-" },
+                  { label: "Ziyaret Tipi", value: selectedFollowUp.visitType || "-" },
+                  {
+                    label: "Ziyaret Tarihi",
+                    value: formatDate(selectedFollowUp.visitDate),
+                  },
+                  {
+                    label: "Sonraki Ziyaret Tarihi",
+                    value: formatDate(selectedFollowUp.nextVisitDate),
+                  },
+                  {
+                    label: "Anlaşma Sağlandı mı?",
+                    value: formatAgreement(selectedFollowUp.agreementReached),
+                  },
+                  {
+                    label: "Anlaşmama Sebebi",
+                    value: selectedFollowUp.agreementFailureReason || "-",
+                  },
+                  { label: "Not", value: selectedFollowUp.note || "-" },
+                ]}
+              />
+            </CrmFormSection>
 
-            <h3>Görüşülen Kişiler</h3>
-            <div className="table-responsive">
-              <table className="table table-striped table-hover table-sm mb-0">
-                <thead>
-                  <tr>
-                    <th>Ünvan</th>
-                    <th>Ad Soyad</th>
-                    <th>Telefon</th>
-                    <th>E-posta</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {selectedFollowUp.meetPeople.length > 0 ? (
-                    selectedFollowUp.meetPeople.map((person) => (
-                      <tr key={person.uuid}>
-                        <td>{person.title || "-"}</td>
-                        <td>{`${person.name} ${person.surname}`.trim() || "-"}</td>
-                        <td>{person.phone || "-"}</td>
-                        <td>{person.email || "-"}</td>
-                      </tr>
-                    ))
-                  ) : (
+            <CrmFormSection title="Görüşülen Kişiler">
+              <div className="table-responsive">
+                <table className="table table-striped table-hover table-sm mb-0">
+                  <thead>
                     <tr>
-                      <td colSpan={4}>Görüşülen kişi bulunamadı.</td>
+                      <th>Ünvan</th>
+                      <th>Ad Soyad</th>
+                      <th>Telefon</th>
+                      <th>E-posta</th>
                     </tr>
-                  )}
-                </tbody>
-              </table>
-            </div>
-
-            <h3>Resimler</h3>
-            {selectedFollowUp.images.length > 0 ? (
-              <div className="customer-detail-grid">
-                {selectedFollowUp.images.map((image, index) => (
-                  <span key={image.uuid}>
-                    Resim {index + 1}:{" "}
-                    <button
-                      className="btn btn-link btn-sm p-0 border-0 text-start"
-                      type="button"
-                      onClick={() => handleOpenImageSlider(index)}
-                    >
-                      Görüntüle
-                    </button>
-                  </span>
-                ))}
+                  </thead>
+                  <tbody>
+                    {selectedFollowUp.meetPeople.length > 0 ? (
+                      selectedFollowUp.meetPeople.map((person) => (
+                        <tr key={person.uuid}>
+                          <td>{person.title || "-"}</td>
+                          <td>{`${person.name} ${person.surname}`.trim() || "-"}</td>
+                          <td>{person.phone || "-"}</td>
+                          <td>{person.email || "-"}</td>
+                        </tr>
+                      ))
+                    ) : (
+                      <tr>
+                        <td colSpan={4}>Görüşülen kişi bulunamadı.</td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
               </div>
-            ) : (
-              <p className="text-muted small">Resim bulunamadı.</p>
-            )}
+            </CrmFormSection>
+
+            <CrmFormSection title="Resimler">
+              {selectedFollowUp.images.length > 0 ? (
+                <ul className="list-group list-group-flush">
+                  {selectedFollowUp.images.map((image, index) => (
+                    <li
+                      key={image.uuid}
+                      className="list-group-item d-flex align-items-center justify-content-between gap-2 px-0"
+                    >
+                      <span>{`Resim ${index + 1}`}</span>
+                      <Button
+                        theme="primary"
+                        size="sm"
+                        type="button"
+                        onClick={() => handleOpenImageSlider(index)}
+                      >
+                        Görüntüle
+                      </Button>
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                <p className="text-muted small mb-0">Resim bulunamadı.</p>
+              )}
+            </CrmFormSection>
+          </div>
         </ControlledModal>
       ) : null}
 
@@ -717,36 +735,10 @@ export function FollowUpsPage({ permissions }: FollowUpsPageProps) {
           title="Müşteri Detayı"
           size="xl"
         >
-            <div className="customer-detail-grid">
-              <span>ID</span>
-              <strong>{selectedCustomerDetail.id || "-"}</strong>
-              <span>Ünvan</span>
-              <strong>{selectedCustomerDetail.unvan || "-"}</strong>
-              <span>Ad</span>
-              <strong>{selectedCustomerDetail.ad || "-"}</strong>
-              <span>Soyad</span>
-              <strong>{selectedCustomerDetail.soyad || "-"}</strong>
-              <span>Yetkili Adı</span>
-              <strong>{selectedCustomerDetail.yetkiliAdi || "-"}</strong>
-              <span>Cep</span>
-              <strong>{selectedCustomerDetail.cep || "-"}</strong>
-              <span>Telefon</span>
-              <strong>{selectedCustomerDetail.telefon || "-"}</strong>
-              <span>Mahalle</span>
-              <strong>{selectedCustomerDetail.mahalle || "-"}</strong>
-              <span>İl Kodu</span>
-              <strong>{selectedCustomerDetail.ilKodu || "-"}</strong>
-              <span>İlçe Kodu</span>
-              <strong>{selectedCustomerDetail.ilceKodu || "-"}</strong>
-              <span>Vergi No</span>
-              <strong>{selectedCustomerDetail.vergiNo || "-"}</strong>
-              <span>T.C. No</span>
-              <strong>{selectedCustomerDetail.tcNo || "-"}</strong>
-              <span>Müşteri Türü</span>
-              <strong>{selectedCustomerDetail.type || "-"}</strong>
-              <span>Kayıt Tarihi</span>
-              <strong>{formatDate(selectedCustomerDetail.createdAt)}</strong>
-            </div>
+          <CustomerDetailModalBody
+            customer={selectedCustomerDetail}
+            formatDate={formatDate}
+          />
         </ControlledModal>
       ) : null}
     </>

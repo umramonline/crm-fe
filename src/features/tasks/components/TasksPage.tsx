@@ -26,10 +26,17 @@ import {
   type TasksDataTableHandle,
   type TasksListMeta,
 } from "@/features/tasks/components/TasksDataTable";
+import { CustomerDetailModalBody } from "@/features/customers/components/CustomerDetailModalBody";
 import { FollowUpRecordFormBody } from "@/features/followUps/components/FollowUpRecordFormBody";
 import { ContentHeader } from "@/shared/components/ContentHeader";
 import { ControlledModal } from "@/shared/components/ControlledModal";
-import { ListTableToolbar, TableActionGroup, TableIconButton } from "@/shared/components";
+import {
+  CrmDetailGrid,
+  CrmFormSection,
+  ListTableToolbar,
+  TableActionGroup,
+  TableIconButton,
+} from "@/shared/components";
 
 const unrestrictedTaskRoleIds = new Set([30, 60, 63]);
 const taskFollowUpFormId = "tasks-follow-up-form";
@@ -209,6 +216,7 @@ export function TasksPage({ permissions, roleId, userId }: TasksPageProps) {
   async function handleOpenCustomerDetail(
     customer: TaskCustomer,
   ): Promise<void> {
+    setSelectedFollowRecord(null);
     setSelectedCustomerDetail(null);
     setIsLoadingCustomerDetail(true);
     setMessage("");
@@ -235,6 +243,8 @@ export function TasksPage({ permissions, roleId, userId }: TasksPageProps) {
     setFollowUpErrors({});
     setFollowUpCompanyInfo(emptyFollowUpCompanyInfo);
     setFollowUpCompanyInfoMessage("");
+    setSelectedCustomerTask(null);
+    setSelectedCustomerDetail(null);
     setSelectedFollowRecord({ task, customer });
     setMessage("");
 
@@ -544,37 +554,55 @@ export function TasksPage({ permissions, roleId, userId }: TasksPageProps) {
           title="Görev Detayı"
           size="xl"
         >
-            <div className="customer-detail-grid">
-              <span>Görev Başlığı</span>
-              <strong>{selectedTask.title || "Potansiyel Müşteri"}</strong>
-              <span>Açıklama</span>
-              <strong>{selectedTask.description || "-"}</strong>
-              <span>Atanan Personel</span>
-              <strong>{selectedTask.assignedUserFullName || "-"}</strong>
-              <span>Müşteri Bayisi</span>
-              <strong>{selectedTask.branchName || "-"}</strong>
-              <span>Ziyaret Tarihi</span>
-              <strong>{formatDate(selectedTask.visitDate)}</strong>
-              <span>Son Ziyaret Tarihi</span>
-              <strong>{formatDate(selectedTask.dueDate)}</strong>
-              <span>Öncelik</span>
-              <strong>{formatTaskPriority(selectedTask.priority)}</strong>
-              <span>Oluşturan</span>
-              <strong>{selectedTask.createdByUserFullName || "-"}</strong>
-              <span aria-hidden="true" />
+          <div className="customer-entry-form">
+            <CrmFormSection title="Görev bilgileri">
+              <CrmDetailGrid
+                items={[
+                  {
+                    label: "Görev Başlığı",
+                    value: selectedTask.title || "Potansiyel Müşteri",
+                  },
+                  { label: "Açıklama", value: selectedTask.description || "-" },
+                  {
+                    label: "Atanan Personel",
+                    value: selectedTask.assignedUserFullName || "-",
+                  },
+                  { label: "Müşteri Bayisi", value: selectedTask.branchName || "-" },
+                  {
+                    label: "Ziyaret Tarihi",
+                    value: formatDate(selectedTask.visitDate),
+                  },
+                  {
+                    label: "Son Ziyaret Tarihi",
+                    value: formatDate(selectedTask.dueDate),
+                  },
+                  {
+                    label: "Öncelik",
+                    value: formatTaskPriority(selectedTask.priority),
+                  },
+                  {
+                    label: "Oluşturan",
+                    value: selectedTask.createdByUserFullName || "-",
+                  },
+                ]}
+              />
+            </CrmFormSection>
+            <div className="d-flex justify-content-end">
+              <Button
+                theme="primary"
+                size="sm"
+                type="button"
+                disabled={selectedTask.customers.length === 0}
+                onClick={() => handleOpenTaskCustomerDetails(selectedTask)}
+              >
+                Müşterilerin Detayı
+              </Button>
             </div>
-            <button
-              className="btn btn-primary btn-sm"
-              type="button"
-              disabled={selectedTask.customers.length === 0}
-              onClick={() => handleOpenTaskCustomerDetails(selectedTask)}
-            >
-              Müşterilerin Detayı
-            </button>
+          </div>
         </ControlledModal>
       ) : null}
 
-      {selectedCustomerTask ? (
+      {selectedCustomerTask && !selectedCustomerDetail && !isLoadingCustomerDetail ? (
         <ControlledModal
           isOpen
           onClose={handleCloseCustomerDetails}
@@ -696,7 +724,7 @@ export function TasksPage({ permissions, roleId, userId }: TasksPageProps) {
               <FollowUpRecordFormBody
                 formScope="tasks-follow-up"
                 headerSummary={
-                  <div className="customer-detail-grid task-assign-form-wide mb-3">
+                  <div className="customer-detail-grid">
                     <span>Görev</span>
                     <strong>
                       {selectedFollowRecord.task.title || "Potansiyel Müşteri"}
@@ -750,9 +778,8 @@ export function TasksPage({ permissions, roleId, userId }: TasksPageProps) {
                 onAddMeetPerson={addFollowUpMeetPerson}
                 onRemoveMeetPerson={removeFollowUpMeetPerson}
                 beforeAgreement={
-                  <>
-                    <h3 className="task-assign-form-wide">Firma Bilgileri</h3>
-                    <div className="customer-detail-grid task-assign-form-wide">
+                  <CrmFormSection title="Firma Bilgileri">
+                    <div className="customer-detail-grid">
                       <span>Firma Adı</span>
                       <strong>{selectedFollowRecord.customer.unvan || "-"}</strong>
                       <span>E-posta</span>
@@ -781,11 +808,9 @@ export function TasksPage({ permissions, roleId, userId }: TasksPageProps) {
                       </strong>
                     </div>
                     {followUpCompanyInfoMessage ? (
-                      <p className="customer-field-error task-assign-form-wide">
-                        {followUpCompanyInfoMessage}
-                      </p>
+                      <p className="text-danger small mb-0 mt-2">{followUpCompanyInfoMessage}</p>
                     ) : null}
-                  </>
+                  </CrmFormSection>
                 }
                 agreementReached={followUpForm.agreementReached}
                 agreementFailureReason={followUpForm.agreementFailureReason}
@@ -821,64 +846,12 @@ export function TasksPage({ permissions, roleId, userId }: TasksPageProps) {
             {isLoadingCustomerDetail ? (
               <p className="text-muted small">Müşteri detayı yükleniyor...</p>
             ) : selectedCustomerDetail ? (
-              <div className="customer-detail-grid">
-                <span>Ünvan</span>
-                <strong>{selectedCustomerDetail.unvan || "-"}</strong>
-                <span>Ad</span>
-                <strong>{selectedCustomerDetail.ad || "-"}</strong>
-                <span>Soyad</span>
-                <strong>{selectedCustomerDetail.soyad || "-"}</strong>
-                <span>Yetkili Adı</span>
-                <strong>{selectedCustomerDetail.yetkiliAdi || "-"}</strong>
-                <span>Cep</span>
-                <strong>{selectedCustomerDetail.cep || "-"}</strong>
-                <span>Telefon</span>
-                <strong>{selectedCustomerDetail.telefon || "-"}</strong>
-                <span>E-posta</span>
-                <strong>{selectedCustomerDetail.eposta || "-"}</strong>
-                <span>Website</span>
-                <strong>{selectedCustomerDetail.website || "-"}</strong>
-                <span>Google Map Link</span>
-                <strong>{selectedCustomerDetail.googleMapLink || "-"}</strong>
-                <span>İlan Sitesi Link</span>
-                <strong>
-                  {selectedCustomerDetail.classifiedsWebsiteLink || "-"}
-                </strong>
-                <span>Mahalle</span>
-                <strong>{selectedCustomerDetail.mahalle || "-"}</strong>
-                <span>Adres Detayı</span>
-                <strong>{selectedCustomerDetail.addressDetail || "-"}</strong>
-                <span>İl Kodu</span>
-                <strong>{selectedCustomerDetail.ilKodu || "-"}</strong>
-                <span>İlçe Kodu</span>
-                <strong>{selectedCustomerDetail.ilceKodu || "-"}</strong>
-                <span>Vergi No</span>
-                <strong>{selectedCustomerDetail.vergiNo || "-"}</strong>
-                <span>Vergi Dairesi</span>
-                <strong>{selectedCustomerDetail.vergiDairesi || "-"}</strong>
-                <span>T.C. No</span>
-                <strong>{selectedCustomerDetail.tcNo || "-"}</strong>
-                <span>Doğum Tarihi</span>
-                <strong>
-                  {formatDate(selectedCustomerDetail.dogumTarihi)}
-                </strong>
-                <span>Araç Stok Sayısı</span>
-                <strong>
-                  {selectedCustomerDetail.vehicleStockCount ?? "-"}
-                </strong>
-                <span>Kurumsal Sektör</span>
-                <strong>{selectedCustomerDetail.corporateSector || "-"}</strong>
-                <span>Müşteri Türü</span>
-                <strong>
-                  {formatCustomerType(selectedCustomerDetail.type)}
-                </strong>
-                <span>Kayıt Tarihi</span>
-                <strong>{formatDate(selectedCustomerDetail.createdAt)}</strong>
-                <span>Telefonlar</span>
-                <strong>
-                  {formatCustomerTelephones(selectedCustomerDetail.telephones)}
-                </strong>
-              </div>
+              <CustomerDetailModalBody
+                customer={selectedCustomerDetail}
+                detailLevel="full"
+                formatCustomerType={formatCustomerType}
+                formatDate={formatDate}
+              />
             ) : null}
         </ControlledModal>
       ) : null}
@@ -1160,18 +1133,4 @@ function formatCustomerType(value: string): string {
   }
 
   return normalized ? value : "-";
-}
-
-function formatCustomerTelephones(
-  telephones: CustomerDetail["telephones"],
-): string {
-  if (telephones.length === 0) {
-    return "-";
-  }
-
-  return telephones
-    .map((telephone) =>
-      [telephone.title, telephone.phoneNumber].filter(Boolean).join(": "),
-    )
-    .join(", ");
 }

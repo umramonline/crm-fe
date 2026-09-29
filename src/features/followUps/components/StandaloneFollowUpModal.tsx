@@ -3,6 +3,7 @@ import { FormEvent, useEffect, useState } from "react";
 
 import { FollowUpRecordFormBody } from "@/features/followUps/components/FollowUpRecordFormBody";
 import { ControlledModal } from "@/shared/components/ControlledModal";
+import { CrmFormSection } from "@/shared/components/CrmFormSection";
 
 import {
   getCustomer,
@@ -232,7 +233,7 @@ export function StandaloneFollowUpModal({
           <FollowUpRecordFormBody
             formScope="follow-up-standalone"
             headerSummary={
-              <div className="customer-detail-grid task-assign-form-wide mb-3">
+              <div className="customer-detail-grid">
                 <span>Görev</span>
                 <strong>Görevsiz Takip</strong>
                 <span>Müşteri</span>
@@ -269,9 +270,8 @@ export function StandaloneFollowUpModal({
             onAddMeetPerson={addPerson}
             onRemoveMeetPerson={removePerson}
             beforeAgreement={
-              <>
-                <h3 className="task-assign-form-wide">Firma Bilgileri</h3>
-                <div className="customer-detail-grid task-assign-form-wide">
+              <CrmFormSection title="Firma Bilgileri">
+                <div className="customer-detail-grid">
                   <span>Firma Adı</span>
                   <strong>{customer.unvan || "-"}</strong>
                   <span>E-posta</span>
@@ -300,11 +300,9 @@ export function StandaloneFollowUpModal({
                   </strong>
                 </div>
                 {companyInfoMessage ? (
-                  <p className="customer-field-error task-assign-form-wide">
-                    {companyInfoMessage}
-                  </p>
+                  <p className="text-danger small mb-0 mt-2">{companyInfoMessage}</p>
                 ) : null}
-              </>
+              </CrmFormSection>
             }
             agreementReached={form.agreementReached}
             agreementFailureReason={form.agreementFailureReason}

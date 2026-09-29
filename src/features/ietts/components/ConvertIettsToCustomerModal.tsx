@@ -18,7 +18,23 @@ export function ConvertIettsToCustomerModal({
   onClose,
   onError,
 }: ConvertIettsToCustomerModalProps) {
+  const [isOpen, setIsOpen] = useState(true);
   const [isConverting, setIsConverting] = useState(false);
+  const [redirectCustomerId, setRedirectCustomerId] = useState<number | null>(null);
+
+  function requestClose(): void {
+    if (isConverting) {
+      return;
+    }
+    setIsOpen(false);
+  }
+
+  function handleModalClosed(): void {
+    onClose();
+    if (redirectCustomerId !== null) {
+      navigateToFullRegistration(redirectCustomerId);
+    }
+  }
 
   async function handleContinue(): Promise<void> {
     setIsConverting(true);
@@ -27,15 +43,15 @@ export function ConvertIettsToCustomerModal({
       const customerId = await convertIettsToCustomer(recordUuid);
       if (!customerId) {
         onError(iettsTexts.convertFailed);
-        onClose();
+        setIsOpen(false);
         return;
       }
 
-      onClose();
-      navigateToFullRegistration(customerId);
+      setRedirectCustomerId(customerId);
+      setIsOpen(false);
     } catch (error) {
       onError(readApiErrorMessage(error, iettsTexts.convertFailed));
-      onClose();
+      setIsOpen(false);
     } finally {
       setIsConverting(false);
     }
@@ -43,12 +59,18 @@ export function ConvertIettsToCustomerModal({
 
   return (
     <ControlledModal
-      isOpen
-      onClose={onClose}
+      isOpen={isOpen}
+      onClose={handleModalClosed}
       title={iettsTexts.convertConfirmTitle}
       footer={
         <>
-          <Button theme="secondary" size="sm" type="button" onClick={onClose} disabled={isConverting}>
+          <Button
+            theme="secondary"
+            size="sm"
+            type="button"
+            onClick={requestClose}
+            disabled={isConverting}
+          >
             {iettsTexts.cancel}
           </Button>
           <Button

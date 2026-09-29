@@ -65,7 +65,7 @@ Bootstrap JS: `index.html` bundle.
 - IETTS pilot: `IettsDataTable` (Tabulator remote, `paginationSizeSelector` footer’da) + toolbar + `card-footer` özet; `@adminlte/react` `Datatable` kullanma
 - Satır işlemleri: `TableActionGroup` + `TableIconButton` (`shared/constants/tableActionIcons.ts`)
 - Authorization gibi matris: `@adminlte/react` `Table`
-- Form: mümkünse `Input` / `Select`; liste filtreleri `TableFilterInput` / `TableFilterSelect` + `id`/`name`
+- Form: `CrmFormSection` (Card outline) + `CrmForm*` (`Input` / `Select` / `Textarea` / `InputFile`); liste filtreleri `TableFilterInput` / `TableFilterSelect` + `id`/`name`
 
 ## CRM iş kuralları (sunum)
 

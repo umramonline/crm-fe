@@ -8,6 +8,7 @@ import {
   CrmFormSelect,
   defaultCrmFormTextMaxLength,
 } from "@/shared/components/CrmFormField";
+import { CrmFormSection } from "@/shared/components/CrmFormSection";
 import {
   completeFullRegistration,
   fullRegistrationPhoneExists,
@@ -374,9 +375,8 @@ export function CustomerFullRegistrationPage({
               />
             </div>
 
-            <h4 className="h5 mb-3">{fullRegistrationStepTitles[step]}</h4>
-
             {step === 1 ? (
+              <CrmFormSection title={fullRegistrationStepTitles[1]}>
               <div className="row g-3">
                 <CrmFormFieldCol>
                   <CrmFormSelect
@@ -484,9 +484,11 @@ export function CustomerFullRegistrationPage({
                   </>
                 )}
               </div>
+              </CrmFormSection>
             ) : null}
 
             {step === 2 ? (
+              <CrmFormSection title={fullRegistrationStepTitles[2]}>
               <div className="row g-3">
                 <CrmFormFieldCol>
                   <CrmFormSelect
@@ -582,9 +584,11 @@ export function CustomerFullRegistrationPage({
                   </>
                 ) : null}
               </div>
+              </CrmFormSection>
             ) : null}
 
             {step === 3 ? (
+              <CrmFormSection title={fullRegistrationStepTitles[3]}>
               <div className="full-registration-list">
                 <div className="d-flex flex-wrap align-items-center gap-2 mb-3">
                   <Button
@@ -601,59 +605,62 @@ export function CustomerFullRegistrationPage({
                   ) : null}
                 </div>
                 {form.telephones.map((telephone, index) => (
-                  <div
-                    className="card card-outline card-secondary mb-2 full-registration-phone-card"
+                  <CrmFormSection
                     key={`${index}-${telephone.id ?? 0}`}
+                    nested
+                    title={`Cep telefonu ${index + 1}`}
+                    className="mb-2 full-registration-phone-card"
+                    bodyClass="pt-2 pb-2"
+                    tools={
+                      <Button
+                        theme="secondary"
+                        size="sm"
+                        type="button"
+                        onClick={() => removeTelephone(index)}
+                        disabled={hasUoId}
+                      >
+                        Sil
+                      </Button>
+                    }
                   >
-                    <div className="card-body py-3">
-                      <div className="row g-3 align-items-end">
-                        <CrmFormFieldCol>
-                          <CrmFormInput
-                    formScope="full-registration"
-                            field="telephoneTitle"
-                            suffix={index}
-                            label="Cep telefonu başlığı"
-                            value={telephone.title}
-                            onChange={(value) => updateTelephone(index, "title", value)}
-                            disabled={hasUoId}
-                          />
-                        </CrmFormFieldCol>
-                        <CrmFormFieldCol>
-                          <CrmFormInput
-                    formScope="full-registration"
-                            field="telephonePhone"
-                            suffix={index}
-                            label="Cep telefonu"
-                            value={telephone.phoneNumber}
-                            onChange={(value) =>
-                              updateTelephone(index, "phoneNumber", value)
-                            }
-                            isPhone
-                            disabled={hasUoId}
-                          />
-                        </CrmFormFieldCol>
-                        <div className="col-12 col-md-6 col-lg-auto">
-                          <Button
-                            theme="secondary"
-                            size="sm"
-                            type="button"
-                            onClick={() => removeTelephone(index)}
-                            disabled={hasUoId}
-                          >
-                            Sil
-                          </Button>
-                        </div>
-                      </div>
+                    <div className="row g-3">
+                      <CrmFormFieldCol>
+                        <CrmFormInput
+                          formScope="full-registration"
+                          field="telephoneTitle"
+                          suffix={index}
+                          label="Cep telefonu başlığı"
+                          value={telephone.title}
+                          onChange={(value) => updateTelephone(index, "title", value)}
+                          disabled={hasUoId}
+                        />
+                      </CrmFormFieldCol>
+                      <CrmFormFieldCol>
+                        <CrmFormInput
+                          formScope="full-registration"
+                          field="telephonePhone"
+                          suffix={index}
+                          label="Cep telefonu"
+                          value={telephone.phoneNumber}
+                          onChange={(value) =>
+                            updateTelephone(index, "phoneNumber", value)
+                          }
+                          isPhone
+                          disabled={hasUoId}
+                        />
+                      </CrmFormFieldCol>
                     </div>
-                  </div>
+                  </CrmFormSection>
                 ))}
                 {errors.telephones ? (
-                  <span className="customer-field-error">{errors.telephones}</span>
+                  <p className="text-danger small mb-0">{errors.telephones}</p>
                 ) : null}
               </div>
+              </CrmFormSection>
             ) : null}
 
             {step === 4 ? (
+              <CrmFormSection title={fullRegistrationStepTitles[4]}>
               <div className="row g-3">
                 <CrmFormFieldCol>
                   <CrmFormSelect
@@ -708,6 +715,7 @@ export function CustomerFullRegistrationPage({
                   />
                 </CrmFormFieldCol>
               </div>
+              </CrmFormSection>
             ) : null}
           </div>
 

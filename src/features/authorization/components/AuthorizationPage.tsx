@@ -26,6 +26,7 @@ import {
   CrmFormInput,
   CrmFormSelect,
 } from "@/shared/components/CrmFormField";
+import { CrmFormSection } from "@/shared/components/CrmFormSection";
 
 const httpMethods: HttpMethod[] = [
   "GET",
@@ -380,7 +381,7 @@ export function AuthorizationPage({ permissions }: AuthorizationPageProps) {
 
             <div className="card-body">
               {canListRoles ? (
-                <CrmFormFieldCol wide>
+                <CrmFormSection title="Rol seçimi" nested className="mb-3">
                   <CrmFormSelect
                     formScope="authorization"
                     field="roleId"
@@ -393,7 +394,7 @@ export function AuthorizationPage({ permissions }: AuthorizationPageProps) {
                     }))}
                     onChange={(value) => setSelectedRoleId(Number(value))}
                   />
-                </CrmFormFieldCol>
+                </CrmFormSection>
               ) : (
                 <p className="text-muted small">Rol listesini görme yetkiniz yok.</p>
               )}
@@ -474,35 +475,42 @@ export function AuthorizationPage({ permissions }: AuthorizationPageProps) {
 
             <div className="card-body">
               {canCreateModules || canUpdateModules ? (
-              <form className="row g-3 mb-3" onSubmit={(event) => void handleModuleSubmit(event)}>
-                <CrmFormFieldCol wide>
-                  <CrmFormInput
-                    formScope="authorization-modules"
-                    field="name"
-                    label="Modül Adı"
-                    value={moduleForm.name}
-                    onChange={(value) =>
-                      setModuleForm((current) => ({ ...current, name: value }))
-                    }
-                  />
-                </CrmFormFieldCol>
-                <div className="col-12">
-                  <div className="button-row">
-                    <Button theme="primary" size="sm" type="submit">
-                      {moduleForm.id ? "Güncelle" : "Ekle"}
-                    </Button>
-                    {moduleForm.id ? (
-                      <Button
-                        theme="secondary"
-                        size="sm"
-                        type="button"
-                        onClick={() => setModuleForm(emptyModuleForm)}
-                      >
-                        Vazgeç
-                      </Button>
-                    ) : null}
+              <form className="customer-entry-form mb-3" onSubmit={(event) => void handleModuleSubmit(event)}>
+                <CrmFormSection
+                  title={moduleForm.id ? "Modül düzenle" : "Yeni modül"}
+                  nested
+                >
+                  <div className="row g-3">
+                    <CrmFormFieldCol wide>
+                      <CrmFormInput
+                        formScope="authorization-modules"
+                        field="name"
+                        label="Modül Adı"
+                        value={moduleForm.name}
+                        onChange={(value) =>
+                          setModuleForm((current) => ({ ...current, name: value }))
+                        }
+                      />
+                    </CrmFormFieldCol>
+                    <div className="col-12">
+                      <div className="button-row">
+                        <Button theme="primary" size="sm" type="submit">
+                          {moduleForm.id ? "Güncelle" : "Ekle"}
+                        </Button>
+                        {moduleForm.id ? (
+                          <Button
+                            theme="secondary"
+                            size="sm"
+                            type="button"
+                            onClick={() => setModuleForm(emptyModuleForm)}
+                          >
+                            Vazgeç
+                          </Button>
+                        ) : null}
+                      </div>
+                    </div>
                   </div>
-                </div>
+                </CrmFormSection>
               </form>
               ) : null}
 
@@ -567,103 +575,110 @@ export function AuthorizationPage({ permissions }: AuthorizationPageProps) {
 
             <div className="card-body">
               {canCreateMethods || canUpdateMethods ? (
-              <form className="row g-3 mb-3" onSubmit={(event) => void handleMethodSubmit(event)}>
-                <CrmFormFieldCol>
-                  <CrmFormSelect
-                    formScope="authorization-methods"
-                    field="moduleId"
-                    label="Modül"
-                    hidePlaceholder
-                    value={String(methodForm.moduleId)}
-                    options={modules.map((module) => ({
-                      value: String(module.id),
-                      label: module.name,
-                    }))}
-                    onChange={(value) =>
-                      setMethodForm((current) => ({
-                        ...current,
-                        moduleId: Number(value),
-                      }))
-                    }
-                  />
-                </CrmFormFieldCol>
-
-                <CrmFormFieldCol>
-                  <CrmFormInput
-                    formScope="authorization-methods"
-                    field="name"
-                    label="İzin Adı"
-                    placeholder="modules.list"
-                    value={methodForm.name}
-                    onChange={(value) =>
-                      setMethodForm((current) => ({ ...current, name: value }))
-                    }
-                  />
-                </CrmFormFieldCol>
-
-                <CrmFormFieldCol wide>
-                  <CrmFormInput
-                    formScope="authorization-methods"
-                    field="description"
-                    label="Açıklama"
-                    value={methodForm.description}
-                    onChange={(value) =>
-                      setMethodForm((current) => ({ ...current, description: value }))
-                    }
-                  />
-                </CrmFormFieldCol>
-
-                <CrmFormFieldCol>
-                  <CrmFormSelect
-                    formScope="authorization-methods"
-                    field="httpMethod"
-                    label="HTTP Method"
-                    placeholderOption="UI İzni"
-                    value={methodForm.method}
-                    options={httpMethods.map((method) => ({
-                      value: method,
-                      label: method,
-                    }))}
-                    onChange={(value) =>
-                      setMethodForm((current) => ({
-                        ...current,
-                        method: value as HttpMethod | "",
-                      }))
-                    }
-                  />
-                </CrmFormFieldCol>
-
-                <CrmFormFieldCol>
-                  <CrmFormInput
-                    formScope="authorization-methods"
-                    field="path"
-                    label="Path"
-                    value={methodForm.path}
-                    onChange={(value) =>
-                      setMethodForm((current) => ({ ...current, path: value }))
-                    }
-                  />
-                </CrmFormFieldCol>
-
-                <div className="col-12">
-                  <div className="button-row">
-                    <Button theme="primary" size="sm" type="submit">
-                      {methodForm.id ? "Güncelle" : "Ekle"}
-                    </Button>
-                    {methodForm.id ? (
-                      <Button
-                        theme="secondary"
-                        size="sm"
-                        type="button"
-                        onClick={() =>
-                          setMethodForm({ ...emptyMethodForm, moduleId: selectedModuleId })
+              <form className="customer-entry-form mb-3" onSubmit={(event) => void handleMethodSubmit(event)}>
+                <CrmFormSection
+                  title={methodForm.id ? "Method düzenle" : "Yeni method"}
+                  nested
+                >
+                  <div className="row g-3">
+                    <CrmFormFieldCol>
+                      <CrmFormSelect
+                        formScope="authorization-methods"
+                        field="moduleId"
+                        label="Modül"
+                        hidePlaceholder
+                        value={String(methodForm.moduleId)}
+                        options={modules.map((module) => ({
+                          value: String(module.id),
+                          label: module.name,
+                        }))}
+                        onChange={(value) =>
+                          setMethodForm((current) => ({
+                            ...current,
+                            moduleId: Number(value),
+                          }))
                         }
-                      >
-                        Vazgeç
-                      </Button>
-                    ) : null}
+                      />
+                    </CrmFormFieldCol>
+
+                    <CrmFormFieldCol>
+                      <CrmFormInput
+                        formScope="authorization-methods"
+                        field="name"
+                        label="İzin Adı"
+                        placeholder="modules.list"
+                        value={methodForm.name}
+                        onChange={(value) =>
+                          setMethodForm((current) => ({ ...current, name: value }))
+                        }
+                      />
+                    </CrmFormFieldCol>
+
+                    <CrmFormFieldCol wide>
+                      <CrmFormInput
+                        formScope="authorization-methods"
+                        field="description"
+                        label="Açıklama"
+                        value={methodForm.description}
+                        onChange={(value) =>
+                          setMethodForm((current) => ({ ...current, description: value }))
+                        }
+                      />
+                    </CrmFormFieldCol>
+
+                    <CrmFormFieldCol>
+                      <CrmFormSelect
+                        formScope="authorization-methods"
+                        field="httpMethod"
+                        label="HTTP Method"
+                        placeholderOption="UI İzni"
+                        value={methodForm.method}
+                        options={httpMethods.map((method) => ({
+                          value: method,
+                          label: method,
+                        }))}
+                        onChange={(value) =>
+                          setMethodForm((current) => ({
+                            ...current,
+                            method: value as HttpMethod | "",
+                          }))
+                        }
+                      />
+                    </CrmFormFieldCol>
+
+                    <CrmFormFieldCol>
+                      <CrmFormInput
+                        formScope="authorization-methods"
+                        field="path"
+                        label="Path"
+                        value={methodForm.path}
+                        onChange={(value) =>
+                          setMethodForm((current) => ({ ...current, path: value }))
+                        }
+                      />
+                    </CrmFormFieldCol>
+
+                    <div className="col-12">
+                      <div className="button-row">
+                        <Button theme="primary" size="sm" type="submit">
+                          {methodForm.id ? "Güncelle" : "Ekle"}
+                        </Button>
+                        {methodForm.id ? (
+                          <Button
+                            theme="secondary"
+                            size="sm"
+                            type="button"
+                            onClick={() =>
+                              setMethodForm({ ...emptyMethodForm, moduleId: selectedModuleId })
+                            }
+                          >
+                            Vazgeç
+                          </Button>
+                        ) : null}
+                      </div>
+                    </div>
                   </div>
-                </div>
+                </CrmFormSection>
               </form>
               ) : null}
 
