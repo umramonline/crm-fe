@@ -1,0 +1,44 @@
+name: Build Frontend
+
+on:
+  workflow_call:
+    inputs:
+      vite_api_base_url:
+        description: API origin baked into the production bundle
+        required: true
+        type: string
+
+jobs:
+  build:
+    name: Build Frontend Assets
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    permissions:
+      contents: read
+
+    env:
+      VITE_API_BASE_URL: ${{ inputs.vite_api_base_url }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+
+      - name: Install npm dependencies
+        run: npm ci
+
+      - name: Build frontend assets
+        run: npm run build
+
+      - name: Upload build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: frontend-build
+          path: dist
+          retention-days: 1

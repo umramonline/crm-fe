@@ -54,7 +54,7 @@ Vite + React SPA; feature-sliced klasörler; cookie tabanlı oturum; permission-
 - Token’ı `localStorage` / `sessionStorage`’a yazmaz
 - MUI / Ant / Tailwind kullanmaz (`@adminlte/react` + Bootstrap 5 kullanır)
 - GraphQL kullanmaz
-- Docker / CI workflow bu repoda yoktur
+- CI/deploy: `.github/workflows/` (GitHub Actions; ayrı `crm-be` repo ile aynı branch/secret modeli)
 - OpenAPI client üretmez; her feature kendi `*Api.ts` normalizasyonunu yazar
 
 ## SPA / state durumu

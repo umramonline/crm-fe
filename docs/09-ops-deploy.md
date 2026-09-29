@@ -28,9 +28,28 @@ npm run preview
 
 Production bundle’ı Vite preview ile servis eder; API URL hâlâ build-time `VITE_*`.
 
-## Deploy
+## GitHub Actions
 
-Bu repoda Docker, nginx conf, GitHub Actions **yok**. Backend `deploy.yml` yalnızca API içindir.
+| Workflow | Tetikleyici | Amaç |
+|----------|-------------|------|
+| `ci.yml` | push (main, test, develop), PR | `npm test -- --run`, `npm run build` (placeholder API URL) |
+| `build-frontend.yml` | `workflow_call` | Ortama göre `VITE_API_BASE_URL` ile build + `dist/` artifact |
+| `deploy-test.yml` | push → `test` | CI + build → rsync `dist/` |
+| `deploy-production.yml` | push → `main` | Aynı, production ortamı |
+
+### GitHub Environment ayarları
+
+**Variables:**
+
+| Variable | Açıklama |
+|----------|----------|
+| `VITE_API_BASE_URL` | Build-time API origin (`.env.staging` ile aynı mantık) |
+| `FE_DEPLOY_DIR` | Sunucuda rsync hedefi (nginx root, trailing slash olmadan dizin) |
+| `HEALTH_CHECK_URL` | SPA kök URL (deploy sonrası curl) |
+
+**Secrets:** `TEST_SSH_*` / `PROD_SSH_*` (backend ile aynı isimler; host aynı olabilir).
+
+## Deploy (manuel özet)
 
 Tipik hedef:
 
@@ -61,12 +80,9 @@ Build sonrası URL değiştirmek için yeniden build.
 
 ## Test / lint CI
 
-Repo’da workflow yok. Local:
+CI: `npm test -- --run` ve `npm run build`. Lint/format workflow’a dahil değil (config yoksa script fail eder). Local:
 
 ```bash
-npm test
-npm run lint
-npm run format
+npm test -- --run
+npm run build
 ```
-
-ESLint/Prettier config dosyası yoksa script fail edebilir.
