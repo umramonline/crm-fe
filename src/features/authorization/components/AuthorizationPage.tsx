@@ -21,6 +21,11 @@ import {
 } from "@/features/authorization/services/authorizationApi";
 import type { Permission } from "@/features/auth/services/authApi";
 import { ContentHeader } from "@/shared/components/ContentHeader";
+import {
+  CrmFormFieldCol,
+  CrmFormInput,
+  CrmFormSelect,
+} from "@/shared/components/CrmFormField";
 
 const httpMethods: HttpMethod[] = [
   "GET",
@@ -367,32 +372,28 @@ export function AuthorizationPage({ permissions }: AuthorizationPageProps) {
             <div className="card-header d-flex align-items-center justify-content-between gap-2">
               <h3 className="card-title mb-0">Rol İzinleri</h3>
               {canUpdateRolePermissions ? (
-              <button className="btn btn-primary btn-sm" type="button" onClick={() => void savePermissions()}>
+              <Button theme="primary" size="sm" type="button" onClick={() => void savePermissions()}>
                 Kaydet
-              </button>
+              </Button>
               ) : null}
             </div>
 
             <div className="card-body">
               {canListRoles ? (
-                <div className="mb-3">
-                  <label className="form-label" htmlFor="role-select">
-                    Rol
-                  </label>
-                  <select
-                    id="role-select"
-                    name="roleId"
-                    className="form-select form-select-sm"
-                    value={selectedRoleId}
-                    onChange={(event) => setSelectedRoleId(Number(event.target.value))}
-                  >
-                    {roles.map((role) => (
-                      <option key={role.id} value={role.id}>
-                        {role.name}
-                      </option>
-                    ))}
-                  </select>
-                </div>
+                <CrmFormFieldCol wide>
+                  <CrmFormSelect
+                    formScope="authorization"
+                    field="roleId"
+                    label="Rol"
+                    hidePlaceholder
+                    value={String(selectedRoleId)}
+                    options={roles.map((role) => ({
+                      value: String(role.id),
+                      label: role.name,
+                    }))}
+                    onChange={(value) => setSelectedRoleId(Number(value))}
+                  />
+                </CrmFormFieldCol>
               ) : (
                 <p className="text-muted small">Rol listesini görme yetkiniz yok.</p>
               )}
@@ -474,20 +475,17 @@ export function AuthorizationPage({ permissions }: AuthorizationPageProps) {
             <div className="card-body">
               {canCreateModules || canUpdateModules ? (
               <form className="row g-3 mb-3" onSubmit={(event) => void handleModuleSubmit(event)}>
-                <div className="col-12">
-                  <label className="form-label" htmlFor="module-name">
-                    Modül Adı
-                  </label>
-                  <input
-                    id="module-name"
-                    name="moduleName"
-                    className="form-control form-control-sm"
+                <CrmFormFieldCol wide>
+                  <CrmFormInput
+                    formScope="authorization-modules"
+                    field="name"
+                    label="Modül Adı"
                     value={moduleForm.name}
-                    onChange={(event) =>
-                      setModuleForm((current) => ({ ...current, name: event.target.value }))
+                    onChange={(value) =>
+                      setModuleForm((current) => ({ ...current, name: value }))
                     }
                   />
-                </div>
+                </CrmFormFieldCol>
                 <div className="col-12">
                   <div className="button-row">
                     <Button theme="primary" size="sm" type="submit">
@@ -570,106 +568,82 @@ export function AuthorizationPage({ permissions }: AuthorizationPageProps) {
             <div className="card-body">
               {canCreateMethods || canUpdateMethods ? (
               <form className="row g-3 mb-3" onSubmit={(event) => void handleMethodSubmit(event)}>
-                <div className="col-md-6">
-                  <label className="form-label" htmlFor="method-module">
-                    Modül
-                  </label>
-                  <select
-                    id="method-module"
-                    name="methodModuleId"
-                    className="form-select form-select-sm"
-                    value={methodForm.moduleId}
-                    onChange={(event) =>
+                <CrmFormFieldCol>
+                  <CrmFormSelect
+                    formScope="authorization-methods"
+                    field="moduleId"
+                    label="Modül"
+                    hidePlaceholder
+                    value={String(methodForm.moduleId)}
+                    options={modules.map((module) => ({
+                      value: String(module.id),
+                      label: module.name,
+                    }))}
+                    onChange={(value) =>
                       setMethodForm((current) => ({
                         ...current,
-                        moduleId: Number(event.target.value),
+                        moduleId: Number(value),
                       }))
                     }
-                  >
-                    {modules.map((module) => (
-                      <option key={module.id} value={module.id}>
-                        {module.name}
-                      </option>
-                    ))}
-                  </select>
-                </div>
+                  />
+                </CrmFormFieldCol>
 
-                <div className="col-md-6">
-                  <label className="form-label" htmlFor="method-name">
-                    İzin Adı
-                  </label>
-                  <input
-                    id="method-name"
-                    name="methodName"
-                    className="form-control form-control-sm"
+                <CrmFormFieldCol>
+                  <CrmFormInput
+                    formScope="authorization-methods"
+                    field="name"
+                    label="İzin Adı"
                     placeholder="modules.list"
                     value={methodForm.name}
-                    onChange={(event) =>
-                      setMethodForm((current) => ({ ...current, name: event.target.value }))
+                    onChange={(value) =>
+                      setMethodForm((current) => ({ ...current, name: value }))
                     }
                   />
-                </div>
+                </CrmFormFieldCol>
 
-                <div className="col-12">
-                  <label className="form-label" htmlFor="method-description">
-                    Açıklama
-                  </label>
-                  <input
-                    id="method-description"
-                    name="methodDescription"
-                    className="form-control form-control-sm"
+                <CrmFormFieldCol wide>
+                  <CrmFormInput
+                    formScope="authorization-methods"
+                    field="description"
+                    label="Açıklama"
                     value={methodForm.description}
-                    onChange={(event) =>
-                      setMethodForm((current) => ({
-                        ...current,
-                        description: event.target.value,
-                      }))
+                    onChange={(value) =>
+                      setMethodForm((current) => ({ ...current, description: value }))
                     }
                   />
-                </div>
+                </CrmFormFieldCol>
 
-                <div className="col-md-6">
-                  <label className="form-label" htmlFor="method-http">
-                    HTTP Method
-                  </label>
-                  <select
-                    id="method-http"
-                    name="methodHttp"
-                    className="form-select form-select-sm"
+                <CrmFormFieldCol>
+                  <CrmFormSelect
+                    formScope="authorization-methods"
+                    field="httpMethod"
+                    label="HTTP Method"
+                    placeholderOption="UI İzni"
                     value={methodForm.method}
-                    onChange={(event) =>
+                    options={httpMethods.map((method) => ({
+                      value: method,
+                      label: method,
+                    }))}
+                    onChange={(value) =>
                       setMethodForm((current) => ({
                         ...current,
-                        method: event.target.value as HttpMethod | "",
-                      }))
-                    }
-                  >
-                    <option value="">UI İzni</option>
-                    {httpMethods.map((method) => (
-                      <option key={method} value={method}>
-                        {method}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                <div className="col-md-6">
-                  <label className="form-label" htmlFor="method-path">
-                    Path
-                  </label>
-                  <input
-                    id="method-path"
-                    name="methodPath"
-                    className="form-control form-control-sm"
-                    value={methodForm.path}
-                    onChange={(event) =>
-                      setMethodForm((current) => ({
-                        ...current,
-                        path: event.target.value,
+                        method: value as HttpMethod | "",
                       }))
                     }
                   />
-                </div>
+                </CrmFormFieldCol>
+
+                <CrmFormFieldCol>
+                  <CrmFormInput
+                    formScope="authorization-methods"
+                    field="path"
+                    label="Path"
+                    value={methodForm.path}
+                    onChange={(value) =>
+                      setMethodForm((current) => ({ ...current, path: value }))
+                    }
+                  />
+                </CrmFormFieldCol>
 
                 <div className="col-12">
                   <div className="button-row">

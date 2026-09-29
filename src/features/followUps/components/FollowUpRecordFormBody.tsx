@@ -331,7 +331,8 @@ export function FollowUpRecordFormBody({
           ))}
         </div>
       ) : null}
-      <label className="field-label task-assign-form-wide">
+      <div className="task-assign-form-wide mb-0">
+        <span className="form-label d-block">Resim</span>
         <span className="follow-up-upload-box">
           <input
             {...formFieldProps(formScope, "images", { label: "Resim" })}
@@ -348,7 +349,7 @@ export function FollowUpRecordFormBody({
           </span>
         </span>
         {imagesError ? <span className="customer-field-error">{imagesError}</span> : null}
-      </label>
+      </div>
       {newImages.length > 0 ? (
         <ul className="follow-up-upload-list task-assign-form-wide">
           {newImages.map((image, index) => (

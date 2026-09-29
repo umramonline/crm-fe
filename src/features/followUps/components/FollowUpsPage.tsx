@@ -223,7 +223,11 @@ export function FollowUpsPage({ permissions }: FollowUpsPageProps) {
         ),
       };
     });
-    setEditErrors((current) => ({ ...current, meetPeople: undefined }));
+    setEditErrors((current) => ({
+      ...current,
+      meetPeople: undefined,
+      [editMeetPersonErrorKey(formId, field)]: undefined,
+    }));
   }
 
   function addEditMeetPerson(): void {
@@ -295,6 +299,7 @@ export function FollowUpsPage({ permissions }: FollowUpsPageProps) {
     const errors = validateEditForm(editForm);
     setEditErrors(errors);
     if (Object.keys(errors).length > 0) {
+      scrollToFirstEditFollowUpError(errors);
       return;
     }
 
@@ -549,6 +554,9 @@ export function FollowUpsPage({ permissions }: FollowUpsPageProps) {
                   email: person.email,
                 }))}
                 meetPeopleError={editErrors.meetPeople}
+                meetPersonFieldError={(rowKey, field) =>
+                  editErrors[editMeetPersonErrorKey(rowKey, field as EditMeetPersonField)]
+                }
                 onMeetPersonChange={(rowKey, field, value) =>
                   updateEditMeetPerson(
                     rowKey,
@@ -813,19 +821,51 @@ function validateEditForm(form: FollowUpEditForm): FollowUpEditErrors {
 
   if (form.meetPeople.length === 0) {
     errors.meetPeople = "En az bir kişi bilgisi girilmelidir.";
-  } else if (
-    form.meetPeople.some(
-      (person) =>
-        !person.title.trim() ||
-        !person.name.trim() ||
-        !person.surname.trim() ||
-        !person.phone.trim(),
-    )
-  ) {
-    errors.meetPeople = "Görev, ad, soyad ve telefon alanları zorunludur.";
   }
 
+  form.meetPeople.forEach((person) => {
+    if (!person.title.trim()) {
+      errors[editMeetPersonErrorKey(person.formId, "title")] = "Görev zorunludur.";
+    }
+    if (!person.name.trim()) {
+      errors[editMeetPersonErrorKey(person.formId, "name")] = "Ad zorunludur.";
+    }
+    if (!person.surname.trim()) {
+      errors[editMeetPersonErrorKey(person.formId, "surname")] = "Soyad zorunludur.";
+    }
+    if (!person.phone.trim()) {
+      errors[editMeetPersonErrorKey(person.formId, "phone")] = "Telefon zorunludur.";
+    } else if (!/^05[0-9]{9}$/.test(person.phone.trim())) {
+      errors[editMeetPersonErrorKey(person.formId, "phone")] =
+        "Telefon 05XXXXXXXXX formatında olmalıdır.";
+    }
+  });
+
   return errors;
+}
+
+type EditMeetPersonField = "title" | "name" | "surname" | "phone" | "email";
+
+function editMeetPersonErrorKey(formId: string, field: EditMeetPersonField): string {
+  return `meetPeople.${formId}.${field}`;
+}
+
+function scrollToFirstEditFollowUpError(errors: FollowUpEditErrors): void {
+  const firstErrorKey = Object.keys(errors).find((key) => errors[key]);
+  if (!firstErrorKey) {
+    return;
+  }
+
+  window.requestAnimationFrame(() => {
+    const target = Array.from(
+      document.querySelectorAll<HTMLElement>("[data-follow-up-error-field]"),
+    ).find((element) => element.dataset.followUpErrorField === firstErrorKey);
+
+    target?.scrollIntoView({ behavior: "smooth", block: "center" });
+    target?.querySelector<HTMLElement>("input, select, textarea")?.focus({
+      preventScroll: true,
+    });
+  });
 }
 
 function formatDate(value: string): string {
