@@ -445,7 +445,30 @@ export function FollowUpsPage({ permissions }: FollowUpsPageProps) {
           >
             Temizle
           </button>
+          <button
+            className="btn btn-outline-secondary btn-sm"
+            type="button"
+            disabled={isTableLoading}
+            onClick={() => tableRef.current?.downloadCsv("tum-takip-kayitlari.csv")}
+          >
+            CSV indir
+          </button>
+          <button
+            className="btn btn-outline-secondary btn-sm"
+            type="button"
+            disabled={isTableLoading}
+            onClick={() => tableRef.current?.downloadJson("tum-takip-kayitlari.json")}
+          >
+            JSON indir
+          </button>
+          <span className="text-muted small ms-auto d-none d-md-inline">
+            Dışa aktarma yalnızca görünen sayfadaki kayıtları içerir.
+          </span>
         </ListTableToolbar>
+
+        <p className="text-muted small d-md-none mb-0 px-3 pt-0 pb-2">
+          Dışa aktarma yalnızca görünen sayfadaki kayıtları içerir.
+        </p>
 
         {message || isLoadingCustomerDetail ? (
           <div className="card-body pb-0">
